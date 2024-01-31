@@ -1,1 +1,15 @@
 .vs/
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.bbl
+*.blg
+*.bcf
+*.xml
+*.run.xml
