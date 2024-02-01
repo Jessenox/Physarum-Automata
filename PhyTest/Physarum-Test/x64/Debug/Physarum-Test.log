@@ -1,12 +1,12 @@
 ﻿  main.cpp
-C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(82,52): warning C4267: 'argumento': conversión de 'size_t' a 'int'; posible pérdida de datos
-C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(82,49): warning C4267: 'argumento': conversión de 'size_t' a 'int'; posible pérdida de datos
-C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(83,36): warning C4267: 'argumento': conversión de 'size_t' a 'int'; posible pérdida de datos
-C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(83,33): warning C4267: 'argumento': conversión de 'size_t' a 'int'; posible pérdida de datos
-C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(198,16): warning C4267: 'inicializando': conversión de 'size_t' a 'int'; posible pérdida de datos
-C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(282,18): warning C4267: 'inicializando': conversión de 'size_t' a 'int'; posible pérdida de datos
-C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(283,18): warning C4267: 'inicializando': conversión de 'size_t' a 'int'; posible pérdida de datos
-C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(289,40): warning C4267: '=': conversión de 'size_t' a 'int'; posible pérdida de datos
+C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(83,52): warning C4267: 'argumento': conversión de 'size_t' a 'int'; posible pérdida de datos
+C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(83,49): warning C4267: 'argumento': conversión de 'size_t' a 'int'; posible pérdida de datos
+C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(84,36): warning C4267: 'argumento': conversión de 'size_t' a 'int'; posible pérdida de datos
+C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(84,33): warning C4267: 'argumento': conversión de 'size_t' a 'int'; posible pérdida de datos
+C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(199,16): warning C4267: 'inicializando': conversión de 'size_t' a 'int'; posible pérdida de datos
+C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(280,18): warning C4267: 'inicializando': conversión de 'size_t' a 'int'; posible pérdida de datos
+C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(281,18): warning C4267: 'inicializando': conversión de 'size_t' a 'int'; posible pérdida de datos
+C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(287,40): warning C4267: '=': conversión de 'size_t' a 'int'; posible pérdida de datos
 C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\main.cpp(129,53): warning C4244: 'argumento': conversión de 'T' a 'int'; posible pérdida de datos
           with
           [
