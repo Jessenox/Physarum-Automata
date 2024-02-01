@@ -1,0 +1,143 @@
+%Document class is an tipe report
+\documentclass[12pt,a4paper,openany]{report}
+\usepackage[latin1]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{makeidx}
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage[hidelinks]{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+%We define this the languaje javascript
+\lstdefinelanguage{JavaScript}{
+    morekeywords=[1]{break, continue, delete, else, for, function, if, in,
+            new, return, this, typeof, var, void, while, with},
+    % Literals, primitive types, and reference types.
+    morekeywords=[2]{false, null, true, boolean, number, undefined,
+            Array, Boolean, Date, Math, Number, String, Object},
+    % Built-ins.
+    morekeywords=[3]{eval, parseInt, parseFloat, escape, unescape},
+    sensitive,
+    morecomment=[s]{/*}{*/},
+    morecomment=[l]//,
+    morecomment=[s]{/**}{*/}, % JavaDoc style comments
+    morestring=[b]',
+    morestring=[b]"
+}[keywords, comments, strings]
+
+%We define colors, in this case, orange, purpe, jsonblue, and the string for make prettier the code
+\definecolor{jsonorange}{RGB}{243,102,25}
+\definecolor{jsonpurple}{RGB}{186,33,132}
+\definecolor{jsonblue}{RGB}{42,87,141}
+\definecolor{jsonstring}{RGB}{42,87,141}
+
+%Now que define json lel
+\lstdefinelanguage{json}{
+basicstyle=\normalfont\ttfamily,
+numbers=left,
+numberstyle=\tiny,
+stepnumber=1,
+numbersep=8pt,
+showstringspaces=false,
+breaklines=true,
+frame=lines,
+backgroundcolor=\color{white},
+literate=
+*{0}{{{\color{jsonpurple}0}}}{1}
+{1}{{{\color{jsonpurple}1}}}{1}
+{2}{{{\color{jsonpurple}2}}}{1}
+{3}{{{\color{jsonpurple}3}}}{1}
+{4}{{{\color{jsonpurple}4}}}{1}
+{5}{{{\color{jsonpurple}5}}}{1}
+{6}{{{\color{jsonpurple}6}}}{1}
+{7}{{{\color{jsonpurple}7}}}{1}
+{8}{{{\color{jsonpurple}8}}}{1}
+{9}{{{\color{jsonpurple}9}}}{1}
+{:}{{{\color{jsonorange}{:}}}}{1}
+{,}{{{\color{jsonorange}{,}}}}{1}
+{\{}{{{\color{jsonblue}{\{}}}}{1}
+{\}}{{{\color{jsonblue}{\}}}}}{1}
+{[}{{{\color{jsonblue}{[}}}}{1}
+{]}{{{\color{jsonblue}{]}}}}{1},
+keywordstyle=\color{jsonorange}\bfseries,
+commentstyle=\color{gray}\itshape,
+stringstyle=\color{jsonstring},
+}
+\lstloadlanguages{C, C++, csh, Java, JavaScript, json}
+\usepackage{color}
+\definecolor{red}{rgb}{0.6,0,0} 
+\definecolor{blue}{rgb}{0,0,0.6}
+\definecolor{green}{rgb}{0,0.8,0}
+\definecolor{cyan}{rgb}{0.0,0.6,0.6}
+\definecolor{cloudwhite}{rgb}{1.0, 1.0,1.0}
+\lstset{
+language=csh,
+basicstyle=\footnotesize\ttfamily,
+numbers=left,
+numberstyle=\tiny,
+numbersep=5pt,
+tabsize=2,
+extendedchars=true,
+breaklines=true,
+frame=b,
+stringstyle=\color{blue}\ttfamily,
+showspaces=false,
+showtabs=false,
+xleftmargin=17pt,
+framexleftmargin=17pt,
+framexrightmargin=5pt,
+framexbottommargin=4pt,
+commentstyle=\color{green},
+morecomment=[l]{//}, %use comment-line-style!
+morecomment=[s]{/*}{*/}, %for multiline comments
+showstringspaces=false,
+morekeywords={ abstract, event, new, struct,
+as, explicit, null, switch,
+base, extern, object, this,
+bool, false, operator, throw,
+break, finally, out, true,
+byte, fixed, override, try,
+case, float, params, typeof,
+catch, for, private, uint,
+char, foreach, protected, ulong,
+checked, goto, public, unchecked,
+class, if, readonly, unsafe,
+const, implicit, ref, ushort,
+continue, in, return, using,
+decimal, int, sbyte, virtual,
+default, interface, sealed, volatile,
+delegate, internal, short, void,
+do, is, sizeof, while,
+double, lock, stackalloc,
+else, long, static,
+enum, namespace, string, break, continue, 
+delete, else, for, function, if, in,
+new, return, this, typeof, var, void, while, with, 
+false, null, true, boolean, number, undefined,
+Array, Boolean, Date, Math, Number, String, Object, 
+eval, parseInt, parseFloat, escape, unescape,
+await, async, case, catch, class, const, default, do,
+enum, export, extends, finally, from, implements, import, instanceof,
+let, static, super, switch, throw, try},
+keywordstyle=\color{cyan},
+identifierstyle=\color{red},
+backgroundcolor=\color{cloudwhite},
+}
+\usepackage{caption}
+\DeclareCaptionFont{white}{\color{white}}
+\DeclareCaptionFormat{listing}{\colorbox{blue}{\parbox{\textwidth}{\hspace{15pt}#1#2#3}}}
+\captionsetup[lstlisting]{format=listing,labelfont=white,textfont=white, singlelinecheck=false, margin=0pt, font={bf,footnotesize}}
+\usepackage[left=2.00cm, right=2.00cm, top=2.00cm, bottom=2.00cm]{geometry}
+\author{Eduardo Hernandez Vergara}
+\title{Dise\~no de un aut\'omata para monitoreo}
+\setcounter{tocdepth}{3}
+\begin{document}
+    \include{./util/Portada}
+    \tableofcontents
+    \include{./util/SeccionI}
+    \include{./bibliography/Referencias}
+\end{document}

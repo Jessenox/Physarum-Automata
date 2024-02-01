@@ -1,0 +1,26 @@
+\subsubsection{Ejemplo}
+    Una vez que hemos explicado los aut\'omatas celulares de 2 dimensiones podemos pasar a explicar un ejemplo de un aut\'omata celular de 2 dimensiones.
+    \vskip 0.5cm
+    En este caso mostraremos un aut\'omata celular de 2 dimensiones(binario) con vecindad de Moore y con una configuraci\'on totalistica 
+        B4678/S35678, es decir, una celda nacer\'a si tiene 4, 6, 7 u 8 vecinos vivos y sobrevivir\'a si tiene 3, 5, 6, 7 u 8 vecinos vivos.
+        Este aut\'omata celular tambi\'en es conocido con el nombre de \textit{Anneal} y es mencionado en \cite{Bastien2010}.
+    \vskip 0.5cm
+    Para formalizar tenemos que este aut\'omata $\mathbb{A} = (\mathbb{Z}^2, S, N, f)$ donde: 
+        $S = \{0,1\}$, $N = \{0,1\}^9$ y $f: \{0,1\}^9 \rightarrow \{0,1\}$ y $C$ es la celda central, 
+        entonces podemos deducir que la funci\'on de transici\'on se define como:
+        \begin{equation*}
+            f(C(x,y,t),N(x,y,t)) = \begin{cases}
+                1 & \text{si } C(x,y,t) = 0 \text{ y } N(x,y,t) \in \{4,6,7,8\} \\
+                1 & \text{si } C(x,y,t) = 1 \text{ y } N(x,y,t) \in \{3,5,6,7,8\} \\
+                0 & \text{en otro caso}
+            \end{cases}
+        \end{equation*}
+    \vskip 0.5cm
+    Dandonos como resultado la siguiente evoluci\'on en 250 generaciones:
+    \begin{figure}[h]
+        \centering
+        \includegraphics[width=0.5\textwidth]{./images/marco_teorico/automatas_celulares/Anneal.png}
+        \caption{Evoluci\'on del aut\'omata celular \textit{Anneal}}
+        \label{fig:anneal}
+    \end{figure}
+    \clearpage
