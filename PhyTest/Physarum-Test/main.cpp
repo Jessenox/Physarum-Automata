@@ -26,13 +26,13 @@ class App {
         sf::CircleShape mPlayer;
         sf::Clock physarumClock;
         sf::Time physarumTimer;
-        Physarum physarum{15};
+        Physarum physarum{16};
         bool mNumOne = false, mNumTwo = false, mNumThree = false, 
              mNumFour = false, mNumFive = false, mNumSix = false, 
              mNumSeven = false, mNumEight = false, mNumNine = false,
              onLeftClick = false, mEnterKey = false;
         bool play = false;
-        float scale = 15;
+        float scale = 16;
         short state = 0;
         int generation = 0;
 };
@@ -221,10 +221,11 @@ void App::update(sf::Time deltaTime) {
     sf::Vector2f movement(0.f, 0.f);
     mPlayer.move(movement * deltaTime.asSeconds());
     setPhysarumOnTexture();
-    if (play && physarumClock.getElapsedTime().asMilliseconds() > 1000.f) {
+    if (play && physarumClock.getElapsedTime().asMilliseconds() > 100.f) {
         std::cout << generation << std::endl;
         physarum.evaluatePhysarum();
         physarumClock.restart();
+        physarum.showPhysarum();
         generation++;
     }
 }
