@@ -3,7 +3,6 @@
 #include <iostream>
 #include <ctime>
 
-
 #define X 500.f
 #define Y 500.f
 
@@ -16,9 +15,12 @@ class App {
         void update(sf::Time);
         void render();
         void handlePlayerInput(sf::Keyboard::Key, bool);
-        void handleMouseEvents();
+        void handleMouseEvents(sf::Mouse::Button, bool);
         void setCell(sf::Vector2i);
         void setPhysarumOnTexture();
+        void textSettings();
+        void updateText();
+        bool setGeneralFont(std::string);
     private:
         sf::RenderWindow myWindow;
         sf::RenderTexture baseTexture;
@@ -26,20 +28,22 @@ class App {
         sf::CircleShape mPlayer;
         sf::Clock physarumClock;
         sf::Time physarumTimer;
-        Physarum physarum{16};
+        sf::Text generationText;
+        sf::Font generalFont;
+        Physarum physarum{100};
         bool mNumOne = false, mNumTwo = false, mNumThree = false, 
              mNumFour = false, mNumFive = false, mNumSix = false, 
              mNumSeven = false, mNumEight = false, mNumNine = false,
              onLeftClick = false, mEnterKey = false;
         bool play = false;
-        float scale = 16;
+        float scale = 100;
         short state = 0;
         int generation = 0;
 };
 
-App::App() : myWindow(sf::VideoMode(1000, 700), "Physarum Test"), mPlayer() {
+App::App() : myWindow(sf::VideoMode(500, 700), "Physarum Test"), mPlayer() {
     baseTexture.create(500,500);
-    
+    textSettings();
     mPlayer.setRadius(40.f);
     mPlayer.setPosition(100.f, 100.f);
     mPlayer.setFillColor(sf::Color::Cyan);
@@ -66,8 +70,11 @@ void App::processEvents() {
         case sf::Event::KeyReleased:
             handlePlayerInput(event.key.code, false);
             break;
+        case sf::Event::MouseButtonPressed:
+            handleMouseEvents(event.mouseButton.button, true);
+            break;
         case sf::Event::MouseButtonReleased :
-            handleMouseEvents();
+            handleMouseEvents(event.mouseButton.button, false);
             break;
         case sf::Event::Closed :
             myWindow.close();
@@ -116,10 +123,9 @@ void App::handlePlayerInput(sf::Keyboard::Key key, bool isPressed) {
     }
 }
 
-void App::handleMouseEvents() {
-    sf::Vector2i actualPosition = sf::Mouse::getPosition(myWindow);
-    if (actualPosition.x < 500 && actualPosition.y < 500) {
-        setCell(actualPosition);
+void App::handleMouseEvents(sf::Mouse::Button button, bool isPressed) {
+    if (button == sf::Mouse::Left) {
+        onLeftClick = isPressed;
     }
 }
 
@@ -127,6 +133,28 @@ void App::setCell(sf::Vector2i pos) {
     sf::Vector2f coordinates((float)pos.x * scale / X, (float)pos.y * scale / Y);
     mPlayer.setPosition(coordinates);
     physarum.setCellState(coordinates.x, coordinates.y, state);
+}
+
+void App::textSettings() {
+    if (setGeneralFont("arial.ttf")) {
+        generationText.setFont(generalFont);
+        generationText.setCharacterSize(24);
+        generationText.setFillColor(sf::Color::White);
+        generationText.setPosition(10, 520);
+    }
+}
+
+void App::updateText() {
+    std::string updatedText = "Generacion: " + std::to_string(generation);
+    generationText.setString(updatedText);
+}
+
+bool App::setGeneralFont(std::string fontName) {
+    if (!generalFont.loadFromFile(fontName)) {
+        std::cout << "Error when read font" << "\n";
+        return false;
+    }
+    return true;
 }
 
 void App::setPhysarumOnTexture() {
@@ -185,9 +213,10 @@ void App::setPhysarumOnTexture() {
     }
 }
 
+
 void App::render() {
-    
     myWindow.clear();
+    myWindow.draw(generationText);
     baseTexture.display();
     baseSprite.setTexture(baseTexture.getTexture());
     myWindow.draw(baseSprite);
@@ -214,18 +243,22 @@ void App::update(sf::Time deltaTime) {
     if (mNumNine)
         state = 8;
     if (mEnterKey) {
-        
-            play = true;
-        
+        play = true;    
     }
+    if (onLeftClick) {
+        sf::Vector2i actualPosition = sf::Mouse::getPosition(myWindow);
+        if (actualPosition.x < 500 && actualPosition.y < 500) {
+            setCell(actualPosition);
+        }     
+    }
+
     sf::Vector2f movement(0.f, 0.f);
     mPlayer.move(movement * deltaTime.asSeconds());
     setPhysarumOnTexture();
-    if (play && physarumClock.getElapsedTime().asMilliseconds() > 100.f) {
-        std::cout << generation << std::endl;
+    if (play && physarumClock.getElapsedTime().asMilliseconds() > 50.f) {
         physarum.evaluatePhysarum();
         physarumClock.restart();
-        physarum.showPhysarum();
+        updateText();
         generation++;
     }
 }

@@ -148,7 +148,7 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, int** cellsA
 			if ((isOnCurrentDirection(currentCellDirection, 3) ||
 				 isOnCurrentDirection(currentCellDirection, 5) ||
 				 isOnCurrentDirection(currentCellDirection, 6)) &&
-				 cellsMemory[i][j] == 0 && !onState0 && !onState7) {
+				 cellsMemory[i][j] == 0  ) {
 				cellsAux[i][j] = 5;
 				cellsMemory[i][j] = currentCellDirection + 1;
 			} 
