@@ -30,13 +30,13 @@ class App {
         sf::Time physarumTimer;
         sf::Text generationText;
         sf::Font generalFont;
-        Physarum physarum{100};
+        Physarum physarum{50};
         bool mNumOne = false, mNumTwo = false, mNumThree = false, 
              mNumFour = false, mNumFive = false, mNumSix = false, 
              mNumSeven = false, mNumEight = false, mNumNine = false,
              onLeftClick = false, mEnterKey = false;
         bool play = false;
-        float scale = 100;
+        float scale = 50;
         short state = 0;
         int generation = 0;
 };
@@ -255,7 +255,7 @@ void App::update(sf::Time deltaTime) {
     sf::Vector2f movement(0.f, 0.f);
     mPlayer.move(movement * deltaTime.asSeconds());
     setPhysarumOnTexture();
-    if (play && physarumClock.getElapsedTime().asMilliseconds() > 50.f) {
+    if (play && physarumClock.getElapsedTime().asMilliseconds() > 100.f) {
         physarum.evaluatePhysarum();
         physarumClock.restart();
         updateText();

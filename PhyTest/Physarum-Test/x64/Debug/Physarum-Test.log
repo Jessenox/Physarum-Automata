@@ -1,18 +1,18 @@
 ﻿  main.cpp
-C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(83,35): warning C4267: 'argumento': conversión de 'size_t' a 'int'; posible pérdida de datos
-C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(83,32): warning C4267: 'argumento': conversión de 'size_t' a 'int'; posible pérdida de datos
-C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(84,36): warning C4267: 'argumento': conversión de 'size_t' a 'int'; posible pérdida de datos
-C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(84,33): warning C4267: 'argumento': conversión de 'size_t' a 'int'; posible pérdida de datos
-C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(121,16): warning C4267: 'inicializando': conversión de 'size_t' a 'int'; posible pérdida de datos
-C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\main.cpp(135,53): warning C4244: 'argumento': conversión de 'T' a 'int'; posible pérdida de datos
+C:\Users\pikmi\Documents\ESCOM\TT\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(83,35): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\pikmi\Documents\ESCOM\TT\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(83,32): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\pikmi\Documents\ESCOM\TT\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(84,36): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\pikmi\Documents\ESCOM\TT\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(84,33): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\pikmi\Documents\ESCOM\TT\Physarum-Automata\PhyTest\Physarum-Test\Physarum.hpp(121,16): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\pikmi\Documents\ESCOM\TT\Physarum-Automata\PhyTest\Physarum-Test\main.cpp(135,53): warning C4244: 'argument': conversion from 'T' to 'int', possible loss of data
           with
           [
               T=float
           ]
-C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\main.cpp(135,38): warning C4244: 'argumento': conversión de 'T' a 'int'; posible pérdida de datos
+C:\Users\pikmi\Documents\ESCOM\TT\Physarum-Automata\PhyTest\Physarum-Test\main.cpp(135,38): warning C4244: 'argument': conversion from 'T' to 'int', possible loss of data
           with
           [
               T=float
           ]
-C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\main.cpp(267,15): warning C4244: 'argumento': conversión de 'time_t' a 'unsigned int'; posible pérdida de datos
-  Physarum-Test.vcxproj -> C:\Users\Angel\Documents\OpenGL\Physarum-Automata\PhyTest\Physarum-Test\x64\Debug\Physarum-Test.exe
+C:\Users\pikmi\Documents\ESCOM\TT\Physarum-Automata\PhyTest\Physarum-Test\main.cpp(267,15): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
+  Physarum-Test.vcxproj -> C:\Users\pikmi\Documents\ESCOM\TT\Physarum-Automata\PhyTest\Physarum-Test\x64\Debug\Physarum-Test.exe

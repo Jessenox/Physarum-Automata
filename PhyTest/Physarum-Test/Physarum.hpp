@@ -148,13 +148,15 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, int** cellsA
 			if ((isOnCurrentDirection(currentCellDirection, 3) ||
 				 isOnCurrentDirection(currentCellDirection, 5) ||
 				 isOnCurrentDirection(currentCellDirection, 6)) &&
-				 cellsMemory[i][j] == 0  ) {
+				 cellsMemory[i][j] == 0 && !onState0 && !onState7) {
 				cellsAux[i][j] = 5;
 				cellsMemory[i][j] = currentCellDirection + 1;
 			} 
 			break;
 		case 5:
-			if (!isOnMooreOffset(neighboursDirections, 5) && !isOnMooreOffset(neighboursDirections, 8) && !onState1 && !onState3 && !onState4 && !onState6) {
+			if (!isOnMooreOffset(neighboursDirections, 5) && 
+				!isOnMooreOffset(neighboursDirections, 8) && 
+				!onState1 && !onState3 && !onState4 && !onState6) {
 				cellsAux[i][j] = 0;
 				cellsMemory[i][j] = 0;
 			}
@@ -164,7 +166,7 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, int** cellsA
 			
 			break;
 		case 7:
-			if (onState3 || onState4 || onState5 || onState6) {
+			if (onState3 || onState4 || onState6) {
 				cellsAux[i][j] = 4;
 			}
 			break;
@@ -195,9 +197,6 @@ bool Physarum::isOnCurrentDirection(int direction,int state) {
 	}
 }
 
-bool Physarum::cellConnectCell() {
-	return true;
-}
 
 bool Physarum::findState(int state) {
 	for (size_t i = 0; i < neighboursData.size(); i++) 
