@@ -39,6 +39,7 @@ class App {
         float scale = 50;
         short state = 0;
         int generation = 0;
+        float interval = 10.f;
 };
 
 App::App() : myWindow(sf::VideoMode(500, 700), "Physarum Test"), mPlayer() {
@@ -255,7 +256,7 @@ void App::update(sf::Time deltaTime) {
     sf::Vector2f movement(0.f, 0.f);
     mPlayer.move(movement * deltaTime.asSeconds());
     setPhysarumOnTexture();
-    if (play && physarumClock.getElapsedTime().asMilliseconds() > 100.f) {
+    if (play && physarumClock.getElapsedTime().asMilliseconds() > interval) {
         physarum.evaluatePhysarum();
         physarumClock.restart();
         updateText();
