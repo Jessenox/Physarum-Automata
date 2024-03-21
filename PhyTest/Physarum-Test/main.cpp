@@ -260,6 +260,10 @@ void App::update(sf::Time deltaTime) {
         physarum.evaluatePhysarum();
         physarumClock.restart();
         updateText();
+        if (physarum.routed) {
+            std::cout << "Ruta obtenida\n";
+            play = false;
+        }
         generation++;
     }
 }

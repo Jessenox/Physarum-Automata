@@ -9,6 +9,7 @@ class Physarum {
 		void showPhysarum();
 		void evaluatePhysarum();
 		void physarumTransitionConditions(int, int, int, int**, std::vector<int>);
+		bool getRoute();
 	private:
 		std::vector<int> neighbours(int, int);
 		std::vector<int> neighboursMemory(int, int);
@@ -19,10 +20,18 @@ class Physarum {
 		bool isOnMoore(int, int, std::vector<int>);
 		bool isOnMooreOffset(std::vector<int>, int);
 		int isOnCorner(std::vector<int>);
+		void cleanRouteData();
 	private:
 		int size = 100;
 		int** cellsMemory;
+		int nutrientNotFounded = 0;
+		int nutrientFounded = 0;
+		int physarumActualCells = 0;
+		int physarumLastCells = 0;
+		int minimumPhysarumCells = 0;
+		int minimumCheck = 0;
 	public:
+		bool routed = false;
 		int** cells;
 };
 
@@ -85,18 +94,35 @@ void Physarum::evaluatePhysarum() {
 			neighboursData.clear();
 		}
 	}
+	// Validate to get route
+	if (nutrientNotFounded == 0 && nutrientFounded > 0) {
+		if (physarumActualCells < physarumLastCells) {
+			minimumPhysarumCells = physarumActualCells;
+		}
+		if (minimumPhysarumCells == physarumLastCells) {
+			minimumCheck++;
+		}
+		else {
+			minimumCheck = 0;
+		}
+		if (minimumCheck > 5) {
+			routed = true;
+		}
+	}
 
 	for (size_t i = 0; i < size; i++) {
 		for (size_t j = 0; j < size; j++) {
 			cells[i][j] = tab[i][j];
 		}
 	}
-
+	
 	if (tab != NULL) {
 		for (int i = 0; i < size; i++)
 			delete[] tab[i];
 		delete[] tab;
 	}
+	physarumLastCells = physarumActualCells;
+	cleanRouteData();
 }
 
 void Physarum::showPhysarum() {
@@ -156,6 +182,7 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, int** cellsA
 			if (onState5 || onState6) {
 				cellsAux[i][j] = 6;
 			}
+			nutrientNotFounded++;
 			break;
 		case 4:
 			if ((isOnCurrentDirection(currentCellDirection, 3, neighboursData) ||
@@ -176,7 +203,10 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, int** cellsA
 			else {
 				cellsAux[i][j] = 8;
 			}
-
+			physarumActualCells++;
+			break;
+		case 6:
+			nutrientFounded++;
 			break;
 		case 7:
 			if (onState3 || onState4 || onState6) {
@@ -185,6 +215,7 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, int** cellsA
 			break;
 		case 8:
 			cellsAux[i][j] = 5;
+			physarumActualCells++;
 			break;
 		default:
 			break;
@@ -192,6 +223,12 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, int** cellsA
 	
 	
 	neighboursDirections.clear();
+}
+
+void Physarum::cleanRouteData() {
+	physarumActualCells = 0;
+	nutrientFounded = 0;
+	nutrientNotFounded = 0;
 }
 
 int Physarum::setCurrentDirection(bool newmann) {
@@ -438,5 +475,12 @@ std::vector<int> Physarum::getNewmannNeighbours(int i, int j) {
 		data.push_back(cells[i][j - 1]);
 	}
 	return data;
+}
+
+bool Physarum::getRoute() {
+	while (!routed) {
+		evaluatePhysarum();
+	}
+	return true;
 }
 
