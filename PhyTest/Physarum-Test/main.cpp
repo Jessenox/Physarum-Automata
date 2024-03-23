@@ -2,6 +2,7 @@
 #include "Physarum.hpp"
 #include <iostream>
 #include <ctime>
+#include <thread>
 
 #define X 500.f
 #define Y 500.f
@@ -21,6 +22,7 @@ class App {
         void textSettings();
         void updateText();
         bool setGeneralFont(std::string);
+        void physarumRoute();
     private:
         sf::RenderWindow myWindow;
         sf::RenderTexture baseTexture;
@@ -34,12 +36,14 @@ class App {
         bool mNumOne = false, mNumTwo = false, mNumThree = false, 
              mNumFour = false, mNumFive = false, mNumSix = false, 
              mNumSeven = false, mNumEight = false, mNumNine = false,
-             onLeftClick = false, mEnterKey = false;
+             onLeftClick = false, mEnterKey = false, mSKey = false;
         bool play = false;
         float scale = 50;
         short state = 0;
         int generation = 0;
         float interval = 10.f;
+        int screenshotTaked = 0;
+        int debounce = 0;
 };
 
 App::App() : myWindow(sf::VideoMode(500, 700), "Physarum Test"), mPlayer() {
@@ -70,6 +74,12 @@ void App::processEvents() {
             break;
         case sf::Event::KeyReleased:
             handlePlayerInput(event.key.code, false);
+            if (event.key.code == sf::Keyboard::S) {
+                std::string name = "Screenshot_" + std::to_string(screenshotTaked) + ".png";
+                baseTexture.getTexture().copyToImage().saveToFile("C:\\Users\\pikmi\\Pictures\\Screenshots\\PhysarumCaptures\\" + name);
+                std::cout << "Screenshot saved as: " << name << "\n";
+                screenshotTaked++;
+            }
             break;
         case sf::Event::MouseButtonPressed:
             handleMouseEvents(event.mouseButton.button, true);
@@ -146,7 +156,7 @@ void App::textSettings() {
 }
 
 void App::updateText() {
-    std::string updatedText = "Generacion: " + std::to_string(generation);
+    std::string updatedText = "Generation: " + std::to_string(generation);
     generationText.setString(updatedText);
 }
 
@@ -256,6 +266,20 @@ void App::update(sf::Time deltaTime) {
     sf::Vector2f movement(0.f, 0.f);
     mPlayer.move(movement * deltaTime.asSeconds());
     setPhysarumOnTexture();
+    /*
+    if (play) {
+        std::thread obj_thread(&App::physarumRoute, this);
+      
+        play = false;
+        std::cout << "Loading...\n";
+        
+    }
+    if (physarum.routed) {
+        std::cout << "finalizado\n";
+        physarum.routed = false;
+    }
+    */
+    
     if (play && physarumClock.getElapsedTime().asMilliseconds() > interval) {
         physarum.evaluatePhysarum();
         physarumClock.restart();
@@ -266,6 +290,11 @@ void App::update(sf::Time deltaTime) {
         }
         generation++;
     }
+    
+}
+
+void App::physarumRoute() {
+    physarum.getRoute();
 }
 
 int main() {

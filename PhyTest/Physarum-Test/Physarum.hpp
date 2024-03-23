@@ -105,7 +105,7 @@ void Physarum::evaluatePhysarum() {
 		else {
 			minimumCheck = 0;
 		}
-		if (minimumCheck > 5) {
+		if (minimumCheck > 10) {
 			routed = true;
 		}
 	}
