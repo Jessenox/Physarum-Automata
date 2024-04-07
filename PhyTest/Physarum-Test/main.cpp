@@ -32,18 +32,20 @@ class App {
         sf::Time physarumTimer;
         sf::Text generationText;
         sf::Font generalFont;
-        Physarum physarum{50};
+        Physarum physarum{48};
         bool mNumOne = false, mNumTwo = false, mNumThree = false, 
              mNumFour = false, mNumFive = false, mNumSix = false, 
              mNumSeven = false, mNumEight = false, mNumNine = false,
              onLeftClick = false, mEnterKey = false, mSKey = false;
         bool play = false;
-        float scale = 50;
+        float scale = 48;
         short state = 0;
         int generation = 0;
         float interval = 10.f;
         int screenshotTaked = 0;
         int debounce = 0;
+        bool started = false;
+        
 };
 
 App::App() : myWindow(sf::VideoMode(500, 700), "Physarum Test"), mPlayer() {
@@ -79,6 +81,11 @@ void App::processEvents() {
                 baseTexture.getTexture().copyToImage().saveToFile("C:\\Users\\pikmi\\Pictures\\Screenshots\\PhysarumCaptures\\" + name);
                 std::cout << "Screenshot saved as: " << name << "\n";
                 screenshotTaked++;
+            }
+            else if (event.key.code == sf::Keyboard::Delete) {
+                std::cout << "starting..\n";
+                std::thread obj_thread(&App::physarumRoute, this);
+                obj_thread.detach();
             }
             break;
         case sf::Event::MouseButtonPressed:
@@ -266,19 +273,7 @@ void App::update(sf::Time deltaTime) {
     sf::Vector2f movement(0.f, 0.f);
     mPlayer.move(movement * deltaTime.asSeconds());
     setPhysarumOnTexture();
-    /*
-    if (play) {
-        std::thread obj_thread(&App::physarumRoute, this);
-      
-        play = false;
-        std::cout << "Loading...\n";
-        
-    }
-    if (physarum.routed) {
-        std::cout << "finalizado\n";
-        physarum.routed = false;
-    }
-    */
+    
     
     if (play && physarumClock.getElapsedTime().asMilliseconds() > interval) {
         physarum.evaluatePhysarum();
@@ -287,10 +282,10 @@ void App::update(sf::Time deltaTime) {
         if (physarum.routed) {
             std::cout << "Ruta obtenida\n";
             play = false;
+            std::cout << std::thread::hardware_concurrency() << std::endl;
         }
         generation++;
     }
-    
 }
 
 void App::physarumRoute() {
@@ -302,6 +297,6 @@ int main() {
 
     App app;
     app.run();
-   
+    
     return 0;
 }
