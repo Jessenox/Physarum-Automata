@@ -32,13 +32,13 @@ class App {
         sf::Time physarumTimer;
         sf::Text generationText;
         sf::Font generalFont;
-        Physarum physarum{48};
+        Physarum physarum{50};
         bool mNumOne = false, mNumTwo = false, mNumThree = false, 
              mNumFour = false, mNumFive = false, mNumSix = false, 
              mNumSeven = false, mNumEight = false, mNumNine = false,
              onLeftClick = false, mEnterKey = false, mSKey = false;
         bool play = false;
-        float scale = 48;
+        float scale = 50;
         short state = 0;
         int generation = 0;
         float interval = 10.f;
@@ -78,14 +78,18 @@ void App::processEvents() {
             handlePlayerInput(event.key.code, false);
             if (event.key.code == sf::Keyboard::S) {
                 std::string name = "Screenshot_" + std::to_string(screenshotTaked) + ".png";
-                baseTexture.getTexture().copyToImage().saveToFile("C:\\Users\\pikmi\\Pictures\\Screenshots\\PhysarumCaptures\\" + name);
+                // baseTexture.getTexture().copyToImage().saveToFile("C:\\Users\\pikmi\\Pictures\\Screenshots\\PhysarumCaptures\\" + name);
+                baseTexture.getTexture().copyToImage().saveToFile("C:\\Users\\Angel\\Pictures\\Screenshots\\PhysarumCaptures\\" + name);
                 std::cout << "Screenshot saved as: " << name << "\n";
                 screenshotTaked++;
             }
             else if (event.key.code == sf::Keyboard::Delete) {
+                /*
                 std::cout << "starting..\n";
                 std::thread obj_thread(&App::physarumRoute, this);
                 obj_thread.detach();
+                */
+                physarumRoute();
             }
             break;
         case sf::Event::MouseButtonPressed:
@@ -280,10 +284,11 @@ void App::update(sf::Time deltaTime) {
         physarumClock.restart();
         updateText();
         if (physarum.routed) {
-            std::cout << "Ruta obtenida\n";
+            // std::cout << "Ruta obtenida\n";
             play = false;
-            std::cout << std::thread::hardware_concurrency() << std::endl;
+            // std::cout << std::thread::hardware_concurrency() << std::endl;
         }
+        //physarum.showPhysarum();
         generation++;
     }
 }
