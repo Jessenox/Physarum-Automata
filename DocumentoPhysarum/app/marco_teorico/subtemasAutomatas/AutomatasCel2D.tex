@@ -23,13 +23,13 @@
             funci\'on del estado actual de ella y de sus vecinos. Estas reglas se aplinan repetidamente a lo largo del tiempo,
             generalmente de manera sincr\'ona, es decir, todas las celdas se actualizan al mismo tiempo. Estas estan definidas 
             por la funci\'on de transici\'on local $f$. Ejemplificando lo anterior tenemos que en el juego de la vida de Conway
-            \cite{Conway1970} donde tenemos que $C(x,y,t)$ que es la celda central y $N(x,y,t)$ que es la vecindad de Moore de la
+            \cite{Conway1970} donde tenemos que $C(x,y:t)$ que es la celda central y $N(x,y:t)$ que es la vecindad de Moore de la
             celda central, adem\'as tenemos que tiene $f: \{0,1\}^9 \rightarrow \{0,1\}$, entonces podemos deducir que la funci\'on de transici\'on 
             se define como:
             \begin{equation*}
-                f(C(x,y,t),N(x,y,t)) = \begin{cases}
-                    1 & \text{si } C(x,y,t) = 0 \text{ y } N(x,y,t) = 3 \\
-                    1 & \text{si } C(x,y,t) = 1 \text{ y } N(x,y,t) = 2 \text{ o } N(x,y,t) = 3 \\
+                f(C(x,y:t),N(x,y:t)) = \begin{cases}
+                    1 & \text{si } C(x,y:t) = 0 \text{ y } N(x,y:t) = 3 \\
+                    1 & \text{si } C(x,y:t) = 1 \text{ y } N(x,y:t) = 2 \text{ o } N(x,y:t) = 3 \\
                     0 & \text{en otro caso}
                 \end{cases}
             \end{equation*}

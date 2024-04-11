@@ -14,6 +14,9 @@
         La evoluci\'on de un aut\'omata celular es una funci\'on $F: S^{{\mathbb{Z}^{n}}} \rightarrow S^{{\mathbb{Z}^{n}}}$ que asigna una configuraci\'on a la siguiente
         configuraci\'on, es decir, $F(c) = c'$, donde $c'$ es la configuraci\'on resultante de aplicar la funci\'on de transici\'on local a cada
         celda de la configuraci\'on $c$, es decir, $c'(x) = f(c|_{x+N})$ para todo $x \in {\mathbb{Z}^{n}}$, donde $c|_{x+N}$ es la restricci\'on de $c$ a la vecindad $x+N$.
+        Esto tambi\'en aplica n dimensionalmente, es decir, que se podr\'ia decir que $c'(x,y) = f(c|_{(x,y)+N})$ para todo $(x,y) \in {\mathbb{Z}^{2}}$.
+        Otra notaci\'on que podemos usar, y de hecho es la que utilizaremos es C(x,y:t) donde C es el centro de la vecindad, x,y son las coordenadas de la celda y t es el tiempo,
+        o generaciones.
     \vskip 0.5cm
     Cabe a\~nadir que puede haber reestricciones adicionales en el conjunto de vecindades $N$ y en la funci\'on de transici\'on local $f$.
         Por ejemplo, en el caso de los aut\'omatas celulares de una dimensi\'on, el conjunto de vecindades $N$ es un conjunto de tuplas de longitud 3,
