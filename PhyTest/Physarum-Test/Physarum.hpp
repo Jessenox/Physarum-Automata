@@ -14,8 +14,7 @@ class Physarum {
 	private:
 		std::vector<int> neighbours(int, int);
 		std::vector<int> neighboursMemory(int, int);
-		std::vector<int> getNewmannNeighbours(int, int);
-		int setCurrentDirection(bool);
+		int setCurrentDirection();
 		bool isOnCurrentDirection(int, int, std::vector<int>);
 		bool findState(int, std::vector<int>);
 		bool isOnMoore(int, int, std::vector<int>);
@@ -81,7 +80,7 @@ void Physarum::setCellState(int m, int n, int value) {
 }
 
 void Physarum::evaluatePhysarum() {
-
+	// Creating auxiliar array 
 	int** tab = new int* [size];
 	for (size_t i = 0; i < size; i++) {
 		tab[i] = new int[size];
@@ -93,35 +92,23 @@ void Physarum::evaluatePhysarum() {
 	// Using threads to calculate Physarum
 	//First, how many threads are available to use
 	/*
-	aqui van los threads
-
-	
-	*/
-
+	** aqui van los threads
 	std::thread my_thread_1(&Physarum::threadableCalculation, this, tab, 0, 50);
 	my_thread_1.join();
-	/*
-	std::thread my_thread_2(&Physarum::threadableCalculation, this, tab, 10, 19);
-	std::thread my_thread_3(&Physarum::threadableCalculation, this, tab, 20, 29);
-	std::thread my_thread_4(&Physarum::threadableCalculation, this, tab, 30, 39);
-	std::thread my_thread_5(&Physarum::threadableCalculation, this, tab, 40, 49);
-	*/
+
 	
-	/*
-	my_thread_2.join();
-	my_thread_3.join();
-	my_thread_4.join();
-	my_thread_5.join();
 	*/
-	/*
+
+	// Evaluate each cell for next generation
 	for (size_t i = 0; i < size; i++) {
 		for (size_t j = 0; j < size; j++) {
 			std::vector<int> neighboursData = neighbours(j, i);
 			physarumTransitionConditions(i, j, cells[i][j], tab, neighboursData);
+			cells[i][j] = tab[i][j];
 			neighboursData.clear();
 		}
 	}
-	*/
+	
 	// Validate to get route
 	if (nutrientNotFounded == 0 && nutrientFounded > 0) {
 		allNutrientsFounded = true;
@@ -138,13 +125,7 @@ void Physarum::evaluatePhysarum() {
 			routed = true;
 		}
 	}
-	/*
-	for (size_t i = 0; i < size; i++) {
-		for (size_t j = 0; j < size; j++) {
-			cells[i][j] = tab[i][j];
-		}
-	}
-	*/
+	
 	if (tab != NULL) {
 		for (int i = 0; i < size; i++)
 			delete[] tab[i];
@@ -152,8 +133,6 @@ void Physarum::evaluatePhysarum() {
 	}
 	physarumLastCells = physarumActualCells;
 	cleanRouteData();
-
-	// std::cout << "Generation calculated\n";
 }
 
 void Physarum::showPhysarum() {
@@ -182,16 +161,9 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, int** cellsA
 			neighboursData[cornerCells[i]] = 2;
 		}
 	}
-
-	size_t contador = 0;
-	
-	for (size_t i = 0; i < neighboursData.size() ; i++) {
-		if (neighboursData[i] == 5 || neighboursData[i] == 8)
-			contador++;
-	}
 	
 	int sizeArray = neighboursData.size();
-	int currentCellDirection = setCurrentDirection(false);
+	int currentCellDirection = setCurrentDirection();
 	std::vector<int> neighboursDirections = neighboursMemory(j, i);
 	
 	bool onState0 = findState(0, neighboursData);
@@ -202,6 +174,7 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, int** cellsA
 	bool onState6 = findState(6, neighboursData);
 	bool onState7 = findState(7, neighboursData);
 	
+	// Evaluate current state of cell
 	switch (cell) {
 		case 0:
 			if ((isOnCurrentDirection(currentCellDirection, 3, neighboursData) ||
@@ -256,23 +229,19 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, int** cellsA
 		default:
 			break;
 		}
-	
-	std::cout << cellsAux[i][j];
 	neighboursDirections.clear();
 }
 
+// Clean data that is necesary for finish physarum
 void Physarum::cleanRouteData() {
 	physarumActualCells = 0;
 	nutrientFounded = 0;
 	nutrientNotFounded = 0;
 }
 
-int Physarum::setCurrentDirection(bool newmann) {
+int Physarum::setCurrentDirection() {
 	int randomValue = 0;
-	if (!newmann) 
-		randomValue = rand() % 8;
-	else 
-		randomValue = rand() % 4;
+	randomValue = rand() % 8;
 	return randomValue;
 }
 
@@ -334,18 +303,7 @@ std::vector<int> Physarum::isOnCorner(std::vector<int> neighboursData) {
 }
 
 void Physarum::threadableCalculation(int ** tab, int start, int end) {
-	/*
-	for (size_t i = start; i < end; i++) {
-		for (size_t j = 0; j < size; j++) {
-			std::vector<int> neighboursData = neighbours(j, i);
-			physarumTransitionConditions(i, j, cells[i][j], tab, neighboursData);
-			neighboursData.clear();
-			std::cout << tab[i][j] << " ";
-		}
-		std::cout << std::endl;
-	}
-	*/
-	
+
 	for (size_t i = 0; i < size; i++) {
 		for (size_t j = 0; j < size; j++) {
 			std::vector<int> neighboursData = neighbours(j, i);
@@ -353,7 +311,6 @@ void Physarum::threadableCalculation(int ** tab, int start, int end) {
 			cells[i][j] = tab[i][j];
 			neighboursData.clear();
 		}
-		std::cout << std::endl;
 	}
 	
 }
@@ -524,17 +481,6 @@ std::vector<int> Physarum::neighboursMemory(int x, int y) {
 			data.push_back(cellsMemory[i][j - 1]);
 			data.push_back(cellsMemory[i - 1][j - 1]);
 		}
-	}
-	return data;
-}
-
-std::vector<int> Physarum::getNewmannNeighbours(int i, int j) {
-	std::vector <int> data;
-	if (i != 0 || j != 0 || i != size - 1 || j != size - 1) {
-		data.push_back(cells[i - 1][j]);
-		data.push_back(cells[i][j + 1]);
-		data.push_back(cells[i + 1][j]);
-		data.push_back(cells[i][j - 1]);
 	}
 	return data;
 }
