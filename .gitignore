@@ -1,3 +1,4 @@
+PhyTest/Physarum-Test/x64/
 .vs/
 *.aux
 *.log
@@ -13,4 +14,3 @@
 *.bcf
 *.xml
 *.run.xml
-x64/

@@ -2,6 +2,8 @@
 #include "Physarum.hpp"
 #include <iostream>
 #include <ctime>
+#include <thread>
+#include "files_management.hpp"
 
 #define X 500.f
 #define Y 500.f
@@ -21,33 +23,48 @@ class App {
         void textSettings();
         void updateText();
         bool setGeneralFont(std::string);
+        void physarumRoute();
+        void initializeColors();
     private:
         sf::RenderWindow myWindow;
         sf::RenderTexture baseTexture;
         sf::Sprite baseSprite;
-        sf::CircleShape mPlayer;
+
+        sf::RectangleShape stateIndicator;
+
         sf::Clock physarumClock;
         sf::Time physarumTimer;
+
         sf::Text generationText;
+        sf::Text currentStateText;
+
         sf::Font generalFont;
+
+        std::vector<sf::Color> stateColors;
+
         Physarum physarum{50};
         bool mNumOne = false, mNumTwo = false, mNumThree = false, 
              mNumFour = false, mNumFive = false, mNumSix = false, 
              mNumSeven = false, mNumEight = false, mNumNine = false,
-             onLeftClick = false, mEnterKey = false;
+             onLeftClick = false, mEnterKey = false, mSKey = false;
         bool play = false;
         float scale = 50;
         short state = 0;
         int generation = 0;
         float interval = 10.f;
+        int screenshotTaked = 0;
+        int debounce = 0;
+        bool started = false;
+        
 };
 
-App::App() : myWindow(sf::VideoMode(500, 700), "Physarum Test"), mPlayer() {
+App::App() : myWindow(sf::VideoMode(500, 700), "Physarum Test") {
+    initializeColors();
     baseTexture.create(500,500);
     textSettings();
-    mPlayer.setRadius(40.f);
-    mPlayer.setPosition(100.f, 100.f);
-    mPlayer.setFillColor(sf::Color::Cyan);
+    stateIndicator.setSize(sf::Vector2f(30, 30));
+    stateIndicator.setPosition(10.f, 570.f);
+    stateIndicator.setFillColor(stateColors[state]);
 
 }
 
@@ -70,6 +87,21 @@ void App::processEvents() {
             break;
         case sf::Event::KeyReleased:
             handlePlayerInput(event.key.code, false);
+            if (event.key.code == sf::Keyboard::S) {
+                std::string name = "Screenshot_" + std::to_string(screenshotTaked) + ".png";
+                // baseTexture.getTexture().copyToImage().saveToFile("C:\\Users\\pikmi\\Pictures\\Screenshots\\PhysarumCaptures\\" + name);
+                baseTexture.getTexture().copyToImage().saveToFile("C:\\Users\\Angel\\Pictures\\Screenshots\\PhysarumCaptures\\" + name);
+                std::cout << "Screenshot saved as: " << name << "\n";
+                screenshotTaked++;
+            }
+            else if (event.key.code == sf::Keyboard::Delete) {
+                /*
+                std::cout << "starting..\n";
+                std::thread obj_thread(&App::physarumRoute, this);
+                obj_thread.detach();
+                */
+                physarumRoute();
+            }
             break;
         case sf::Event::MouseButtonPressed:
             handleMouseEvents(event.mouseButton.button, true);
@@ -132,7 +164,6 @@ void App::handleMouseEvents(sf::Mouse::Button button, bool isPressed) {
 
 void App::setCell(sf::Vector2i pos) {
     sf::Vector2f coordinates((float)pos.x * scale / X, (float)pos.y * scale / Y);
-    mPlayer.setPosition(coordinates);
     physarum.setCellState(coordinates.x, coordinates.y, state);
 }
 
@@ -142,12 +173,33 @@ void App::textSettings() {
         generationText.setCharacterSize(24);
         generationText.setFillColor(sf::Color::White);
         generationText.setPosition(10, 520);
+
+        currentStateText.setFont(generalFont);
+        currentStateText.setCharacterSize(24);
+        currentStateText.setFillColor(sf::Color::White);
+        currentStateText.setPosition(50, 570);
     }
 }
 
 void App::updateText() {
-    std::string updatedText = "Generacion: " + std::to_string(generation);
-    generationText.setString(updatedText);
+    std::string updatedGenerationText = "Generation: " + std::to_string(generation);
+    generationText.setString(updatedGenerationText);
+
+    std::string updatedCurrentStateText = "Current State: " + std::to_string(state);
+    currentStateText.setString(updatedCurrentStateText);
+}
+
+void App::initializeColors() {
+    // Actual colors for Physarum
+    stateColors.push_back(sf::Color(26, 26, 112)); // State 0
+    stateColors.push_back(sf::Color(122, 105, 237)); // State 1
+    stateColors.push_back(sf::Color(255, 0, 0)); // State 2
+    stateColors.push_back(sf::Color(0, 0, 0)); // State 3
+    stateColors.push_back(sf::Color(255, 224, 54)); // State 4
+    stateColors.push_back(sf::Color(0, 128, 0)); // State 5
+    stateColors.push_back(sf::Color(250, 232, 181)); // State 6
+    stateColors.push_back(sf::Color(46, 79, 79)); // State 7
+    stateColors.push_back(sf::Color(133, 186, 102)); // State 8
 }
 
 bool App::setGeneralFont(std::string fontName) {
@@ -171,39 +223,39 @@ void App::setPhysarumOnTexture() {
             switch (physarum.cells[i][j]) {
                 case 0 :
                     for (int k = 0; k < 4; k++)
-                        cell[k].color = sf::Color(26, 26, 112);
+                        cell[k].color = stateColors[0];
                     break;
                 case 1:
                     for (int k = 0; k < 4; k++)
-                        cell[k].color = sf::Color(122, 105, 237);
+                        cell[k].color = stateColors[1];
                     break;
                 case 2:
                     for (int k = 0; k < 4; k++)
-                        cell[k].color = sf::Color(255, 0, 0);
+                        cell[k].color = stateColors[2];
                     break;                       
                 case 3:                          
                     for (int k = 0; k < 4; k++)  
-                        cell[k].color = sf::Color(0, 0, 0);
+                        cell[k].color = stateColors[3];
                     break;                       
                 case 4:                          
                     for (int k = 0; k < 4; k++)  
-                        cell[k].color = sf::Color(255, 224, 54);
+                        cell[k].color = stateColors[4];
                     break;                       
                 case 5:                          
                     for (int k = 0; k < 4; k++)  
-                        cell[k].color = sf::Color(0, 128, 0);
+                        cell[k].color = stateColors[5];
                     break;                       
                 case 6:                          
                     for (int k = 0; k < 4; k++)  
-                        cell[k].color = sf::Color(250, 232, 181);
+                        cell[k].color = stateColors[6];
                     break;                       
                 case 7:                          
                     for (int k = 0; k < 4; k++)  
-                        cell[k].color = sf::Color(46, 79, 79);
+                        cell[k].color = stateColors[7];
                     break;                       
                 case 8:                          
                     for (int k = 0; k < 4; k++)  
-                        cell[k].color = sf::Color(133, 186, 102);
+                        cell[k].color = stateColors[8];
                     break;
                 default:
                     break;
@@ -217,7 +269,13 @@ void App::setPhysarumOnTexture() {
 
 void App::render() {
     myWindow.clear();
+
+    
+
     myWindow.draw(generationText);
+    myWindow.draw(currentStateText);
+
+    myWindow.draw(stateIndicator);
     baseTexture.display();
     baseSprite.setTexture(baseTexture.getTexture());
     myWindow.draw(baseSprite);
@@ -253,19 +311,29 @@ void App::update(sf::Time deltaTime) {
         }     
     }
 
-    sf::Vector2f movement(0.f, 0.f);
-    mPlayer.move(movement * deltaTime.asSeconds());
     setPhysarumOnTexture();
+    updateText();
+    stateIndicator.setFillColor(stateColors[state]);
+
     if (play && physarumClock.getElapsedTime().asMilliseconds() > interval) {
         physarum.evaluatePhysarum();
         physarumClock.restart();
-        updateText();
+        
         if (physarum.routed) {
-            std::cout << "Ruta obtenida\n";
+            // std::cout << "Ruta obtenida\n";
             play = false;
+            // std::cout << std::thread::hardware_concurrency() << std::endl;
+        }
+        if (generation == 0) {
+            saveInitialState(physarum.cells, scale);
         }
         generation++;
+        
     }
+}
+
+void App::physarumRoute() {
+    physarum.getRoute();
 }
 
 int main() {
@@ -273,6 +341,6 @@ int main() {
 
     App app;
     app.run();
-   
+    
     return 0;
 }
