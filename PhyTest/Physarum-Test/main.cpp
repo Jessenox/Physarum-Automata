@@ -5,6 +5,11 @@
 #include <thread>
 #include "files_management.hpp"
 
+#include <opencv2/core.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/highgui.hpp>
+
+
 #define X 500.f
 #define Y 500.f
 
@@ -336,11 +341,11 @@ void App::physarumRoute() {
     physarum.getRoute();
 }
 
-int main() {
+int main(int argc, char** argv) {
     srand(time(NULL));
 
     App app;
     app.run();
-    
+
     return 0;
 }
