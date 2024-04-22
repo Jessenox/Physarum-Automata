@@ -155,6 +155,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="files_management.hpp" />
+    <ClInclude Include="LoadMap.hpp" />
     <ClInclude Include="Physarum.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

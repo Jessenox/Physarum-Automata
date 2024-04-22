@@ -4,10 +4,7 @@
 #include <ctime>
 #include <thread>
 #include "files_management.hpp"
-
-#include <opencv2/core.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/highgui.hpp>
+#include "LoadMap.hpp"
 
 
 #define X 500.f
@@ -60,7 +57,7 @@ class App {
         int screenshotTaked = 0;
         int debounce = 0;
         bool started = false;
-        
+        LoadMap loadmap;
 };
 
 App::App() : myWindow(sf::VideoMode(500, 700), "Physarum Test") {
@@ -71,6 +68,8 @@ App::App() : myWindow(sf::VideoMode(500, 700), "Physarum Test") {
     stateIndicator.setPosition(10.f, 570.f);
     stateIndicator.setFillColor(stateColors[state]);
 
+    loadmap.convertImageToMap("C:\\Users\\Angel\\Downloads\\mapa_mexico.jpg");
+    loadmap.setDataToArray(physarum.cells, scale, scale);
 }
 
 void App::run() {
@@ -344,6 +343,8 @@ void App::physarumRoute() {
 int main(int argc, char** argv) {
     srand(time(NULL));
 
+    //LoadMap map;
+    //map.convertImageToMap("C:\\Users\\Angel\\Pictures\\Screenshots\\PhysarumCaptures\\Screenshot_0.png");
     App app;
     app.run();
 
