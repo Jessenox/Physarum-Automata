@@ -6,6 +6,7 @@
 #include "files_management.hpp"
 #include "LoadMap.hpp"
 
+#include <filesystem>
 
 #define X 500.f
 #define Y 500.f
@@ -14,6 +15,8 @@ class App {
     public:
         App();
         void run();
+        //TMP
+        void loadMap(std::string);
     private:
         void processEvents();
         void update(sf::Time);
@@ -28,6 +31,8 @@ class App {
         void physarumRoute();
         void initializeColors();
     private:
+        
+
         sf::RenderWindow myWindow;
         sf::RenderTexture baseTexture;
         sf::Sprite baseSprite;
@@ -44,13 +49,13 @@ class App {
 
         std::vector<sf::Color> stateColors;
 
-        Physarum physarum{50};
+        Physarum physarum{100};
         bool mNumOne = false, mNumTwo = false, mNumThree = false, 
              mNumFour = false, mNumFive = false, mNumSix = false, 
              mNumSeven = false, mNumEight = false, mNumNine = false,
              onLeftClick = false, mEnterKey = false, mSKey = false;
         bool play = false;
-        float scale = 50;
+        float scale = 100;
         short state = 0;
         int generation = 0;
         float interval = 10.f;
@@ -68,9 +73,14 @@ App::App() : myWindow(sf::VideoMode(500, 700), "Physarum Test") {
     stateIndicator.setPosition(10.f, 570.f);
     stateIndicator.setFillColor(stateColors[state]);
 
-    loadmap.convertImageToMap("C:\\Users\\Angel\\Downloads\\mapa_mexico.jpg");
+    
+}
+
+void App::loadMap(std::string FILE_PATH) {
+    loadmap.convertImageToMap(FILE_PATH);
     loadmap.setDataToArray(physarum.cells, scale, scale);
 }
+
 
 void App::run() {
     sf::Clock clock;
@@ -341,12 +351,67 @@ void App::physarumRoute() {
 }
 
 int main(int argc, char** argv) {
-    srand(time(NULL));
+    std::string FILES_PATH = "C:\\Users\\Angel\\Documents\\OpenGL\\Physarum-Automata\\PhyTest\\Physarum-Test\\MAPS\\";
 
-    //LoadMap map;
-    //map.convertImageToMap("C:\\Users\\Angel\\Pictures\\Screenshots\\PhysarumCaptures\\Screenshot_0.png");
+    srand(time(NULL));
+    // Menu (tmp)
+
+    bool isOptionSelected = false;
+    std::string optionSelected;
+    int opt = 0;
+
+
+    while (!isOptionSelected) {
+        std::cout << "Select some option\n";
+        std::cout << "1.- Select a map to load into the program\n";
+        std::cout << "2.- Init program without loading a map\n";
+        std::cin >> optionSelected;
+        opt = std::stoi(optionSelected);
+        if (opt == 1 || opt == 2) {
+            isOptionSelected = true;
+        }
+        else {
+            std::cout << "Is not a option\n";
+        }
+    }
     App app;
-    app.run();
+
+    // Get name files
+    std::vector<std::string> fileListPaths;
+    std::vector<std::string> fileList;
+    std::string fileName;
+    int fileSelected = 0;
+
+    switch (opt) {
+        case 1:
+            for (const auto& entry : std::filesystem::directory_iterator(FILES_PATH)) {
+                fileName = entry.path().string();
+                fileListPaths.push_back(fileName);
+                fileName = entry.path().filename().string();
+                fileList.push_back(fileName);
+            }
+            std::cout << "Select an image: \n";
+            for (size_t i = 0; i < fileListPaths.size(); i++) {
+                std::cout << i + 1 << ".- " << fileList[i] << "\n";
+            }
+            std::cin >> fileSelected;
+            if (fileSelected - 1 > fileListPaths.size()) {
+                std::cout << "Not an option\n";
+            }
+            else {
+                app.loadMap(fileListPaths[fileSelected - 1]);
+                app.run();
+            }
+        break;
+        case 2:
+            // do something
+        
+            app.run();
+        break;
+    }
+    
+    
 
     return 0;
 }
+
