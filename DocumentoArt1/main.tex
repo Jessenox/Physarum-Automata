@@ -1,0 +1,74 @@
+\documentclass[twocolumn]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{titling}
+\usepackage{lipsum}
+\usepackage{wrapfig}
+\usepackage{romannum}
+\usepackage{fancyhdr}
+\usepackage[top=2cm, bottom=2cm, left=2cm, right=2cm]{geometry}
+
+\renewcommand{\thesection}{\Roman{section}} 
+\renewcommand{\thesubsection}{\thesection.\Roman{subsection}}
+
+\pagestyle{fancy}
+\fancyhf{} 
+\fancyhead[R]{\today} 
+\renewcommand{\headrulewidth}{0pt} 
+
+
+\fancypagestyle{plain}{ 
+    \fancyhf{}
+    \fancyhead[R]{\today}
+    \renewcommand{\headrulewidth}{0pt} 
+}
+
+\title{Physarum polycephalum-Inspired Routing Algorithm for Cave and Catacomb Navigation}
+
+\author{%
+    \begin{tabular}{cccc}
+        \textbf{Primer Autor} & \textbf{Segundo Autor} & \textbf{Tercer Autor} & \textbf{Cuarto Autor} \\
+        \textit{Afiliaci\'on 1} & \textit{Afiliaci\'on 2} & \textit{Afiliaci\'on 3} & \textit{Afiliaci\'on 4} \\
+        \texttt{email1@example.com} & \texttt{email2@example.com} & \texttt{email3@example.com} & \texttt{email4@example.com} \\
+    \end{tabular}
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+    El estudio de sistemas biol\'ogicos como el moho del fango Physarum polycephalum, 
+        conocido por optimizar rutas de transporte en busca de alimento, inspira el 
+        desarrollo de algoritmos de enrutamiento avanzados. Este trabajo introduce 
+        un algoritmo de enrutamiento basado en Physarum polycephalum para la navegaci\'on 
+        en cuevas y catacumbas. Dise\~nado para mapear entornos subterr\'aneos complejos, 
+        el algoritmo utiliza las propiedades de adaptaci\'on y exploraci\'on del moho para 
+        determinar rutas \'optimas a trav\'es de laberintos naturales y estructuras subterr\'aneas. 
+        Los resultados experimentales indican que el algoritmo mejora la eficiencia en la generaci\'on 
+        de caminos y demuestra robustez ante obst\'aculos y variaciones topogr\'aficas, ofreciendo nuevas 
+        herramientas para la exploraci\'on arqueol\'ogica y geol\'ogica y avanzando hacia la automatizaci\'on 
+        de la exploraci\'on subterr\'anea.
+\end{abstract}
+
+\textbf{Keywords—}Physarum polycephalum, routing algorithm, underground navigation, bio-inspired artificial intelligence, cave and catacomb exploration.
+
+\input{./app/Introduccion.tex}
+
+\input{./app/Physarum.tex}
+
+\section{Desarrollo}
+\lipsum[6-10]
+
+\subsection{Otro Tema}
+\lipsum[11]
+
+\section{Conclusiones}
+\lipsum[12]
+
+\begin{thebibliography}{00}
+\bibitem{b1} Referencia del primer elemento.
+\bibitem{b2} Referencia del segundo elemento.
+\end{thebibliography}
+
+\end{document}
