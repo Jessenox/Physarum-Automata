@@ -6,17 +6,17 @@
 #include "files_management.hpp"
 #include "LoadMap.hpp"
 
-#include <filesystem>
 
 #define X 500.f
 #define Y 500.f
+
+
 
 class App {
     public:
         App();
         void run();
-        //TMP
-        void loadMap(std::string);
+        bool OpenFile();
     private:
         void processEvents();
         void update(sf::Time);
@@ -30,12 +30,17 @@ class App {
         bool setGeneralFont(std::string);
         void physarumRoute();
         void initializeColors();
-    private:
-        
+        void setMemoryOnTexture();
 
+
+    private:
         sf::RenderWindow myWindow;
         sf::RenderTexture baseTexture;
         sf::Sprite baseSprite;
+        // For memory analisys
+        sf::RenderTexture memoryTexture;
+        sf::Sprite memorySprite;
+
 
         sf::RectangleShape stateIndicator;
 
@@ -48,6 +53,7 @@ class App {
         sf::Font generalFont;
 
         std::vector<sf::Color> stateColors;
+        std::vector<sf::Color> memoryStateColors;
 
         Physarum physarum{100};
         bool mNumOne = false, mNumTwo = false, mNumThree = false, 
@@ -65,22 +71,21 @@ class App {
         LoadMap loadmap;
 };
 
-App::App() : myWindow(sf::VideoMode(500, 700), "Physarum Test") {
+
+App::App() : myWindow(sf::VideoMode(1000, 700), "Physarum Test") {
+    // Initialize color for physarum states
     initializeColors();
     baseTexture.create(500,500);
+    memoryTexture.create(500, 500);
+    
     textSettings();
     stateIndicator.setSize(sf::Vector2f(30, 30));
     stateIndicator.setPosition(10.f, 570.f);
     stateIndicator.setFillColor(stateColors[state]);
 
-    
+    //loadmap.convertImageToMap("C:\\Users\\pikmi\\Pictures\\Screenshots\\PhysarumCaptures\\Espiral_Nuevo_Punto_Inicial\\Screenshot_0.png");
+    //loadmap.setDataToArray(physarum.cells, scale, scale);
 }
-
-void App::loadMap(std::string FILE_PATH) {
-    loadmap.convertImageToMap(FILE_PATH);
-    loadmap.setDataToArray(physarum.cells, scale, scale);
-}
-
 
 void App::run() {
     sf::Clock clock;
@@ -103,18 +108,15 @@ void App::processEvents() {
             handlePlayerInput(event.key.code, false);
             if (event.key.code == sf::Keyboard::S) {
                 std::string name = "Screenshot_" + std::to_string(screenshotTaked) + ".png";
-                // baseTexture.getTexture().copyToImage().saveToFile("C:\\Users\\pikmi\\Pictures\\Screenshots\\PhysarumCaptures\\" + name);
-                baseTexture.getTexture().copyToImage().saveToFile("C:\\Users\\Angel\\Pictures\\Screenshots\\PhysarumCaptures\\" + name);
+                baseTexture.getTexture().copyToImage().saveToFile("C:\\Users\\pikmi\\Pictures\\Screenshots\\PhysarumCaptures\\" + name);
+                //baseTexture.getTexture().copyToImage().saveToFile("C:\\Users\\Angel\\Pictures\\Screenshots\\PhysarumCaptures\\" + name);
                 std::cout << "Screenshot saved as: " << name << "\n";
                 screenshotTaked++;
             }
             else if (event.key.code == sf::Keyboard::Delete) {
-                /*
-                std::cout << "starting..\n";
-                std::thread obj_thread(&App::physarumRoute, this);
-                obj_thread.detach();
-                */
-                physarumRoute();
+                
+
+
             }
             break;
         case sf::Event::MouseButtonPressed:
@@ -124,6 +126,7 @@ void App::processEvents() {
             handleMouseEvents(event.mouseButton.button, false);
             break;
         case sf::Event::Closed :
+            physarum.cleanCells();
             myWindow.close();
             break;
         }
@@ -214,6 +217,15 @@ void App::initializeColors() {
     stateColors.push_back(sf::Color(250, 232, 181)); // State 6
     stateColors.push_back(sf::Color(46, 79, 79)); // State 7
     stateColors.push_back(sf::Color(133, 186, 102)); // State 8
+
+    memoryStateColors.push_back(sf::Color(250, 21, 5));
+    memoryStateColors.push_back(sf::Color(237, 31, 17));
+    memoryStateColors.push_back(sf::Color(207, 32, 21));
+    memoryStateColors.push_back(sf::Color(184, 33, 24));
+    memoryStateColors.push_back(sf::Color(163, 34, 26));
+    memoryStateColors.push_back(sf::Color(135, 32, 26));
+    memoryStateColors.push_back(sf::Color(112, 30, 25));
+    memoryStateColors.push_back(sf::Color(92, 27, 23));
 }
 
 bool App::setGeneralFont(std::string fontName) {
@@ -222,6 +234,58 @@ bool App::setGeneralFont(std::string fontName) {
         return false;
     }
     return true;
+}
+
+void App::setMemoryOnTexture() {
+    memoryTexture.clear(sf::Color::Black);
+    for (size_t i = 0; i < scale; i++) {
+        for (size_t j = 0; j < scale; j++) {
+            sf::VertexArray cell(sf::TrianglesStrip, 4);
+            cell[0].position = sf::Vector2f(j * X / scale, i * Y / scale);
+            cell[1].position = sf::Vector2f(j * X / scale + X / scale, i * Y / scale);
+            cell[2].position = sf::Vector2f(j * X / scale, i * Y / scale + Y / scale);
+            cell[3].position = sf::Vector2f(j * X / scale + X / scale, i * Y / scale + Y / scale);
+
+            switch (physarum.cellsMemory[i][j]) {
+            case 1:
+                for (int k = 0; k < 4; k++)
+                    cell[k].color = memoryStateColors[0];
+                break;
+            case 2:
+                for (int k = 0; k < 4; k++)
+                    cell[k].color = memoryStateColors[1];
+                break;
+            case 3:
+                for (int k = 0; k < 4; k++)
+                    cell[k].color = memoryStateColors[2];
+                break;
+            case 4:
+                for (int k = 0; k < 4; k++)
+                    cell[k].color = memoryStateColors[3];
+                break;
+            case 5:
+                for (int k = 0; k < 4; k++)
+                    cell[k].color = memoryStateColors[4];
+                break;
+            case 6:
+                for (int k = 0; k < 4; k++)
+                    cell[k].color = memoryStateColors[5];
+                break;
+            case 7:
+                for (int k = 0; k < 4; k++)
+                    cell[k].color = memoryStateColors[6];
+                break;
+            case 8:
+                for (int k = 0; k < 4; k++)
+                    cell[k].color = memoryStateColors[7];
+                break;
+            default:
+                break;
+            }
+
+            memoryTexture.draw(cell);
+        }
+    }
 }
 
 void App::setPhysarumOnTexture() {
@@ -284,15 +348,20 @@ void App::setPhysarumOnTexture() {
 void App::render() {
     myWindow.clear();
 
-    
-
     myWindow.draw(generationText);
     myWindow.draw(currentStateText);
 
     myWindow.draw(stateIndicator);
     baseTexture.display();
+    memoryTexture.display();
+
     baseSprite.setTexture(baseTexture.getTexture());
+    memorySprite.setTexture(memoryTexture.getTexture());
+    memorySprite.setPosition(sf::Vector2f(500.f, 0.f));
+
     myWindow.draw(baseSprite);
+    myWindow.draw(memorySprite);
+
     myWindow.display();
 }
 
@@ -326,6 +395,7 @@ void App::update(sf::Time deltaTime) {
     }
 
     setPhysarumOnTexture();
+    setMemoryOnTexture();
     updateText();
     stateIndicator.setFillColor(stateColors[state]);
 
@@ -351,67 +421,16 @@ void App::physarumRoute() {
 }
 
 int main(int argc, char** argv) {
-    std::string FILES_PATH = "C:\\Users\\Angel\\Documents\\OpenGL\\Physarum-Automata\\PhyTest\\Physarum-Test\\MAPS\\";
-
     srand(time(NULL));
-    // Menu (tmp)
 
-    bool isOptionSelected = false;
-    std::string optionSelected;
-    int opt = 0;
-
-
-    while (!isOptionSelected) {
-        std::cout << "Select some option\n";
-        std::cout << "1.- Select a map to load into the program\n";
-        std::cout << "2.- Init program without loading a map\n";
-        std::cin >> optionSelected;
-        opt = std::stoi(optionSelected);
-        if (opt == 1 || opt == 2) {
-            isOptionSelected = true;
-        }
-        else {
-            std::cout << "Is not a option\n";
-        }
-    }
+    //LoadMap map;
+    //map.convertImageToMap("C:\\Users\\Angel\\Pictures\\Screenshots\\PhysarumCaptures\\Screenshot_0.png");
     App app;
-
-    // Get name files
-    std::vector<std::string> fileListPaths;
-    std::vector<std::string> fileList;
-    std::string fileName;
-    int fileSelected = 0;
-
-    switch (opt) {
-        case 1:
-            for (const auto& entry : std::filesystem::directory_iterator(FILES_PATH)) {
-                fileName = entry.path().string();
-                fileListPaths.push_back(fileName);
-                fileName = entry.path().filename().string();
-                fileList.push_back(fileName);
-            }
-            std::cout << "Select an image: \n";
-            for (size_t i = 0; i < fileListPaths.size(); i++) {
-                std::cout << i + 1 << ".- " << fileList[i] << "\n";
-            }
-            std::cin >> fileSelected;
-            if (fileSelected - 1 > fileListPaths.size()) {
-                std::cout << "Not an option\n";
-            }
-            else {
-                app.loadMap(fileListPaths[fileSelected - 1]);
-                app.run();
-            }
-        break;
-        case 2:
-            // do something
-        
-            app.run();
-        break;
-    }
-    
-    
+    app.run();
 
     return 0;
 }
-
+bool App::OpenFile() {
+    std::cout << "Hola\n";
+    return false;
+}

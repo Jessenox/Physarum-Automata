@@ -17,7 +17,7 @@ class LoadMap {
 		cv::Mat actualImage;
 		cv::Mat processedImage;
 		std::vector<std::vector<float>> rgbVector;
-		float threshold = 200;
+		float threshold = 30;
 		int IMG_WIDTH = 100, IMG_HEIGHT = 100;
 };
 
@@ -46,7 +46,6 @@ void LoadMap::setDataToArray(int **array, int height, int width) {
 			else {
 				array[i][j] = 2;
 			}
-			// Borders
 			if (i == 0 || j == 0 || i == height - 1 || j == width - 1) {
 				array[i][j] = 2;
 			}

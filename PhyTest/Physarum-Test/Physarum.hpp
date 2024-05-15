@@ -1,6 +1,16 @@
 #include "SFML/Graphics.hpp"
 #include <iostream>
 #include <thread>
+#include "RandomRange.hpp"
+
+
+#if defined (_MSC_VER)  // Visual studio
+#define thread_local __declspec( thread )
+#elif defined (__GCC__) // GCC
+#define thread_local __thread
+#endif
+
+
 
 class Physarum {
 	public:
@@ -9,7 +19,7 @@ class Physarum {
 		void cleanCells();
 		void showPhysarum();
 		void evaluatePhysarum();
-		void physarumTransitionConditions(int, int, int, int**, std::vector<int>);
+		void physarumTransitionConditions(int, int, int, std::vector<int>);
 		bool getRoute();
 	private:
 		std::vector<int> neighbours(int, int);
@@ -21,10 +31,12 @@ class Physarum {
 		bool isOnMooreOffset(std::vector<int>, int);
 		std::vector<int> isOnCorner(std::vector<int>);
 		void cleanRouteData();
-		void threadableCalculation(int**, int, int);
+		void threadableCalculation(int, int);
+		void resetAuxArray();
+		void matchArrays();
 	private:
 		int size = 100;
-		int** cellsMemory;
+		int** cellsAux;
 		int nutrientNotFounded = 0;
 		int nutrientFounded = 0;
 		int physarumActualCells = 0;
@@ -35,17 +47,22 @@ class Physarum {
 	public:
 		bool routed = false;
 		int** cells;
+		int** cellsMemory;
 };
 
 Physarum::Physarum(int preSize) {
 	size = preSize;
 	cells = new int* [size];
 	cellsMemory = new int* [size];
+	cellsAux = new int* [size];
+
 	for (size_t i = 0; i < size; i++) {
 		cells[i] = new int[size];
 		cellsMemory[i] = new int[size];
+		cellsAux[i] = new int[size];
 		for (size_t j = 0; j < size; j++) {
 			cells[i][j] = 0;
+			cellsAux[i][j] = 0;
 		}
 	}
 	for (size_t i = 0; i < size; i++) {
@@ -65,13 +82,17 @@ Physarum::Physarum(int preSize) {
 			cellsMemory[i][j] = 0;
 		}
 	}
+
 }
 
 void Physarum::cleanCells() {
 	if (cells != NULL) {
-		for (int i = 0; i < size; i++)
+		for (int i = 0; i < size; i++) {
 			delete[] cells[i];
+			delete[] cellsAux[i];
+		}
 		delete[] cells;
+		delete[] cellsAux;
 	}
 }
 
@@ -79,36 +100,64 @@ void Physarum::setCellState(int m, int n, int value) {
 	cells[n][m] = value;
 }
 
-void Physarum::evaluatePhysarum() {
-	// Creating auxiliar array 
-	int** tab = new int* [size];
+void Physarum::resetAuxArray() {
 	for (size_t i = 0; i < size; i++) {
-		tab[i] = new int[size];
 		for (size_t j = 0; j < size; j++) {
-			tab[i][j] = cells[i][j];
+			cellsAux[i][j] = 0;
 		}
 	}
+}
 
+void Physarum::matchArrays() {
+	for (size_t i = 0; i < size; i++) {
+		for (size_t j = 0; j < size; j++) {
+			cellsAux[i][j] = cells[i][j];
+		}
+	}
+}
+
+void Physarum::evaluatePhysarum() {
+	matchArrays();
 	// Using threads to calculate Physarum
-	//First, how many threads are available to use
-	/*
-	** aqui van los threads
-	std::thread my_thread_1(&Physarum::threadableCalculation, this, tab, 0, 50);
-	my_thread_1.join();
+	// First, how many threads are available to use
+	const int n_threads = std::thread::hardware_concurrency();
+	std::vector<std::thread> work_threads;
+	// Get range and total cells
+	const int total_cells = size * size;
+	const int evaluation_range = total_cells / n_threads;
+	int lastValue = 0;
 
 	
-	*/
 
+	std::thread my_thread_1(&Physarum::threadableCalculation, this, 0, 20);
+	std::thread my_thread_2(&Physarum::threadableCalculation, this, 20, 40);
+	std::thread my_thread_3(&Physarum::threadableCalculation, this, 40, 60);
+	std::thread my_thread_4(&Physarum::threadableCalculation, this, 60, 80);
+	std::thread my_thread_5(&Physarum::threadableCalculation, this, 80, 100);
+	
 	// Evaluate each cell for next generation
+
+	/*
 	for (size_t i = 0; i < size; i++) {
 		for (size_t j = 0; j < size; j++) {
 			std::vector<int> neighboursData = neighbours(j, i);
-			physarumTransitionConditions(i, j, cells[i][j], tab, neighboursData);
-			cells[i][j] = tab[i][j];
+			physarumTransitionConditions(i, j, cells[i][j], neighboursData);
+			cells[i][j] = cellsAux[i][j];
 			neighboursData.clear();
 		}
 	}
+	*/
 	
+	my_thread_1.join();
+	my_thread_2.join();
+	my_thread_3.join();
+	my_thread_4.join();
+	my_thread_5.join();
+	
+	//threadableCalculation(tab, 50, 50);
+
+
+
 	// Validate to get route
 	if (nutrientNotFounded == 0 && nutrientFounded > 0) {
 		allNutrientsFounded = true;
@@ -126,11 +175,8 @@ void Physarum::evaluatePhysarum() {
 		}
 	}
 	
-	if (tab != NULL) {
-		for (int i = 0; i < size; i++)
-			delete[] tab[i];
-		delete[] tab;
-	}
+	resetAuxArray();
+
 	physarumLastCells = physarumActualCells;
 	cleanRouteData();
 }
@@ -153,7 +199,7 @@ void Physarum::showPhysarum() {
 	*/
 }
 
-void Physarum::physarumTransitionConditions(int i, int j, int cell, int** cellsAux, std::vector<int> neighboursData) {
+void Physarum::physarumTransitionConditions(int i, int j, int cell, std::vector<int> neighboursData) {
 	std::vector<int> cornerCells = isOnCorner(neighboursData);
 	// For corners cell (No escape)
 	if (!cornerCells.empty()) {
@@ -238,9 +284,8 @@ void Physarum::cleanRouteData() {
 }
 
 int Physarum::setCurrentDirection() {
-	int randomValue = 0;
-	randomValue = rand() % 8;
-	return randomValue;
+	RandomRange rnd;
+	return rnd.getRandom(0, 7);
 }
 
 bool Physarum::isOnCurrentDirection(int direction,int state, std::vector<int> neighboursData) {
@@ -300,13 +345,12 @@ std::vector<int> Physarum::isOnCorner(std::vector<int> neighboursData) {
 	return corners;
 }
 
-void Physarum::threadableCalculation(int ** tab, int start, int end) {
-
-	for (size_t i = 0; i < size; i++) {
+void Physarum::threadableCalculation(int start, int end) {
+	for (size_t i = start; i < end; i++) {
 		for (size_t j = 0; j < size; j++) {
 			std::vector<int> neighboursData = neighbours(j, i);
-			physarumTransitionConditions(i, j, cells[i][j], tab, neighboursData);
-			cells[i][j] = tab[i][j];
+			physarumTransitionConditions(i, j, cells[i][j], neighboursData);
+			cells[i][j] = cellsAux[i][j];
 			neighboursData.clear();
 		}
 	}
