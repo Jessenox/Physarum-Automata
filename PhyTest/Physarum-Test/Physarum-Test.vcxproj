@@ -156,6 +156,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DensityData.hpp" />
     <ClInclude Include="files_management.hpp" />
     <ClInclude Include="LoadMap.hpp" />
     <ClInclude Include="Physarum.hpp" />

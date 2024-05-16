@@ -3,14 +3,11 @@
 #include <thread>
 #include "RandomRange.hpp"
 
-
 #if defined (_MSC_VER)  // Visual studio
 #define thread_local __declspec( thread )
 #elif defined (__GCC__) // GCC
 #define thread_local __thread
 #endif
-
-
 
 class Physarum {
 	public:
@@ -34,6 +31,7 @@ class Physarum {
 		void threadableCalculation(int, int);
 		void resetAuxArray();
 		void matchArrays();
+		void initializeDensityValues();
 	private:
 		int size = 100;
 		int** cellsAux;
@@ -48,6 +46,7 @@ class Physarum {
 		bool routed = false;
 		int** cells;
 		int** cellsMemory;
+		int statesDensity[9];
 };
 
 Physarum::Physarum(int preSize) {
@@ -82,7 +81,13 @@ Physarum::Physarum(int preSize) {
 			cellsMemory[i][j] = 0;
 		}
 	}
+	initializeDensityValues();
+}
 
+void Physarum::initializeDensityValues() {
+	for (size_t i = 0; i < 9; i++) {
+		statesDensity[i] = 0;
+	}
 }
 
 void Physarum::cleanCells() {
@@ -126,18 +131,19 @@ void Physarum::evaluatePhysarum() {
 	const int total_cells = size * size;
 	const int evaluation_range = total_cells / n_threads;
 	int lastValue = 0;
-
+	initializeDensityValues();
 	
+	/*
 
 	std::thread my_thread_1(&Physarum::threadableCalculation, this, 0, 20);
 	std::thread my_thread_2(&Physarum::threadableCalculation, this, 20, 40);
 	std::thread my_thread_3(&Physarum::threadableCalculation, this, 40, 60);
 	std::thread my_thread_4(&Physarum::threadableCalculation, this, 60, 80);
 	std::thread my_thread_5(&Physarum::threadableCalculation, this, 80, 100);
-	
+	*/
 	// Evaluate each cell for next generation
 
-	/*
+	
 	for (size_t i = 0; i < size; i++) {
 		for (size_t j = 0; j < size; j++) {
 			std::vector<int> neighboursData = neighbours(j, i);
@@ -146,14 +152,14 @@ void Physarum::evaluatePhysarum() {
 			neighboursData.clear();
 		}
 	}
-	*/
 	
+	/*
 	my_thread_1.join();
 	my_thread_2.join();
 	my_thread_3.join();
 	my_thread_4.join();
 	my_thread_5.join();
-	
+	*/
 	//threadableCalculation(tab, 50, 50);
 
 
@@ -229,12 +235,20 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, std::vector<
 				&& cellsMemory[i][j] == 0) {
 				cellsAux[i][j] = 7;
 			}
+			statesDensity[0]++;
 			break;
 		case 1:
 			if (onState5 || onState6) {
 				cellsAux[i][j] = 6;
 			}
 			nutrientNotFounded++;
+			statesDensity[1]++;
+			break;
+		case 2:
+			statesDensity[2]++;
+			break;
+		case 3:
+			statesDensity[3]++;
 			break;
 		case 4:
 			if ((((isOnCurrentDirection(currentCellDirection, 3, neighboursData) ||
@@ -244,7 +258,7 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, std::vector<
 				cellsAux[i][j] = 5;
 				cellsMemory[i][j] = currentCellDirection + 1;
 			}
-			
+			statesDensity[4]++;
 			break;
 		case 5:
 			if (!isOnMooreOffset(neighboursDirections, 5) &&
@@ -257,18 +271,22 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, std::vector<
 				cellsAux[i][j] = 8;
 			}
 			physarumActualCells++;
+			statesDensity[5]++;
 			break;
 		case 6:
 			nutrientFounded++;
+			statesDensity[6]++;
 			break;
 		case 7:
 			if (onState3 || onState4 || onState6) {
 				cellsAux[i][j] = 4;
 			}
 			break;
+			statesDensity[7]++;
 		case 8:
 			cellsAux[i][j] = 5;
 			physarumActualCells++;
+			statesDensity[8]++;
 			break;
 		default:
 			break;

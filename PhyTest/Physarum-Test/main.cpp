@@ -5,7 +5,7 @@
 #include <thread>
 #include "files_management.hpp"
 #include "LoadMap.hpp"
-
+#include "DensityData.hpp"
 
 #define X 500.f
 #define Y 500.f
@@ -69,6 +69,8 @@ class App {
         int debounce = 0;
         bool started = false;
         LoadMap loadmap;
+
+        std::vector<DensityData> densityValues;
 };
 
 
@@ -401,11 +403,16 @@ void App::update(sf::Time deltaTime) {
 
     if (play && physarumClock.getElapsedTime().asMilliseconds() > interval) {
         physarum.evaluatePhysarum();
+        DensityData data(generation, physarum.statesDensity[0], physarum.statesDensity[1], physarum.statesDensity[2], 
+            physarum.statesDensity[3], physarum.statesDensity[4], physarum.statesDensity[5],
+            physarum.statesDensity[6], physarum.statesDensity[7], physarum.statesDensity[8]);
+        densityValues.push_back(data);
         physarumClock.restart();
         
         if (physarum.routed) {
             // std::cout << "Ruta obtenida\n";
             play = false;
+            saveDensityData("hola.txt", densityValues);
             // std::cout << std::thread::hardware_concurrency() << std::endl;
         }
         if (generation == 0) {
@@ -423,8 +430,6 @@ void App::physarumRoute() {
 int main(int argc, char** argv) {
     srand(time(NULL));
 
-    //LoadMap map;
-    //map.convertImageToMap("C:\\Users\\Angel\\Pictures\\Screenshots\\PhysarumCaptures\\Screenshot_0.png");
     App app;
     app.run();
 
