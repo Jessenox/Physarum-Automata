@@ -16,3 +16,5 @@ PhyTest/Physarum-Test/x64/
 *.bcf
 *.xml
 *.run.xml
+sfml-app
+*.o
