@@ -85,7 +85,7 @@ App::App() : myWindow(sf::VideoMode(1000, 700), "Physarum Test") {
     stateIndicator.setPosition(10.f, 570.f);
     stateIndicator.setFillColor(stateColors[state]);
 
-    //loadmap.convertImageToMap("C:\\Users\\pikmi\\Pictures\\Screenshots\\PhysarumCaptures\\Espiral_Nuevo_Punto_Inicial\\Screenshot_0.png");
+    //loadmap.convertImageToMap("C:\\Users\\Angel\\Documents\\OpenGL\\Physarum-Automata\\PhyTest\\Physarum-Test\\MAPS\\espiral.png");
     //loadmap.setDataToArray(physarum.cells, scale, scale);
 }
 
@@ -397,7 +397,9 @@ void App::update(sf::Time deltaTime) {
     }
 
     setPhysarumOnTexture();
-    setMemoryOnTexture();
+    if (!physarum.allNutrientsFounded) {
+        setMemoryOnTexture();
+    }
     updateText();
     stateIndicator.setFillColor(stateColors[state]);
 

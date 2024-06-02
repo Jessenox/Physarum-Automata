@@ -41,8 +41,9 @@ class Physarum {
 		int physarumLastCells = 0;
 		int minimumPhysarumCells = 0;
 		int minimumCheck = 0;
-		bool allNutrientsFounded = false;
 	public:
+		bool allNutrientsFounded = false;
+
 		bool routed = false;
 		int** cells;
 		int** cellsMemory;
