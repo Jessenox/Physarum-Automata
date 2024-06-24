@@ -156,6 +156,8 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="App.h" />
+    <ClInclude Include="App.hpp" />
     <ClInclude Include="DensityData.hpp" />
     <ClInclude Include="files_management.hpp" />
     <ClInclude Include="LoadMap.hpp" />

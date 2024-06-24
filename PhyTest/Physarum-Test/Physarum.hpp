@@ -132,6 +132,8 @@ void Physarum::evaluatePhysarum() {
 	const int total_cells = size * size;
 	const int evaluation_range = total_cells / n_threads;
 	int lastValue = 0;
+
+	// Count each value per state
 	initializeDensityValues();
 	
 	/*
@@ -195,15 +197,6 @@ void Physarum::showPhysarum() {
 		}
 		std::cout << "\n";
 	}
-	/*
-	std::cout << "-----Physarum Memmory:-------\n";
-	for (size_t i = 0; i < size; i++) {
-		for (size_t j = 0; j < size; j++) {
-			std::cout << " " << cellsMemory[i][j];
-		}
-		std::cout << "\n";
-	}
-	*/
 }
 
 void Physarum::physarumTransitionConditions(int i, int j, int cell, std::vector<int> neighboursData) {
