@@ -409,7 +409,6 @@ void App::Reforce(int **tab, int n) {
                     val = 0;
                 }
                 else {
-
                     val = aux / dirsNeigh.size();
                 }
                 dirs[i][j] = val;
@@ -428,9 +427,6 @@ void App::Reforce(int **tab, int n) {
         }
         std::cout << "\n";
     }
-
-
-
 
 
     for (int i = 0; i < n; i++) {

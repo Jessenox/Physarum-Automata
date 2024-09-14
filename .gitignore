@@ -21,3 +21,4 @@ Physarum-GUI/MAPS/
 *.run.xml
 sfml-app
 *.o
+*/x64/
