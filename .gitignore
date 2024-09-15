@@ -19,3 +19,6 @@ Physarum-GUI/MAPS/
 sfml-app
 *.o
 */x64/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
