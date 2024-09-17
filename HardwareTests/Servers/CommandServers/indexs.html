@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Control Client</title>
+</head>
+<body>
+    <button onclick="sendCommand('w')">W</button>
+    <button onclick="sendCommand('s')">S</button>
+    <button onclick="sendCommand('a')">A</button>
+    <button onclick="sendCommand('d')">D</button>
+
+    <script>
+        function sendCommand(command) {
+            fetch('http://localhost:3000/send-command', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ command: command })
+            }).then(response => response.json())
+              .then(data => console.log(data))
+              .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>

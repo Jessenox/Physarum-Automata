@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Client</title>
+</head>
+<body>
+    <h1>LiDAR Data Visualization</h1>
+    <canvas id="canvas" width="800" height="600" style="border: 1px solid black;"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        
+        const ws = new WebSocket('ws://18.224.22.196:8093');
+
+        ws.onopen = () => {
+            console.log('Connected to the WebSocket server.');
+        };
+
+        ws.onmessage = (event) => {
+            
+            event.data.text().then((text) => {
+                try {
+                    console.log('Received data from WebSocket:', text); 
+
+                
+                    const data = JSON.parse(text);
+                    
+                    if (data.points && Array.isArray(data.points)) {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                        
+                        data.points.forEach((point) => {
+                            ctx.beginPath();
+                            ctx.arc(point.x * 10 + canvas.width / 2, point.y * 10 + canvas.height / 2, 3, 0, 2 * Math.PI);
+                            ctx.fillStyle = 'blue';
+                            ctx.fill();
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error processing WebSocket message:', error);
+                }
+            }).catch((error) => {
+                console.error('Error reading Blob as text:', error);
+            });
+        };
+
+
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        ws.onclose = () => {
+            console.log('Disconnected from the WebSocket server.');
+        };
+    </script>
+</body>
+</html>
