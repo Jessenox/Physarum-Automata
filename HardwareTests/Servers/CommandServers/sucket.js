@@ -1,7 +1,7 @@
 const http = require('http');
 const net = require('net');
 const fs = require('fs');
-const socketPath = '/tmp/unixSocket9';
+const socketPath = '/tmp/unixSocket10'; // UNIX socket path
 
 // Remove the socket file if it already exists
 if (fs.existsSync(socketPath)) {
@@ -33,8 +33,11 @@ unixSocketServer.listen(socketPath, () => {
     console.log('UNIX socket server listening on', socketPath);
 });
 
-// Create an HTTP server to receive commands from the first HTTP server
-const server = http.createServer((req, res) => {
+// Create the second HTTP server to receive commands and relay them to the UNIX socket
+const relayServer = http.createServer((req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     if (req.method === 'POST' && req.url === '/relay-command') {
         let body = '';
 
@@ -44,7 +47,7 @@ const server = http.createServer((req, res) => {
 
         req.on('end', () => {
             const { command } = JSON.parse(body);
-            console.log('Received command to relay:', command);
+            console.log('Received command:', command);
 
             // Check if the C++ client is connected
             if (cppClientSocket) {
@@ -55,9 +58,9 @@ const server = http.createServer((req, res) => {
                 console.error('No C++ client connected to the UNIX socket.');
             }
 
-            // Respond to the HTTP request
+            // Respond to the first HTTP server
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ status: 'Command sent to C++ program', command: command }));
+            res.end(JSON.stringify({ status: 'Command received', command: command }));
         });
     } else {
         res.writeHead(404, { 'Content-Type': 'text/plain' });
@@ -65,7 +68,7 @@ const server = http.createServer((req, res) => {
     }
 });
 
-// Start the HTTP server to listen on port 4001
-server.listen(4001, () => {
-    console.log('UNIX socket server HTTP interface listening on port 4001');
+// Start the second HTTP server on port 4001
+relayServer.listen(25565, () => {
+    console.log('Relay HTTP server listening on port 4001');
 });

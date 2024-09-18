@@ -13,6 +13,7 @@ wss.on('connection', (ws) => {
     ws.on('message', (message) => {
         try {
             // Parse the incoming message (if sent from another server or client)
+            
             const data = JSON.parse(message);
 
             if (data.points && Array.isArray(data.points)) {
@@ -21,7 +22,7 @@ wss.on('connection', (ws) => {
                 // Broadcast the message to all connected WebSocket clients
                 wss.clients.forEach((client) => {
                     if (client.readyState === WebSocket.OPEN) {
-                        client.send(message);  // Forward the message to each client
+                        client.send(JSON.stringify(data));  // Forward the parsed message as a JSON string
                     }
                 });
             } else {

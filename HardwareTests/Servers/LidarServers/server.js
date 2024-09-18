@@ -5,7 +5,7 @@ const fs = require('fs');
 const WebSocket = require('./node_modules/ws');
 
 const socketPath = '/tmp/unixSocket8';
-const wssUrl = 'ws://18.224.22.196:8093';  // WebSocket server URL
+const wssUrl = 'ws://18.117.235.92:4001';  // WebSocket server URL
 
 // Remove the socket file if it already exists
 if (fs.existsSync(socketPath)) {

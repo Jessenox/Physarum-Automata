@@ -11,42 +11,53 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
 
-        
-        const ws = new WebSocket('ws://18.224.22.196:8093');
+        // Connect to the WebSocket server
+        const ws = new WebSocket('ws://18.224.22.196:4001');
 
         ws.onopen = () => {
             console.log('Connected to the WebSocket server.');
         };
 
         ws.onmessage = (event) => {
-            
-            event.data.text().then((text) => {
-                try {
-                    console.log('Received data from WebSocket:', text); 
+            // Log the received data to the console to see what we're getting
+            console.log('Raw message received:', event.data);
 
-                
-                    const data = JSON.parse(text);
-                    
-                    if (data.points && Array.isArray(data.points)) {
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                        
-                        data.points.forEach((point) => {
-                            ctx.beginPath();
-                            ctx.arc(point.x * 10 + canvas.width / 2, point.y * 10 + canvas.height / 2, 3, 0, 2 * Math.PI);
-                            ctx.fillStyle = 'blue';
-                            ctx.fill();
-                        });
-                    }
-                } catch (error) {
-                    console.error('Error processing WebSocket message:', error);
-                }
-            }).catch((error) => {
-                console.error('Error reading Blob as text:', error);
-            });
+            try {
+                // Process the received message
+                processMessage(event.data);
+            } catch (error) {
+                console.error('Error processing WebSocket message:', error);
+            }
         };
 
+        // Function to handle JSON parsing and drawing points
+        function processMessage(text) {
+            try {
+                console.log('Processing received data:', text);
 
+                const data = JSON.parse(text);
+                
+                if (data.points && Array.isArray(data.points)) {
+                    console.log('Received points:', data.points);
+
+                    // Clear the canvas before drawing
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    // Draw each point on the canvas
+                    data.points.forEach((point) => {
+                        console.log(`Drawing point: X = ${point.x}, Y = ${point.y}`);
+                        ctx.beginPath();
+                        ctx.arc(point.x * 10 + canvas.width / 2, point.y * 10 + canvas.height / 2, 3, 0, 2 * Math.PI);
+                        ctx.fillStyle = 'blue';
+                        ctx.fill();
+                    });
+                } else {
+                    console.error('Received data does not contain an array of points:', data);
+                }
+            } catch (error) {
+                console.error('Error parsing WebSocket message as JSON:', error);
+            }
+        }
 
         ws.onerror = (error) => {
             console.error('WebSocket error:', error);
