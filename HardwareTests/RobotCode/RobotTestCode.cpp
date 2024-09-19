@@ -11,13 +11,20 @@
 #include <atomic>
 #include <thread>
 #include <random>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
+#include <cstring>
+#include <pthread.h>
+#include <vector>
+#include <mutex>
 
 using namespace std;
 using namespace ydlidar;
 
-// Pines y configuración para los motores
+// Pines y configuracin para los motores
 const int PWM_PINS[] = {13, 19, 18, 12};  // Pines PWM para los motores
-const int DIR_PINS[] = {5, 6, 23, 24};    // Pines de dirección para los motores
+const int DIR_PINS[] = {5, 6, 23, 24};    // Pines de direccin para los motores
 int frequency = 400; // Frecuencia inicial
 
 std::atomic<bool> is_running(true);
@@ -82,9 +89,9 @@ void turnRight() {
 }
 
 void increaseSpeed() {
-    if (frequency < 1600) {
+    if (frequency < 2000) {
         frequency += 100;
-        if (frequency > 1600) frequency = 1600;
+        if (frequency > 2000) frequency = 2000;
         for (int i = 0; i < 4; ++i) {
             setMotorSpeed(i, frequency);
         }
@@ -101,56 +108,113 @@ void decreaseSpeed() {
     }
 }
 
+
 sf::Color getPointColor(float distance, float maxRange) {
     float ratio = distance / maxRange;
     return sf::Color(255 * (1 - ratio), 255 * ratio, 0); // Color de rojo a verde
 }
 
+int contadorObstaculoTotal = 0;
+int obstaculoHola = 0;
+int obsRelativo = 0;
 void randomMovement(CYdLidar &laser) {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::discrete_distribution<> dist({1, 10, 10, 70}); // Distribución para la probabilidad de movimiento
+    std::discrete_distribution<> dist({1, 0, 10, 70}); // Distribucin para la probabilidad de movimiento
+
+    const float FRONT_MIN_ANGLE = -10.0f * (M_PI / 180.0f); // -15 grados en radaianes
+    const float FRONT_MAX_ANGLE = 10.0f * (M_PI / 180.0f);  // 15 grados en radianes
+    const float DETECTION_RADIUS = 0.25f; // 35 cm
+
+    std::vector<float> previousScanPoints;
 
     while (is_running) {
         if (!is_manual_mode) {
             LaserScan scan;
             if (laser.doProcessSimple(scan)) {
                 bool obstacle_detected = false;
+                std::vector<float> currentScanPoints;
+                
                 for (const auto &point : scan.points) {
-                    if (point.range < 0.35) {  // Detecta un obstáculo a 35 cm
+                    // Convertir el ngulo del punto al ngulo relativo al "sur" del robot
+                    float adjusted_angle = point.angle + M_PI;
+                    //std::cout << "Er " << point.range << std::endl;
+                    // Verificar si el punto est dentro del rango frontal de 30
+                    if (point.range > 0 &&point.range < 0.40 && abs(point.angle) < adjusted_angle) {
                         obstacle_detected = true;
+                        currentScanPoints.push_back(point.range);
+                        std::cout << "Obstacle distance: " << (float)point.range  << " Y en el angulo  "<<point.angle << std::endl;
                         break;
                     }
                 }
-
+                
                 if (obstacle_detected) {
-                    // Si detecta un obstáculo, retrocede por 4 segundos
-                    moveBackward();
-                    std::this_thread::sleep_for(std::chrono::seconds(4));
+                    // Si detecta un obstculo, retrocede por 4 segundos
+                    contadorObstaculoTotal++;
+                    std::cout << "Obs: " << contadorObstaculoTotal << std::endl;
+                    //obsRelativo++;
                     stopMotors();
-
-                    // Luego gira aleatoriamente a la izquierda o derecha
+                    //Luego gira aleatoriamente a la izquierda o derecha
                     int turn = dist(gen) % 2;
                     if (turn == 0) {
                         turnLeft();
+                        std::this_thread::sleep_for(std::chrono::seconds(5));
                     } else {
                         turnRight();
+                        std::this_thread::sleep_for(std::chrono::seconds(5));
                     }
                     std::this_thread::sleep_for(std::chrono::seconds(2));
                     stopMotors();
-                } else {
-                    // Si no hay obstáculo, elige un movimiento aleatorio
-                    int move = dist(gen);
-                    switch (move) {
-                        case 0: moveBackward(); break;
-                        case 1: turnRight(); break;
-                        case 2: turnLeft(); break;
-                        case 3: moveForward(); break;
+                    
+                    if(!previousScanPoints.empty() && previousScanPoints.size() == currentScanPoints.size()){
+                            bool mismoObs = true;
+                            for(size_t i = 0; i < currentScanPoints.size(); ++i){
+                                if(fabs(currentScanPoints[i] - previousScanPoints[i]) > 0.05){
+                                        mismoObs = false;
+                                        break;
+                                }
+                            }
+                            if(mismoObs){
+                                obsRelativo++;
+                            }else{
+                                obsRelativo = 0;
+                            }
                     }
+                    
+                    previousScanPoints = currentScanPoints;
+                    
+                    if((obsRelativo > 3)){
+                        //obsRelativo = 0;
+                        moveBackward();
+                        std::this_thread::sleep_for(std::chrono::seconds(3));
+                        stopMotors();
+                        int turn = dist(gen) % 2;
+                        if (turn == 0) {
+                            turnLeft();
+                            std::this_thread::sleep_for(std::chrono::seconds(5));
+                        } else {
+                            turnRight();
+                            std::this_thread::sleep_for(std::chrono::seconds(5));
+                        }
+                            std::this_thread::sleep_for(std::chrono::seconds(2));
+                            stopMotors();
+                    }
+                } else {
+                    moveForward();
+                    // Si no hay obstculo, elige un movimiento aleatorio
+                    //
+                    //int move = dist(gen);
+                    //switch (move) {
+                      //  case 0: moveBackward(); break;
+                      //  case 1: turnRight(); break;
+                      //  case 2: turnLeft(); break;
+                      //  case 3: moveForward(); break;
+                    //}
                 }
             }
+            
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            stopMotors();
+            //stopMotors();
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
@@ -163,19 +227,19 @@ int main() {
         return -1;
     }
 
-    // Configurar pines de dirección como salida
+    // Configurar pines de direccin como salida
     for (int i = 0; i < 4; ++i) {
         gpioSetMode(DIR_PINS[i], PI_OUTPUT);
         gpioSetMode(PWM_PINS[i], PI_OUTPUT);
         setMotorSpeed(i, frequency);  // Inicializar PWM con frecuencia inicial
     }
 
-    // Asegúrate de establecer XDG_RUNTIME_DIR
+    // Asegrate de establecer XDG_RUNTIME_DIR
     if (getenv("XDG_RUNTIME_DIR") == nullptr) {
         setenv("XDG_RUNTIME_DIR", "/tmp/runtime-$(id -u)", 1);
     }
 
-    // Ejecuta libcamera-vid en un proceso separado y captura la salida en YUV, sin previsualización
+    // Ejecuta libcamera-vid en un proceso separado y captura la salida en YUV, sin previsualizacn
     FILE* pipe = popen("libcamera-vid -t 0 --codec yuv420 --nopreview -o -", "r");
     if (!pipe) {
         std::cerr << "Error: No se pudo ejecutar libcamera-vid." << std::endl;
@@ -190,7 +254,7 @@ int main() {
     // Buffer para leer los datos de video
     const int width = 640;
     const int height = 480;
-    std::vector<uint8_t> buffer(width * height * 3 / 2); // Ajusta el tamaño del buffer para YUV420
+    std::vector<uint8_t> buffer(width * height * 3 / 2); // Ajusta el tamao del buffer para YUV420
 
     cv::Mat yuvImage(height + height / 2, width, CV_8UC1, buffer.data());
     cv::Mat rgbImage(height, width, CV_8UC3);
@@ -207,11 +271,11 @@ int main() {
     } else if (ports.size() == 1) {
         port = ports.begin()->second;
     } else {
-        std::cerr << "No se detectó ningún LiDAR. Verifica la conexión." << std::endl;
+        std::cerr << "No se detect ningn LiDAR. Verifica la conexin." << std::endl;
         return -1;
     }
 
-    // Configuración del LiDAR
+    // Configuracin del LiDAR
     int baudrate = 115200;
     std::cout << "Baudrate: " << baudrate << std::endl;
 
@@ -273,11 +337,11 @@ int main() {
                         is_manual_mode = true;
                         turnRight();
                         break;
-                    case sf::Keyboard::Add:
+                    case sf::Keyboard::V:
                         is_manual_mode = true;
                         increaseSpeed();
                         break;
-                    case sf::Keyboard::Subtract:
+                    case sf::Keyboard::B:
                         is_manual_mode = true;
                         decreaseSpeed();
                         break;
@@ -297,7 +361,7 @@ int main() {
             }
         }
 
-        // Leer los datos del video desde la tubería
+        // Leer los datos del video desde la tubera
         size_t bytesRead = fread(buffer.data(), 1, buffer.size(), pipe);
         if (bytesRead != buffer.size()) {
             std::cerr << "Error: No se pudo leer suficientes datos de video." << std::endl;
@@ -307,11 +371,11 @@ int main() {
         // Convertir YUV420 a RGB
         cv::cvtColor(yuvImage, rgbImage, cv::COLOR_YUV2RGB_I420);
 
-        // Convertir a RGBA añadiendo un canal alfa
+        // Convertir a RGBA aadiendo un canal alfa
         cv::Mat frame_rgba;
         cv::cvtColor(rgbImage, frame_rgba, cv::COLOR_RGB2RGBA);
 
-        // Actualizar la textura de la cámara con los datos del frame
+        // Actualizar la textura de la cmara con los datos del frame
         if (!cameraTexture.create(frame_rgba.cols, frame_rgba.rows)) {
             std::cerr << "Error: No se pudo crear la textura." << std::endl;
             continue;
@@ -335,17 +399,17 @@ int main() {
         window.draw(minimap);
 
         // Dibujar el centro del LiDAR (color azul)
-        sf::CircleShape lidarCenter(5); // Radio del círculo del LiDAR
+        sf::CircleShape lidarCenter(5); // Radio del crculo del LiDAR
         lidarCenter.setFillColor(sf::Color::Blue);
-        lidarCenter.setPosition(105, 105); // Posición del centro en el minimapa
+        lidarCenter.setPosition(105, 105); // Posicin del centro en el minimapa
 
         window.draw(lidarCenter);
 
-        // Dibujar la línea hacia el norte
+        // Dibujar la lnea hacia el norte
         sf::Vertex line[] =
         {
             sf::Vertex(sf::Vector2f(110, 110), sf::Color::Black),
-            sf::Vertex(sf::Vector2f(110, 60), sf::Color::Black) // Línea hacia arriba (norte)
+            sf::Vertex(sf::Vector2f(110, 160), sf::Color::Black) // Lnea hacia arriba (norte)
         };
 
         window.draw(line, 2, sf::Lines);
@@ -370,6 +434,7 @@ int main() {
 
                     window.draw(lidarPoint);
                 }
+                //std::cout << "An " << point.range <<std :: endl;
             }
         } else {
             std::cerr << "No se pudieron obtener los datos del LiDAR." << std::endl;
@@ -382,7 +447,7 @@ int main() {
     laser.turnOff();
     laser.disconnecting();
 
-    // Cierra la tubería, detiene los motores y apaga el robot
+    // Cierra la tubera, detiene los motores y apaga el robot
     pclose(pipe);
     stopMotors();
     gpioTerminate();
