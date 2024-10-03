@@ -18,6 +18,7 @@
 #include <pthread.h>
 #include <vector>
 #include <mutex>
+#define PI 180.f
 
 using namespace std;
 using namespace ydlidar;
@@ -25,6 +26,7 @@ using namespace ydlidar;
 // Pines y configuracin para los motores
 const int PWM_PINS[] = {13, 19, 18, 12};  // Pines PWM para los motores
 const int DIR_PINS[] = {5, 6, 23, 24};    // Pines de direccin para los motores
+const int SENSOR_PROFUNIDAD_PINS[] = {2, 3};
 int frequency = 400; // Frecuencia inicial
 
 std::atomic<bool> is_running(true);
@@ -117,10 +119,11 @@ sf::Color getPointColor(float distance, float maxRange) {
 int contadorObstaculoTotal = 0;
 int obstaculoHola = 0;
 int obsRelativo = 0;
+int idTipoObstaculo = 0;
 void randomMovement(CYdLidar &laser) {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::discrete_distribution<> dist({1, 0, 10, 70}); // Distribucin para la probabilidad de movimiento
+    std::discrete_distribution<> dist({0, 5}); // Distribucin para la probabilidad de movimiento
 
     const float FRONT_MIN_ANGLE = -10.0f * (M_PI / 180.0f); // -15 grados en radaianes
     const float FRONT_MAX_ANGLE = 10.0f * (M_PI / 180.0f);  // 15 grados en radianes
@@ -137,15 +140,37 @@ void randomMovement(CYdLidar &laser) {
                 
                 for (const auto &point : scan.points) {
                     // Convertir el ngulo del punto al ngulo relativo al "sur" del robot
-                    float adjusted_angle = point.angle + M_PI;
+                    float adjusted_angle = point.angle + PI;
                     //std::cout << "Er " << point.range << std::endl;
                     // Verificar si el punto est dentro del rango frontal de 30
-                    if (point.range > 0 &&point.range < 0.40 && abs(point.angle) < adjusted_angle) {
+                    //std::cout << point.angle << std::endl;
+                    if (point.range > 0 && point.range < 0.30 && ( point.angle <= -0.5235f  && point.angle >= -2.617f)) { // Norte
                         obstacle_detected = true;
                         currentScanPoints.push_back(point.range);
-                        std::cout << "Obstacle distance: " << (float)point.range  << " Y en el angulo  "<<point.angle << std::endl;
+                        idTipoObstaculo = 1;
+                        std::cout << "Obstacle distance N: " << (float)point.range  << " Y en el angulo  "<<point.angle << std::endl;
+                        break;
+                    } else if(point.range > 0 && point.range < 0.25 && (point.angle <= 0.872f  && point.angle>= -0.5235f)){ // Este
+                        obstacle_detected = true;
+                        currentScanPoints.push_back(point.range);
+                        idTipoObstaculo = 2;
+                        std::cout << "Obstacle distance E: " << (float)point.range  << " Y en el angulo  "<<point.angle << std::endl;
+                        break;
+                    }else if(point.range > 0 && point.range < 0.45 && (point.angle <= 2.26f && point.angle >= 0.872f)){ // Sur
+                        obstacle_detected = true;
+                        currentScanPoints.push_back(point.range);
+                        idTipoObstaculo = 3;
+                        std::cout << "Obstacle distance S:" << (float)point.range  << " Y en el angulo  "<<point.angle << std::endl;
+                        break;
+                    }else if (point.range > 0 && point.range < 0.25 && (point.angle <= -2.61f  || point.angle >= 2.27f)){ // Oeste
+                        obstacle_detected = true;
+                        currentScanPoints.push_back(point.range);
+                        idTipoObstaculo = 4;
+                        std::cout << "Obstacle distance O:" << (float)point.range  << " Y en el angulo  "<<point.angle << std::endl;
                         break;
                     }
+                    
+                    
                 }
                 
                 if (obstacle_detected) {
@@ -155,16 +180,58 @@ void randomMovement(CYdLidar &laser) {
                     //obsRelativo++;
                     stopMotors();
                     //Luego gira aleatoriamente a la izquierda o derecha
-                    int turn = dist(gen) % 2;
-                    if (turn == 0) {
-                        turnLeft();
-                        std::this_thread::sleep_for(std::chrono::seconds(5));
-                    } else {
-                        turnRight();
-                        std::this_thread::sleep_for(std::chrono::seconds(5));
+                    switch(idTipoObstaculo) {
+                        case 1: {
+                            int turn = dist(gen) % 2;
+                            moveBackward();
+                            std::this_thread::sleep_for(std::chrono::seconds(5));
+                            if (turn == 0) {
+                                turnLeft();
+                                std::this_thread::sleep_for(std::chrono::seconds(5));
+                            } else {
+                                turnRight();
+                                std::this_thread::sleep_for(std::chrono::seconds(5));
+                            }
+                            std::this_thread::sleep_for(std::chrono::seconds(2));
+                            stopMotors();
+                        }
+                        break;
+                        
+                        case 2:
+                            turnLeft();
+                            std::this_thread::sleep_for(std::chrono::seconds(5));
+                            std::this_thread::sleep_for(std::chrono::seconds(2));
+                            stopMotors();
+                        break;
+                        
+                        case 3:// este es el 4 y el de abajo el 3
+                            moveForward();
+                            std::this_thread::sleep_for(std::chrono::seconds(2));
+                            stopMotors();
+                            
+                        break;
+                        
+                        case 4:
+                            turnRight();
+                            std::this_thread::sleep_for(std::chrono::seconds(7));
+                            stopMotors();
+                        break;
+                        
+                        default: {
+                            int turn = dist(gen) % 2;
+                            if (turn == 0) {
+                                turnLeft();
+                                std::this_thread::sleep_for(std::chrono::seconds(5));
+                            } else {
+                                turnRight();
+                                std::this_thread::sleep_for(std::chrono::seconds(5));
+                            }
+                            std::this_thread::sleep_for(std::chrono::seconds(2));
+                            stopMotors();
+                        }
+                        break;
                     }
-                    std::this_thread::sleep_for(std::chrono::seconds(2));
-                    stopMotors();
+
                     
                     if(!previousScanPoints.empty() && previousScanPoints.size() == currentScanPoints.size()){
                             bool mismoObs = true;
@@ -188,16 +255,61 @@ void randomMovement(CYdLidar &laser) {
                         moveBackward();
                         std::this_thread::sleep_for(std::chrono::seconds(3));
                         stopMotors();
-                        int turn = dist(gen) % 2;
-                        if (turn == 0) {
-                            turnLeft();
-                            std::this_thread::sleep_for(std::chrono::seconds(5));
-                        } else {
-                            turnRight();
-                            std::this_thread::sleep_for(std::chrono::seconds(5));
+                        
+                        
+                        switch(idTipoObstaculo) {
+                            case 1: {
+                                int turn = dist(gen) % 2;
+                                moveBackward();
+                                std::this_thread::sleep_for(std::chrono::seconds(5));
+                                if (turn == 0) {
+                                    turnLeft();
+                                    std::this_thread::sleep_for(std::chrono::seconds(5));
+                                } else {
+                                    turnRight();
+                                    std::this_thread::sleep_for(std::chrono::seconds(5));
+                                }
+                                std::this_thread::sleep_for(std::chrono::seconds(2));
+                                stopMotors();
+                            }
+                            break;
+                            
+                            case 2:
+                                turnLeft();
+                                std::this_thread::sleep_for(std::chrono::seconds(5));
+                                std::this_thread::sleep_for(std::chrono::seconds(2));
+                                stopMotors();
+                            break;
+                            
+                            case 3:
+                                turnRight();
+                                std::this_thread::sleep_for(std::chrono::seconds(7));
+                                stopMotors();
+                            break;
+                            
+                            case 4:
+                                moveForward();
+                                std::this_thread::sleep_for(std::chrono::seconds(2));
+                                stopMotors();
+                            break;
+                            
+                            default: {
+                                int turn = dist(gen) % 2;
+                                if (turn == 0) {
+                                    turnLeft();
+                                    std::this_thread::sleep_for(std::chrono::seconds(5));
+                                } else {
+                                    turnRight();
+                                    std::this_thread::sleep_for(std::chrono::seconds(5));
+                                }
+                                std::this_thread::sleep_for(std::chrono::seconds(2));
+                                stopMotors();
+                            }
+                            break;
                         }
-                            std::this_thread::sleep_for(std::chrono::seconds(2));
-                            stopMotors();
+
+                        
+                        
                     }
                 } else {
                     moveForward();
