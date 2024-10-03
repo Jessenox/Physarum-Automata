@@ -12,13 +12,18 @@
 \usepackage[hidelinks]{hyperref}
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage{colortbl}
 \usepackage{tabularx} % Importa el paquete tabularx
 \usepackage{booktabs} % Para mejores l\'ineas horizontales
 \usepackage{lipsum} % Solo para texto de relleno
 \usepackage{longtable} % Importa el paquete necesario para tablas largas.
 \usepackage{array} % Mejora la calidad y la configuraci\'on de las tablas.
 \usepackage{url}
+\usepackage{gensymb}
 %We define this the languaje javascript
+\definecolor{royalblue}{RGB}{65, 105, 225} % Define Royal Blue
+\definecolor{lemon}{RGB}{255, 250, 205} % Lemon color
+\definecolor{darkgreen}{RGB}{0, 100, 0} % Dark green color
 \lstdefinelanguage{JavaScript}{
     morekeywords=[1]{break, continue, delete, else, for, function, if, in,
             new, return, this, typeof, var, void, while, with},
@@ -145,5 +150,6 @@ backgroundcolor=\color{cloudwhite},
     \include{./util/Portada}
     \tableofcontents
     \include{./util/SeccionI}
+    \include{./util/SeccionII}
     \include{./bibliography/Referencias}
 \end{document}

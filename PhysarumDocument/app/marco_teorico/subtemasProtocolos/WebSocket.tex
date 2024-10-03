@@ -1,0 +1,38 @@
+\subsubsection{WebSocket}
+\label{sub:WebSocket}
+    % Parrafo 1
+    El protocolo de WebSocket fue desarrollado ya que el protocolo HTTP no es adecuado para aplicaciones en tiempo real, esto por que 
+        el protocolo HTTP es de petici\'on-respuesta, lo que significa que el cliente debe solicitar informaci\'on al servidor y el servidor
+        debe responder a la solicitud. En cambio, el protocolo WebSocket permite una comunicaci\'on bidireccional entre el cliente y el servidor,
+        en otras palabras, existe una conexi\'on persistente entre el cliente y el servidor, lo que permite que el servidor env\'ie informaci\'on
+        al cliente sin que este lo solicite. \cite{Kitamura2012}
+    \vskip 0.5cm
+        % P\'arrafo 2
+        A diferencia de los protocolos de comunicaci\'on tradicionales, WebSocket permite reducir la latencia en aplicaciones que 
+            requieren una actualizaci\'on constante de datos, como juegos multijugador, chats en tiempo real, o plataformas de 
+            trading financiero. Esta capacidad es posible gracias al establecimiento de una conexi\'on persistente a trav\'es de 
+            un \'unico canal TCP, que permanece abierta hasta que alguna de las partes decide cerrarla. Esto reduce la sobrecarga 
+            de establecer conexiones repetidas y mejora significativamente el rendimiento de las aplicaciones que requieren 
+            actualizaciones constantes. \cite{RFC6455}
+    \vskip 0.5cm
+        % P\'arrafo 3
+        El proceso de establecimiento de una conexi\'on WebSocket comienza con un "handshake" basado en HTTP, donde el cliente 
+            solicita la apertura de una conexi\'on WebSocket al servidor utilizando un encabezado espec\'ifico, y el servidor 
+            responde aceptando o rechazando la conexi\'on. Una vez completado el "handshake", la conexi\'on se actualiza y ambos 
+            pueden intercambiar mensajes en formato binario o texto sin necesidad de seguir el ciclo de solicitud-respuesta. 
+            Esto hace que WebSocket sea altamente eficiente para aplicaciones en tiempo real que manejan grandes cantidades de 
+            datos o requieren baja latencia. \cite{FetteMelnikov}
+    \vskip 0.5cm
+        % P\'arrafo 4
+        Adem\'as, WebSocket proporciona ventajas en cuanto a la reducci\'on del uso de ancho de banda. Al evitar la necesidad de 
+            crear m\'ultiples conexiones y al eliminar los encabezados HTTP innecesarios en cada intercambio de mensajes, 
+            se logra una transmisi\'on de datos m\'as ligera. Esto es especialmente \'util en entornos donde los recursos de red 
+            son limitados, como dispositivos m\'oviles o redes con baja velocidad. \cite{WebSocketEfficiency}
+    \vskip 0.5cm
+        % P\'arrafo 5
+        Sin embargo, aunque WebSocket ofrece muchas ventajas en t\'erminos de rendimiento y latencia, su implementaci\'on 
+            puede tener desaf\'ios de seguridad, como la exposici\'on a ataques de "Cross-Site WebSocket Hijacking" (CSWSH)
+            o vulnerabilidades de inyecci\'on. Por esta raz\'on, es importante integrar medidas de seguridad, como el uso de 
+            WebSockets sobre TLS (WSS) para cifrar las comunicaciones, y pol\'iticas adecuadas de validaci\'on del origen de 
+            las conexiones. \cite{WebSocketSecurity}
+    

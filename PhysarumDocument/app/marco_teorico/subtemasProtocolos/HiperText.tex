@@ -1,0 +1,45 @@
+\subsubsection{HTTP} % (fold)
+\label{ssub:HTTP}
+
+    El protocolo HTTP (Hypertext Transfer Protocol) es un protocolo de comunicaci\'on utilizado en 
+        la World Wide Web para la transferencia de informaci\'on entre un cliente y un servidor. 
+        Fue dise\~nado para ser un protocolo simple y flexible, que permitiera la transferencia 
+        de datos de manera eficiente y segura. \cite{RFC2616}
+    \vskip 0.5cm
+        % P\'arrafo 2
+        HTTP opera bajo el modelo petici\'on-respuesta, donde el cliente env\'ia una petici\'on al servidor 
+            solicitando un recurso espec\'ifico, y el servidor responde con el recurso solicitado o un c\'odigo 
+            de estado que indica si la petici\'on fue exitosa o no. Las peticiones y respuestas en HTTP est\'an 
+            compuestas por un conjunto de encabezados y opcionalmente un cuerpo de mensaje, que contiene la 
+            informaci\'on a transferir. \cite{RFC2616}
+    \vskip 0.5cm
+        % P\'arrafo 3
+        HTTP es un protocolo sin estado, lo que significa que cada petici\'on se procesa de manera independiente, 
+            sin tener en cuenta las peticiones anteriores. Esto permite que el servidor sea m\'as escalable y 
+            flexible, ya que no necesita mantener un estado de sesi\'on con cada cliente. Sin embargo, esta 
+            caracter\'istica tambi\'en implica que el servidor no puede recordar informaci\'on sobre el cliente 
+            entre peticiones, lo que puede limitar la interacci\'on entre el cliente y el servidor. \cite{RFC2616}
+    \vskip 0.5cm
+        % P\'arrafo 4
+        HTTP utiliza el protocolo TCP (Transmission Control Protocol) como su capa de transporte, lo que garantiza 
+            una comunicaci\'on fiable y ordenada entre el cliente y el servidor. Las conexiones HTTP se establecen 
+            mediante un \textit{handshake} entre el cliente y el servidor, donde se negocian los par\'ametros de la 
+            conexi\'on, como el tipo de contenido aceptado, la codificaci\'on de transferencia, y la longitud del 
+            cuerpo del mensaje. Una vez establecida la conexi\'on, el cliente y el servidor pueden intercambiar 
+            mensajes de manera eficiente y segura. \cite{RFC2616}
+    \vskip 0.5cm
+        % P\'arrafo 5
+        A pesar de su simplicidad y flexibilidad, HTTP tiene algunas limitaciones en t\'erminos de rendimiento y 
+            eficiencia. Por ejemplo, HTTP es un protocolo de texto plano, lo que significa que los mensajes enviados 
+            a trav\'es de HTTP deben ser codificados en texto legible por humanos, lo que puede aumentar el tama\~no 
+            de los mensajes y reducir la eficiencia de la transferencia de datos. Adem\'as, HTTP no es adecuado para 
+            aplicaciones en tiempo real, ya que su modelo petici\'on-respuesta puede introducir latencia en la 
+            comunicaci\'on entre el cliente y el servidor. \cite{RFC2616}
+    \vskip 0.5cm
+        % P\'arrafo 6
+        A pesar de estas limitaciones, HTTP sigue siendo uno de los protocolos de comunicaci\'on m\'as utilizados en 
+            la World Wide Web, debido a su simplicidad, flexibilidad y compatibilidad con una amplia variedad de 
+            plataformas y tecnolog\'ias. Sin embargo, en aplicaciones que requieren una comunicaci\'on m\'as eficiente 
+            y en tiempo real, es posible que sea necesario utilizar protocolos m\'as especializados, como WebSocket o 
+            MQTT, que est\'an dise\~nados espec\'ificamente para este prop\'osito. \cite{RFC2616}
+% subsubsection HTTP (end)
