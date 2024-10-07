@@ -11,8 +11,8 @@ App::App() : myWindow(sf::VideoMode(1000, 700), "Physarum Test") {
     stateIndicator.setPosition(10.f, 570.f);
     stateIndicator.setFillColor(stateColors[state]);
 
-    //loadmap.convertImageToMap("C:\\Users\\Angel\\Documents\\OpenGL\\Physarum-Automata\\PhyTest\\Physarum-Test\\MAPS\\espiral.png");
-    //loadmap.setDataToArray(physarum.cells, scale, scale);
+    loadmap.convertImageToMap("C:\\Users\\Angel\\Pictures\\CircuitoIPN.png");
+    loadmap.setDataToArray(physarum.cells, scale, scale);
 }
 
 void App::run() {
