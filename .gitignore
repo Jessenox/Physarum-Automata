@@ -1,7 +1,7 @@
 Physarum-GUI/x64/
 Physarum-GUI/SAVE_DATA/
 Physarum-GUI/MAPS/
-Phytest/SAVE_DATA/
+/Phytest/SAVE_DATA/
 .vs/
 *.aux
 *.log
