@@ -123,17 +123,14 @@ bool isDrawing = false;  // Bandera para rastrear si el raton esta presionado
 
 
 
-void drawLiDARPoints(sf::RenderWindow &window, const std::vector<LaserPoint> &lidarPoints, const sf::Vector2f &robotPosition, float scale) {
-    for (const auto& point : lidarPoints) {
-        // Convertir las coordenadas polares del LiDAR a coordenadas cartesianas
+void drawLiDARPoints(sf::RenderWindow &window, const LaserScan &lidarPoints, const sf::Vector2f &robotPosition, float scale, float max_range) {
+    for (const auto& point : lidarPoints.points) {
         float x = point.range * cos(point.angle);
         float y = point.range * sin(point.angle);
 
-        // Ajustar la posición de los puntos del LiDAR en función de la posición del robot
         float adjustedX = robotFixedPosition.x + (x * scale) - robotPosition.x;
         float adjustedY = robotFixedPosition.y - (y * scale) - robotPosition.y;  // Invertir Y para la pantalla
 
-        // Dibujar los puntos del LiDAR
         if (point.range > 0.05) {  // Excluir puntos cercanos al centro
             sf::CircleShape lidarPoint(2);  // Tamaño del punto
             lidarPoint.setPosition(adjustedX, adjustedY);
@@ -143,6 +140,7 @@ void drawLiDARPoints(sf::RenderWindow &window, const std::vector<LaserPoint> &li
         }
     }
 }
+
 
 
 
@@ -177,13 +175,13 @@ void updateRoute(const sf::RectangleShape &minimap, sf::RenderWindow &window) {
 
 
 
-void drawRoute(sf::RenderWindow &window, const std::vector<sf::Vector2f> &routePoints, const sf::Vector2f &robotPosition) {
+void drawRoute(sf::RenderWindow &window, const std::vector<sf::Vector2f> &routePoints, const sf::RectangleShape &minimap) {
     if (routePoints.size() > 1) {
         for (size_t i = 0; i < routePoints.size() - 1; ++i) {
             // Dibujar las líneas de la ruta, ajustando las coordenadas en función de la posición del robot
             sf::Vertex line[] = {
-                sf::Vertex(robotFixedPosition + (routePoints[i] - robotPosition), sf::Color::Red),  // Ajustar posición en función del robot
-                sf::Vertex(robotFixedPosition + (routePoints[i + 1] - robotPosition), sf::Color::Red)
+                sf::Vertex(routePoints[i] + minimap.getPosition(), sf::Color::Red), // Ajuste de posición para el minimapa
+                sf::Vertex(routePoints[i + 1] + minimap.getPosition(), sf::Color::Red)
             };
             window.draw(line, 2, sf::Lines);
         }
@@ -285,30 +283,22 @@ void moveTo(sf::Vector2f point, sf::Vector2f &robotPosition, float &currentAngle
 
 
 
-
-void followRoute(sf::RenderWindow &window, std::vector<sf::Vector2f> &routePoints, const std::vector<LaserPoint> &lidarPoints) {
+void followRoute(sf::RenderWindow &window, std::vector<sf::Vector2f> &routePoints, const LaserScan &lidarPoints, const sf::Vector2f &minimapPosition, float max_range) {
     sf::Vector2f robotPosition(110, 110);  // Posición inicial del robot en el minimapa
     float currentAngle = -M_PI / 2;  // Ángulo inicial del robot (norte en -90°)
 
-    // Seguir la ruta mientras haya puntos
     while (!routePoints.empty()) {
-        sf::Vector2f targetPoint = routePoints.front();  // Obtener el primer punto de la ruta
+        sf::Vector2f targetPoint = routePoints.front();
 
-        // Mover al robot al primer punto
         moveTo(targetPoint, robotPosition, currentAngle);
 
-        // Eliminar el punto de la ruta una vez alcanzado
         routePoints.erase(routePoints.begin());
 
-        // Actualizar la posición del robot al punto alcanzado
-        robotPosition = targetPoint;
-
-        // Mover el entorno en función de la nueva posición del robot
-        drawRoute(window, routePoints, robotPosition);  // Dibujar la ruta ajustada
-        // Asumiremos que lidarPoints es global o será pasada como parámetro
-        drawLiDARPoints(window, lidarPoints, robotPosition, 25.0f);  // Dibujar los puntos del LiDAR ajustados
+        drawRoute(window, routePoints, minimapPosition);
+        drawLiDARPoints(window, lidarPoints, robotPosition, 25.0f, max_range);
     }
 }
+
 
 
 
@@ -637,80 +627,7 @@ int main() {
         sf::RectangleShape minimap(sf::Vector2f(200, 200));
         minimap.setFillColor(sf::Color(200, 200, 200, 150)); // Fondo semitransparente
         minimap.setPosition(10, 10); // Esquina superior izquierda
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed){
-                window.close();
-            }
-
-            if(event.type == sf::Event::MouseButtonPressed){
-                std::cout << "Mouse pressed" << std::endl;
-                handleMouseClick(event, minimap);
-            }else if(event.type == sf::Event::MouseButtonReleased){
-                std::cout << "Mouse released" << std::endl;
-                handleMouseClick(event, minimap);
-                isDrawing = false;
-            }
-            
-
-
-
-            if (event.type == sf::Event::KeyPressed) {
-                switch (event.key.code) {
-                    case sf::Keyboard::W:
-                        is_manual_mode = true;
-                        std::cout << "W" << std::endl;
-                        moveForward();
-                        break;
-                    case sf::Keyboard::S:
-                        is_manual_mode = true;
-                        std::cout << "S" << std::endl;
-                        moveBackward();
-                        break;
-                    case sf::Keyboard::A:
-                        is_manual_mode = true;
-                        std::cout << "A" << std::endl;
-                        turnLeft();
-                        break;
-                    case sf::Keyboard::D:
-                        is_manual_mode = true;
-                        std::cout << "D" << std::endl;
-                        turnRight();
-                        break;
-                    case sf::Keyboard::V:
-                        is_manual_mode = true;
-                        std::cout << "V" << std::endl;
-                        increaseSpeed();
-                        break;
-                    case sf::Keyboard::B:
-                        is_manual_mode = true;
-                        std::cout << "B" << std::endl;
-                        decreaseSpeed();
-                        break;
-                    case sf::Keyboard::Space:
-                        is_manual_mode = true;
-                        std::cout << "Space" << std::endl;
-                        stopMotors();
-                        break;
-                    case sf::Keyboard::R: {
-                        is_manual_mode = false;
-                        std::thread routeThread(followRoute, std::ref(window), std::ref(routePoints), std::ref(lidarPoints));
-                        routeThread.detach();
-                        break;
-                    }
-                    case sf::Keyboard::K:
-                        is_manual_mode = false;
-                        std::cout << "K" << std::endl;
-                        break;
-                    case sf::Keyboard::M:
-                        is_manual_mode = true;
-                        std::cout << "M" << std::endl;
-                        break;
-                    default:
-                        break;
-                }
-            }
-        }
+        
 
         // Leer los datos del video desde la tubera
         size_t bytesRead = fread(buffer.data(), 1, buffer.size(), pipe);
@@ -768,10 +685,86 @@ int main() {
 
         LaserScan scan;
         if (laser.doProcessSimple(scan)) {
-            drawLiDARPoints(window, scan.points, sf::Vector2f(110, 110), 25.0f);
-        } else {
+            drawLiDARPoints(window, scan, minimap.getPosition(), 25.0f, max_range);
+        }else {
             std::cerr << "No se pudieron obtener los datos del LiDAR." << std::endl;
         }
+
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed){
+                window.close();
+            }
+
+            if(event.type == sf::Event::MouseButtonPressed){
+                std::cout << "Mouse pressed" << std::endl;
+                handleMouseClick(event, minimap);
+            }else if(event.type == sf::Event::MouseButtonReleased){
+                std::cout << "Mouse released" << std::endl;
+                handleMouseClick(event, minimap);
+                isDrawing = false;
+            }
+            
+
+
+
+            if (event.type == sf::Event::KeyPressed) {
+                switch (event.key.code) {
+                    case sf::Keyboard::W:
+                        is_manual_mode = true;
+                        std::cout << "W" << std::endl;
+                        moveForward();
+                        break;
+                    case sf::Keyboard::S:
+                        is_manual_mode = true;
+                        std::cout << "S" << std::endl;
+                        moveBackward();
+                        break;
+                    case sf::Keyboard::A:
+                        is_manual_mode = true;
+                        std::cout << "A" << std::endl;
+                        turnLeft();
+                        break;
+                    case sf::Keyboard::D:
+                        is_manual_mode = true;
+                        std::cout << "D" << std::endl;
+                        turnRight();
+                        break;
+                    case sf::Keyboard::V:
+                        is_manual_mode = true;
+                        std::cout << "V" << std::endl;
+                        increaseSpeed();
+                        break;
+                    case sf::Keyboard::B:
+                        is_manual_mode = true;
+                        std::cout << "B" << std::endl;
+                        decreaseSpeed();
+                        break;
+                    case sf::Keyboard::Space:
+                        is_manual_mode = true;
+                        std::cout << "Space" << std::endl;
+                        stopMotors();
+                        break;
+                    case sf::Keyboard::R: {
+                        is_manual_mode = false;
+                        std::thread routeThread(followRoute, std::ref(window), std::ref(routePoints), std::ref(scan), minimap.getPosition(), max_range);
+                        routeThread.detach();
+                        break;
+                    }
+                    case sf::Keyboard::K:
+                        is_manual_mode = false;
+                        std::cout << "K" << std::endl;
+                        break;
+                    case sf::Keyboard::M:
+                        is_manual_mode = true;
+                        std::cout << "M" << std::endl;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
 
         window.display();
     }

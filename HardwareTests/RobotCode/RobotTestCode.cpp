@@ -157,7 +157,7 @@ void randomMovement(CYdLidar &laser) {
                         currentScanPoints.push_back(point.range);
                         std::cout << "Obstacle distance S:" << (float)point.range  << " Y en el angulo  "<<point.angle << std::endl;
                         break;
-                    }else if (point.range > 0 && point.range < 0.25 && (point.angle <= -2.61f  && point.angle >= 2.27f)){ // Oeste
+                    }else if (point.range > 0 && point.range < 0.25 && (point.angle <= -2.61f  || point.angle >= 2.27f)){ // Oeste
                         obstacle_detected = true;
                         currentScanPoints.push_back(point.range);
                         std::cout << "Obstacle distance O:" << (float)point.range  << " Y en el angulo  "<<point.angle << std::endl;
@@ -205,7 +205,8 @@ void randomMovement(CYdLidar &laser) {
                         stopMotors();
                         int turn = dist(gen) % 2;
                         if (turn == 0) {
-                            turnLeft();
+                            //turnLeft();
+                            turnRight();
                             std::this_thread::sleep_for(std::chrono::seconds(5));
                         } else {
                             turnRight();
