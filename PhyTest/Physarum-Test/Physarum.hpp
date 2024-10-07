@@ -103,6 +103,8 @@ void Physarum::cleanCells() {
 
 void Physarum::setCellState(int m, int n, int value) {
 	cells[n][m] = value;
+	if (value == 0)
+		cellsMemory [n][m] = 0;
 }
 
 void Physarum::resetAuxArray() {

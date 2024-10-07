@@ -1,10 +1,9 @@
 #include "App.h"
 
-App::App() : myWindow(sf::VideoMode(1000, 700), "Physarum Test") {
+App::App() : myWindow(sf::VideoMode(500, 700), "Physarum Test") {
     // Initialize color for physarum states
     initializeColors();
     baseTexture.create(500, 500);
-    memoryTexture.create(500, 500);
 
     textSettings();
     stateIndicator.setSize(sf::Vector2f(30, 30));
@@ -272,7 +271,6 @@ void App::setPhysarumOnTexture() {
     }
 }
 
-
 void App::render() {
     myWindow.clear();
 
@@ -281,14 +279,11 @@ void App::render() {
 
     myWindow.draw(stateIndicator);
     baseTexture.display();
-    memoryTexture.display();
+
 
     baseSprite.setTexture(baseTexture.getTexture());
-    memorySprite.setTexture(memoryTexture.getTexture());
-    memorySprite.setPosition(sf::Vector2f(500.f, 0.f));
 
     myWindow.draw(baseSprite);
-    myWindow.draw(memorySprite);
 
     myWindow.display();
 }
@@ -323,9 +318,7 @@ void App::update(sf::Time deltaTime) {
     }
 
     setPhysarumOnTexture();
-    if (!physarum.allNutrientsFounded) {
-        setMemoryOnTexture();
-    }
+
     updateText();
     stateIndicator.setFillColor(stateColors[state]);
 
@@ -338,14 +331,28 @@ void App::update(sf::Time deltaTime) {
         physarumClock.restart();
 
         if (physarum.routed) {
-            // std::cout << "Ruta obtenida\n";
-            play = false;
-            saveDensityData("hola.txt", densityValues);
             Reforce(physarum.cells, scale);
+            std::cout << "Ruta obtenida\n";
+            
+            saveDensityData("hola.txt", densityValues);
             // std::cout << std::thread::hardware_concurrency() << std::endl;
+            play = false;
         }
         if (generation == 0) {
             saveInitialState(physarum.cells, scale);
+            // Get initial point and one nutrient
+            for (size_t i = 0; i < scale; i++) {
+                for (size_t j = 0; j < scale; j++) {
+                    if (physarum.cells[i][j] == 3) {
+                        _initialCoordinates = make_tuple('a', j, i); // Name, X, Y
+                        std::cout << "ini" << std::get<1>(_initialCoordinates) << ", " << std::get<2>(_initialCoordinates) << "\n";
+                    }
+                    if (physarum.cells[i][j] == 1) {
+                        _nutrientCoordinates = make_tuple('b', j, i); // Name, X, Y
+                        std::cout << "nut" << std::get<1>(_nutrientCoordinates) << ", " << std::get<2>(_nutrientCoordinates) << "\n";
+                    }
+                }
+            }
         }
         generation++;
 
@@ -362,76 +369,74 @@ bool App::OpenFile() {
     return false;
 }
 
-
+// TO DO
+/*
+    * First, get all physarum cells when is routed
+    * Save all coordinates in array
+    * for each cell, calculate Bresenham, stop if cell is repelent
+    * finish when point reach nutrient
+    * Save route and send 
+*/
 void App::Reforce(int **tab, int n) {
-    float **dirs = new float* [n];
+
+    int Xc = 0, Yc = 0;
+
+    int dy = std::get<2>(_nutrientCoordinates) - get<2>(_initialCoordinates);
+    int dx = std::get<1>(_nutrientCoordinates) - get<1>(_initialCoordinates);
+
+    int inXci = 0;
+    int inYci = 0;
+    int inXcr = 0;
+    int inYcr = 0;
+
+    if (dy > 0)
+        inYci = 1;
+    else {
+        dy = -dy;
+        inYci = -1;
+    }
     
+    if (dx >= 0)
+        inXci = 1;
+    else {
+        dx = -dx;
+        inXci = -1;
+    }
 
-    for (size_t i = 0; i < n; i++) {
-        dirs[i] = new float[n];
-        for (size_t j = 0; j < n; j++) {
-            dirs[i][j] = 0;
+    if (dx >= dy) {
+        inYcr = 0;
+        inXcr = inXci;
+    }
+    else {
+        inXcr = 0;
+        inYcr = inYci;
+        int temp = dx;
+        dx = dy;
+        dy = temp;
+    }
+    Xc = std::get<1>(_initialCoordinates);
+    Yc = std::get<2>(_initialCoordinates);
+
+    int avR = 0, av = 0, avI = 0;
+    avR = (2 * dy);
+    av = avR - dx;
+    avI = (av - dx);
+
+    do {
+        physarum.setCellState(Xc, Yc,  9);
+        std::cout << "x: " << Xc << "y: " << Yc << "\n";
+        if (av >= 0) {
+            Xc = Xc + inXci;
+            Yc = Yc + inYci;
+            av = av + avI;
         }
-    }
-
-    for (size_t i = 0; i < n; i++) {
-        for (size_t j = 0; j < n; j++) {
-            if (tab[i][j] == 5 || tab[i][j] == 8) {
-                std::vector<int> dirsNeigh;
-                std::vector<int> data;
-                float val = 0, aux = 0;
-                if (i != 0 && j != 0 && i != n - 1 && j != n - 1) {
-
-                    data.push_back(tab[i - 1][j]);
-
-                    data.push_back(tab[i - 1][j + 1]);
-                    data.push_back(tab[i][j + 1]);
-                    data.push_back(tab[i + 1][j + 1]);
-
-                    data.push_back(tab[i + 1][j]);
-
-                    data.push_back(tab[i + 1][j - 1]);
-                    data.push_back(tab[i][j - 1]);
-                    data.push_back(tab[i - 1][j - 1]);
-                }
-
-                for (size_t k = 0; k < data.size(); k++) {
-
-                    if (data[k] == 5 || data[k] == 8) {
-                        dirsNeigh.push_back(k + 1);
-                    }
-                }
-                for (size_t k = 0; k < dirsNeigh.size(); k++) {
-                    aux += dirsNeigh[k];
-                }
-
-                if (dirsNeigh.empty()) {
-                    val = 0;
-                }
-                else {
-                    val = aux / dirsNeigh.size();
-                }
-                dirs[i][j] = val;
-
-                data.clear();
-            }
+        else {
+            Xc = Xc + inXcr;
+            Yc = Yc + inYcr;
+            av = av + avR;
         }
-    }
-
-    //physarum.showPhysarum();
-    // Show dirs
-    for (size_t i = 0; i < n; i++) {
-        for (size_t j = 0; j < n; j++) {
-            //printf("%.1f ", dirs[i][j]);
-            printf("%d ", (int)dirs[i][j]);
-        }
-        std::cout << "\n";
-    }
+    } while (Xc != std::get<1>(_nutrientCoordinates) - 1 && Yc != std::get<2>(_nutrientCoordinates) - 1) ;
 
 
-    for (int i = 0; i < n; i++) {
-        delete[] dirs[i];
-            
-    }
-    delete[] dirs;   
+    
 }

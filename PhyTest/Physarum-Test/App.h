@@ -3,6 +3,7 @@
 #include <iostream>
 #include <ctime>
 #include <thread>
+#include <tuple>
 #include "files_management.hpp"
 #include "LoadMap.hpp"
 #include "DensityData.hpp"
@@ -71,4 +72,6 @@ private:
     LoadMap loadmap;
 
     std::vector<DensityData> densityValues;
+    std::tuple <char, float, float> _initialCoordinates;
+    std::tuple <char, float, float> _nutrientCoordinates;
 };
