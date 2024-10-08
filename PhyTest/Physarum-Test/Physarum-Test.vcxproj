@@ -161,6 +161,7 @@
     <ClInclude Include="DensityData.hpp" />
     <ClInclude Include="files_management.hpp" />
     <ClInclude Include="LoadMap.hpp" />
+    <ClInclude Include="PerfectRouteAutomata.hpp" />
     <ClInclude Include="Physarum.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

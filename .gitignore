@@ -23,4 +23,6 @@ CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 node_modules/
-/PhyTest/Physarum-Test/Physarum-Test/
+/Physarum-Test/Physarum-Test/
+/Physarum-Test/SAVE_DATA/
+/Physarum-Test/MAPS/

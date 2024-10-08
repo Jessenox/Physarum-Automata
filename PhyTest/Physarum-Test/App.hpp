@@ -331,36 +331,45 @@ void App::update(sf::Time deltaTime) {
         physarumClock.restart();
 
         if (physarum.routed) {
-            Reforce(physarum.cells, scale);
-            std::cout << "Ruta obtenida\n";
-            
+            //Reforce(physarum.cells, scale);
+            PerfectRouteAutomata objAut;
+            objAut.getPrevRoute(physarum.cells, scale);
             saveDensityData("hola.txt", densityValues);
-            // std::cout << std::thread::hardware_concurrency() << std::endl;
             play = false;
         }
         if (generation == 0) {
             saveInitialState(physarum.cells, scale);
             // Get initial point and one nutrient
-            for (size_t i = 0; i < scale; i++) {
-                for (size_t j = 0; j < scale; j++) {
-                    if (physarum.cells[i][j] == 3) {
-                        _initialCoordinates = make_tuple('a', j, i); // Name, X, Y
-                        std::cout << "ini" << std::get<1>(_initialCoordinates) << ", " << std::get<2>(_initialCoordinates) << "\n";
-                    }
-                    if (physarum.cells[i][j] == 1) {
-                        _nutrientCoordinates = make_tuple('b', j, i); // Name, X, Y
-                        std::cout << "nut" << std::get<1>(_nutrientCoordinates) << ", " << std::get<2>(_nutrientCoordinates) << "\n";
-                    }
-                }
-            }
+            getInitialPoints();
         }
         generation++;
 
     }
 }
 
-void App::physarumRoute() {
-    physarum.getRoute();
+void App::getInitialPoints() {
+    for (size_t i = 0; i < scale; i++) {
+        for (size_t j = 0; j < scale; j++) {
+            if (physarum.cells[i][j] == 3) {
+                _iniPoint = make_tuple('a', j, i); // Name, X, Y
+            }
+            if (physarum.cells[i][j] == 1) {
+                _endPoint = make_tuple('b', j, i); // Name, X, Y
+            }
+        }
+    }
+}
+
+void App::getPhysarumTempRoute() {
+    for (size_t i = 0; i < scale; i++) {
+        for (size_t j = 0; j < scale; j++) {
+            if (physarum.cells[i][j] == 5 || physarum.cells[i][j] == 8) {
+                // params (X, Y)
+                std::tuple<int, int> coords(j, i);
+                physarumCellsCoords.push_back(coords);
+            }
+        }
+    }
 }
 
 
@@ -378,11 +387,11 @@ bool App::OpenFile() {
     * Save route and send 
 */
 void App::Reforce(int **tab, int n) {
-
+    bool xReached = false, yReached = false;
     int Xc = 0, Yc = 0;
 
-    int dy = std::get<2>(_nutrientCoordinates) - get<2>(_initialCoordinates);
-    int dx = std::get<1>(_nutrientCoordinates) - get<1>(_initialCoordinates);
+    int dy = std::get<2>(_endPoint) - get<2>(_iniPoint);
+    int dx = std::get<1>(_endPoint) - get<1>(_iniPoint);
 
     int inXci = 0;
     int inYci = 0;
@@ -414,8 +423,8 @@ void App::Reforce(int **tab, int n) {
         dx = dy;
         dy = temp;
     }
-    Xc = std::get<1>(_initialCoordinates);
-    Yc = std::get<2>(_initialCoordinates);
+    Xc = std::get<1>(_iniPoint);
+    Yc = std::get<2>(_iniPoint);
 
     int avR = 0, av = 0, avI = 0;
     avR = (2 * dy);
@@ -435,8 +444,7 @@ void App::Reforce(int **tab, int n) {
             Yc = Yc + inYcr;
             av = av + avR;
         }
-    } while (Xc != std::get<1>(_nutrientCoordinates) - 1 && Yc != std::get<2>(_nutrientCoordinates) - 1) ;
-
-
-    
+        if (Xc == std::get<1>(_endPoint)) xReached = true;
+        if (Yc == std::get<2>(_endPoint)) yReached = true;
+    } while (!xReached || !yReached);
 }

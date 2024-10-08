@@ -7,6 +7,7 @@
 #include "files_management.hpp"
 #include "LoadMap.hpp"
 #include "DensityData.hpp"
+#include "PerfectRouteAutomata.hpp"
 
 #define X 500.f
 #define Y 500.f
@@ -27,10 +28,10 @@ private:
     void textSettings();
     void updateText();
     bool setGeneralFont(std::string);
-    void physarumRoute();
+    void getInitialPoints();
     void initializeColors();
     void setMemoryOnTexture();
-
+    void getPhysarumTempRoute();
 
     void Reforce(int** tab, int n);
 
@@ -72,6 +73,7 @@ private:
     LoadMap loadmap;
 
     std::vector<DensityData> densityValues;
-    std::tuple <char, float, float> _initialCoordinates;
-    std::tuple <char, float, float> _nutrientCoordinates;
+    std::tuple <char, int, int> _iniPoint;
+    std::tuple <char, int, int> _endPoint;
+    std::vector<std::tuple<int, int>> physarumCellsCoords;
 };
