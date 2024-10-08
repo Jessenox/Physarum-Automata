@@ -19,9 +19,9 @@
 using namespace std;
 using namespace ydlidar;
 
-// Pines y configuración para los motores
+// Pines y configuracin para los motores
 const int PWM_PINS[] = {13, 19, 18, 12};  // Pines PWM para los motores
-const int DIR_PINS[] = {5, 6, 23, 24};    // Pines de dirección para los motores
+const int DIR_PINS[] = {5, 6, 23, 24};    // Pines de direccin para los motores
 int frequency = 400; // Frecuencia inicial
 
 std::atomic<bool> is_running(true);
@@ -308,7 +308,7 @@ int main() {
     if (ports.size() > 0) {
         port = ports.begin()->second;
     } else {
-        std::cerr << "No se detectó ningún LiDAR. Verifica la conexión." << std::endl;
+        std::cerr << "No se detect ningn LiDAR. Verifica la conexin." << std::endl;
         return -1;
     }
 

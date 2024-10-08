@@ -132,7 +132,7 @@ void drawLiDARPoints(sf::RenderWindow &window, const LaserScan &lidarPoints, con
         float adjustedY = robotFixedPosition.y - (y * scale) - robotPosition.y;  // Invertir Y para la pantalla
 
         if (point.range > 0.05) {  // Excluir puntos cercanos al centro
-            sf::CircleShape lidarPoint(2);  // Tamaño del punto
+            sf::CircleShape lidarPoint(2);  // Tamao del punto
             lidarPoint.setPosition(adjustedX, adjustedY);
             lidarPoint.setFillColor(getPointColor(point.range, max_range));  // Color basado en la distancia
 
@@ -175,13 +175,13 @@ void updateRoute(const sf::RectangleShape &minimap, sf::RenderWindow &window) {
 
 
 
-void drawRoute(sf::RenderWindow &window, const std::vector<sf::Vector2f> &routePoints, const sf::RectangleShape &minimap) {
+void drawRoute(sf::RenderWindow &window, const std::vector<sf::Vector2f> &routePoints, const sf::Vector2f &robotPosition) {
     if (routePoints.size() > 1) {
         for (size_t i = 0; i < routePoints.size() - 1; ++i) {
-            // Dibujar las líneas de la ruta, ajustando las coordenadas en función de la posición del robot
+            // Dibujar las lneas de la ruta, ajustando las coordenadas en funcin de la posicin del robot
             sf::Vertex line[] = {
-                sf::Vertex(routePoints[i] + minimap.getPosition(), sf::Color::Red), // Ajuste de posición para el minimapa
-                sf::Vertex(routePoints[i + 1] + minimap.getPosition(), sf::Color::Red)
+                sf::Vertex(robotFixedPosition + (routePoints[i] - robotPosition), sf::Color::Red),  // Ajustar posicin en funcin del robot
+                sf::Vertex(robotFixedPosition + (routePoints[i + 1] - robotPosition), sf::Color::Red)
             };
             window.draw(line, 2, sf::Lines);
         }
@@ -265,17 +265,16 @@ void moveTo(sf::Vector2f point, sf::Vector2f &robotPosition, float &currentAngle
     if (distanceToPoint > threshold) {
         // Calcular el angulo hacia el punto de destino
         float targetAngle = atan2(deltaY, deltaX);
-
-        // Ajustar el angulo para que el norte sea -90°
+        // Ajustar el angulo para que el norte sea -90
         targetAngle = adjustAngleForNorth(targetAngle);
 
         // Girar hacia el angulo correcto
-        rotateTowardsPoint(currentAngle, targetAngle);  // Función para girar hacia el ángulo
+        rotateTowardsPoint(currentAngle, targetAngle);  // Funcin para girar hacia el ngulo
 
         // Mover hacia el punto
         moveTowardsPoint(distanceToPoint);
         
-        // Actualizar la posicion y el ángulo del robot
+        // Actualizar la posicion y el ngulo del robot
         robotPosition = point;
         currentAngle = targetAngle;
     }
@@ -284,8 +283,8 @@ void moveTo(sf::Vector2f point, sf::Vector2f &robotPosition, float &currentAngle
 
 
 void followRoute(sf::RenderWindow &window, std::vector<sf::Vector2f> &routePoints, const LaserScan &lidarPoints, const sf::Vector2f &minimapPosition, float max_range) {
-    sf::Vector2f robotPosition(110, 110);  // Posición inicial del robot en el minimapa
-    float currentAngle = -M_PI / 2;  // Ángulo inicial del robot (norte en -90°)
+    sf::Vector2f robotPosition(110, 110);  // Posicin inicial del robot en el minimapa
+    float currentAngle = -M_PI / 2;  // ngulo inicial del robot (norte en -90)
 
     while (!routePoints.empty()) {
         sf::Vector2f targetPoint = routePoints.front();
@@ -525,6 +524,72 @@ void randomMovement(CYdLidar &laser) {
 }
 
 
+// Definir las dimensiones del robot en el minimapa
+    const float frontDistance = 15.0f;   // cm hacia adelante
+    const float backDistance = 35.0f;    // cm hacia atrs
+    const float rightDistance = 21.0f;   // cm hacia la derecha
+    const float leftDistance = 21.0f;    // cm hacia la izquierda
+
+    // Escalar las distancias al minimapa (considera ajustar el factor de escala segn lo necesites)
+    float scale = 0.4f;  // Cambia este valor si necesitas ajustar el tamao del robot en el minimapa
+
+
+void drawRobot(sf::RenderWindow &window, const sf::Vector2f &robotPosition, const sf::RectangleShape &minimap) {
+    
+
+    float width = (leftDistance + rightDistance) * scale;
+    float height = (frontDistance + backDistance) * scale;
+
+    // Dibujar el rectngulo representando al robot
+    sf::RectangleShape robotShape(sf::Vector2f(width, height));
+    robotShape.setFillColor(sf::Color(100, 100, 255, 150));  // Color azul claro con algo de transparencia
+
+    // Ajustar el origen del rectngulo al punto donde est el LiDAR, es decir, al centro del robot
+    robotShape.setOrigin(leftDistance * scale, backDistance * scale);
+
+    // Establecer la posicin del rectngulo del robot en el minimapa, centrado en la posicin del LiDAR
+    robotShape.setPosition(105, 105); // Usamos la misma posicin del LiDAR para centrar el robot
+
+    window.draw(robotShape);
+}
+
+
+
+
+void drawGrid(sf::RenderWindow &window, const sf::RectangleShape &minimap) {
+    const float cellSizeCm = 50.0f;  // Tamaño de cada celda en centímetros
+    const float scaleFactor = 10.0f; // Relación 1 cm = 10 píxeles en el minimapa
+    const float cellSizePx = cellSizeCm * scaleFactor;  // Tamaño de cada celda en píxeles
+
+    // Obtener la posición y tamaño del minimapa
+    sf::Vector2f minimapPosition = minimap.getPosition();
+    sf::Vector2f minimapSize = minimap.getSize();
+
+    // Calcular el origen del grid para mantenerlo fijo respecto al robot centrado en (105, 105)
+    float originX = minimapPosition.x - fmod(minimapPosition.x + 105.0f, cellSizePx);
+    float originY = minimapPosition.y - fmod(minimapPosition.y + 105.0f, cellSizePx);
+
+    // Dibujar las líneas verticales de la cuadrícula
+    for (float x = originX; x <= minimapPosition.x + minimapSize.x; x += cellSizePx) {
+        sf::Vertex verticalLine[] = {
+            sf::Vertex(sf::Vector2f(x, minimapPosition.y), sf::Color(150, 150, 150, 200)),
+            sf::Vertex(sf::Vector2f(x, minimapPosition.y + minimapSize.y), sf::Color(150, 150, 150, 200))
+        };
+        window.draw(verticalLine, 2, sf::Lines);
+    }
+
+    // Dibujar las líneas horizontales de la cuadrícula
+    for (float y = originY; y <= minimapPosition.y + minimapSize.y; y += cellSizePx) {
+        sf::Vertex horizontalLine[] = {
+            sf::Vertex(sf::Vector2f(minimapPosition.x, y), sf::Color(150, 150, 150, 200)),
+            sf::Vertex(sf::Vector2f(minimapPosition.x + minimapSize.x, y), sf::Color(150, 150, 150, 200))
+        };
+        window.draw(horizontalLine, 2, sf::Lines);
+    }
+}
+
+
+
 
 
 
@@ -664,24 +729,28 @@ int main() {
 
         
         window.draw(minimap);
+        drawGrid(window, minimap);
         updateRoute(minimap, window);
         // Dibujar la ruta en el minimapa
-        drawRoute(window, routePoints, minimap);
+        drawRoute(window, routePoints, minimap.getPosition());
         // Dibujar el centro del LiDAR (color azul)
-        sf::CircleShape lidarCenter(5); // Radio del crculo del LiDAR
-        lidarCenter.setFillColor(sf::Color::Blue);
-        lidarCenter.setPosition(105, 105); // Posicin del centro en el minimapa
+        drawRobot(window, robotFixedPosition, minimap);
 
-        window.draw(lidarCenter);
 
-        // Dibujar la lnea hacia el norte
+        // Calcular el centro del rectngulo del robot para dibujar la lnea que indica el norte
+        sf::Vector2f robotCenter = minimap.getPosition() + robotFixedPosition;
+
+        // Dibujar la lnea hacia el norte (ajustada al centro del rectngulo)
         sf::Vertex line[] =
         {
-            sf::Vertex(sf::Vector2f(110, 110), sf::Color::Black),
-            sf::Vertex(sf::Vector2f(110, 160), sf::Color::Black) // Lnea hacia arriba (norte)
+            sf::Vertex(sf::Vector2f(105, 105), sf::Color::Black), // Posicin inicial de la lnea
+            sf::Vertex(sf::Vector2f(105, 160), sf::Color::Black)   // Posicin final hacia arriba
         };
 
+        // Dibujar la lnea que representa el norte
         window.draw(line, 2, sf::Lines);
+
+
 
         LaserScan scan;
         if (laser.doProcessSimple(scan)) {
