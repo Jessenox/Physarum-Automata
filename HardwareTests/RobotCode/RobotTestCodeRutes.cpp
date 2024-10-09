@@ -71,6 +71,7 @@ void moveBackward() {
 }
 
 void turnLeft() {
+    std::cout << "Turning left" << std::endl;
     for (int i = 0; i < 4; ++i) {
         gpioPWM(PWM_PINS[i], 128);  // Establecer ciclo de trabajo al 50%
     }
@@ -81,6 +82,7 @@ void turnLeft() {
 }
 
 void turnRight() {
+    std::cout << "Turning right" << std::endl;
     for (int i = 0; i < 4; ++i) {
         gpioPWM(PWM_PINS[i], 128);  // Establecer ciclo de trabajo al 50%
     }
@@ -556,6 +558,91 @@ void drawRobot(sf::RenderWindow &window, const sf::Vector2f &robotPosition, cons
 
 
 
+void moveAlongRoute(const std::vector<int> &route) {
+    // Las celdas están numeradas de 1 a N como en la imagen proporcionada.
+    std::map<int, std::pair<int, int>> cellCoordinates = {
+        {1, {0, 0}}, {2, {0, 1}}, {3, {0, 2}},
+        {4, {1, 0}}, {5, {1, 1}}, {6, {1, 2}},
+        {7, {2, 0}}, {8, {2, 1}}, {9, {2, 2}},
+        // Continúa con el resto de las celdas de la cuadrícula...
+        {10,{3, 0}}, {11,{3, 1}}, {12,{3, 2}},
+        {13,{4, 0}}, {14,{4, 1}}, {15,{4, 2}},
+        {16,{5, 0}}, {17,{5, 1}}, {18,{5, 2}},
+        {19,{6, 0}}, {20,{6, 1}}, {21,{6, 2}},
+        {22,{7, 0}}, {23,{7, 1}}, {24,{7, 2}}
+    };
+
+    std::cout << "Moviendo a lo largo de la ruta..." << std::endl;
+    std::cout << "La ruta es: " << std::endl;
+    for (int cell : route) {
+        std::cout << cell << " ";
+    }
+    std::cout << std::endl;
+    for (size_t i = 0; i < route.size() - 1; ++i) {
+        int currentCell = route[i];
+        int nextCell = route[i + 1];
+        std::cout << "Current cell: " << currentCell << " Next cell: " << nextCell << endl;
+        auto currentCoord = cellCoordinates[currentCell];
+        auto nextCoord = cellCoordinates[nextCell];
+
+        // Calculamos la dirección en la que el robot debe moverse.
+        int deltaX = nextCoord.first - currentCoord.first;
+        int deltaY = nextCoord.second - currentCoord.second;
+        is_manual_mode = false;
+        std::cout << "Delta X: " << deltaX << " Delta Y: " << deltaY << endl;
+        if (deltaX == 0 && deltaY == 1) {
+            // Movimiento hacia la derecha.
+            stopMotors();
+            std::cout << "Girando hacia la derecha y avanzando..." << std::endl;
+            turnRight();
+            std::this_thread::sleep_for(std::chrono::milliseconds(4500));  // Girar por 4.35 segundos.
+            stopMotors();
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));   // Pausa antes de avanzar.
+            moveForward();
+            std::this_thread::sleep_for(std::chrono::milliseconds(5000));  // Avanzar por 5 segundos.
+            stopMotors();
+        } else if (deltaX == 0 && deltaY == -1) {
+            // Movimiento hacia la izquierda.
+            stopMotors();
+            std::cout << "Girando hacia la izquierda y avanzando..." << std::endl;
+            turnLeft();
+            std::this_thread::sleep_for(std::chrono::milliseconds(4350));  // Girar por 4.35 segundos.
+            stopMotors();
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));   // Pausa antes de avanzar.
+            moveForward();
+            std::this_thread::sleep_for(std::chrono::milliseconds(5000));  // Avanzar por 5 segundos.
+            stopMotors();
+        } else if (deltaX == 1 && deltaY == 0) {
+            // Movimiento hacia adelante (eje X positivo).
+            stopMotors();
+            std::cout << "Avanzando hacia adelante..." << std::endl;
+            moveForward();
+            std::this_thread::sleep_for(std::chrono::milliseconds(5000));  // Avanzar por 5 segundos.
+            stopMotors();
+        } else if (deltaX == -1 && deltaY == 0) {
+            // Movimiento hacia atrás (eje X negativo).
+            std::cout << "Retrocediendo..." << std::endl;
+            moveBackward();
+            std::this_thread::sleep_for(std::chrono::milliseconds(5000));  // Retroceder por 5 segundos.
+            stopMotors();
+        } else {
+            std::cerr << "Movimiento no soportado entre las celdas: " << currentCell << " y " << nextCell << std::endl;
+        }
+        std::cout << "Movimiento completado." << std::endl;
+        stopMotors();
+        // Pausa entre movimientos para evitar sobrecargar los motores.
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
+}
+
+
+
+
+
+
+
+
+
 void drawGrid(sf::RenderWindow &window, const sf::RectangleShape &minimap) {
     const float cellSizeCm = 50.0f;  // Tamaño de cada celda en centímetros
     const float scaleFactor = 10.0f; // Relación 1 cm = 10 píxeles en el minimapa
@@ -816,8 +903,10 @@ int main() {
                         break;
                     case sf::Keyboard::R: {
                         is_manual_mode = false;
-                        std::thread routeThread(followRoute, std::ref(window), std::ref(routePoints), std::ref(scan), minimap.getPosition(), max_range);
-                        routeThread.detach();
+                        std::vector<int> route = {1, 2, 5, 8, 11, 14, 13, 16};
+                        moveAlongRoute(route);
+                        //std::thread routeThread(followRoute, std::ref(window), std::ref(routePoints), std::ref(scan), minimap.getPosition(), max_range);
+                        //routeThread.detach();
                         break;
                     }
                     case sf::Keyboard::K:
