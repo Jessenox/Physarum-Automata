@@ -1,0 +1,733 @@
+\subsection{Desarrollo de m\'odulos de hardware del robot para pruebas de integraci\'on}
+\label{sec:Desarrollo de m\'odulos de hardware del robot para pruebas de integraci\'on}
+    % Parrafo 1
+    En la siguiente secci\'on vamos a detallar el proceso de implementaci\'on de los m\'odulos
+        de hardware que componen el robot. Se describir\'an las decisiones t\'ecnicas tomadas
+        durante la construcci\'on, la integraci\'on f\'isica y funcional de los m\'odulos, y los
+        resultados preliminares de las pruebas iniciales. El objetivo es mostrar c\'omo los
+        m\'odulos de actuadores, sensores, la unidad de control y sistema de visualizaci\'on
+        fueron desarrollados para llevar a cabo las pruebas de integraci\'on.
+    \vskip 0.5cm
+    \subsubsection{M\'odulo de actuadores}
+    El m\'odulo de actuadores est\'a compuesto por cuatro motores Nema 23 conectados a
+        ruedas omnidireccionales. Los motores se montaron sobre una base de perfiles de
+        aluminio 2040, elegidos por su resistencia y ligereza. Los motores se conectaron a susrespectivos controladores mediante cables blindados para reducir interferencias
+        electromagn\'eticas.
+    \vskip 0.5cm
+    Para el control de los motores, se utiliz\'o la Raspberry Pi, que env\'ia se\~nales PWM a
+        trav\'es de sus pines GPIO, controlando la velocidad y direcci\'on de los motores. Se
+        ajust\'o la frecuencia de las se\~nales PWM a 400 Hz, lo que permiti\'o un control suave y
+        preciso del movimiento del robot.
+    \vskip 0.5cm
+    Para poder controlar los motores, se desarroll\'o un c\'odigo en C++ que utiliz\'o la
+        biblioteca pigpio para gestionar las se\~nales PWM. El c\'odigo permite ajustar tanto la
+        velocidad como la direcci\'on de los motores en tiempo real.
+    \vskip 0.5cm
+    \begin{lstlisting}[language={C++}, caption={C\'odigo de ejemplo de motores}, label={Script}]
+        void setMotorSpeed(int motor, int frequency) {
+            if (motor >= 0 && motor < 4) {
+                gpioSetPWMfrequency(PWM_PINS[motor], frequency);
+            }
+        }
+        void setMotorDirection(int motor, int direction) {
+            if (motor >= 0 && motor < 4) {
+                gpioWrite(DIR_PINS[motor], direction);
+            }
+        }
+    \end{lstlisting}
+    \vskip 0.5cm
+    \subsubsection{M\'odulo de sensores}
+    El sensor LiDAR YDLIDAR 2XL fue montado en la parte superior del robot para obtener
+        un \'angulo de escaneo de 360 grados. El sensor se conect\'o a la Raspberry Pi a trav\'es de
+        un puerto USB A. La configuraci\'on f\'isica permiti\'o que el LiDAR tuviera una vista
+        despejada del entorno, crucial para la detecci\'on precisa de obst\'aculos.
+    \vskip 0.5cm
+    El sensor LiDAR se configur\'o utilizando la biblioteca proporcionada por el fabricante
+        (YLiDAR SDK) y se desarroll\'o un c\'odigo para la lectura continua de los datos de escaneo.
+        Los datos obtenidos del LiDAR se procesaron en tiempo real para permitir la
+        navegaci\'on aut\'onoma y la detecci\'on de obst\'aculos.
+    \vskip 0.5cm
+    \begin{lstlisting}[language={C++}, caption={Primero se implementa la librer\'ia del LiDAR}, label={Script}]
+        #include "CYdLidar.h"
+        using namespace ydlidar;
+    \end{lstlisting}
+    \vskip 0.5cm
+    Despu\'es se inicializa el sensor y se obtienen los datos de escaneo:
+    \vskip 0.5cm
+    \begin{lstlisting}[language={C++}, caption={Configuraci\'on de opciones del LiDAR}, label={Script}]
+        CYdLidar laser;
+        laser.setlidaropt(LidarPropSerialPort, port.c_str(), port.size());
+        std::string ignore_array;
+        ignore_array.clear();
+        laser.setlidaropt(LidarPropIgnoreArray, ignore_array.c_str(), ignore_array.size());
+
+        laser.setlidaropt(LidarPropSerialBaudrate, &baudrate, sizeof(int));
+        int optval = TYPE_TRIANGLE;
+        laser.setlidaropt(LidarPropLidarType, &optval, sizeof(int));
+        optval = YDLIDAR_TYPE_SERIAL;
+        laser.setlidaropt(LidarPropDeviceType, &optval, sizeof(int));
+        optval = isSingleChannel ? 3 : 4;
+        laser.setlidaropt(LidarPropSampleRate, &optval, sizeof(int));
+        optval = 4;
+        laser.setlidaropt(LidarPropAbnormalCheckCount, &optval, sizeof(int));
+
+        bool b_optvalue = false;
+        laser.setlidaropt(LidarPropFixedResolution, &b_optvalue, sizeof(bool));
+        laser.setlidaropt(LidarPropReversion, &b_optvalue, sizeof(bool));
+        laser.setlidaropt(LidarPropInverted, &b_optvalue, sizeof(bool));
+        b_optvalue = true;
+        laser.setlidaropt(LidarPropAutoReconnect, &b_optvalue, sizeof(bool));
+        laser.setlidaropt(LidarPropSingleChannel, &isSingleChannel, sizeof(bool));
+        b_optvalue = false;
+        laser.setlidaropt(LidarPropIntenstiy, &b_optvalue, sizeof(bool));
+        b_optvalue = true;
+        laser.setlidaropt(LidarPropSupportMotorDtrCtrl, &b_optvalue, sizeof(bool));
+        b_optvalue = false;
+        laser.setlidaropt(LidarPropSupportHeartBeat, &b_optvalue, sizeof(bool));
+
+        float f_optvalue = 180.0f;
+        laser.setlidaropt(LidarPropMaxAngle, &f_optvalue, sizeof(float));
+        f_optvalue = -180.0f;
+        laser.setlidaropt(LidarPropMinAngle, &f_optvalue, sizeof(float));
+        f_optvalue = 64.0f;
+        laser.setlidaropt(LidarPropMaxRange, &f_optvalue, sizeof(float));
+        f_optvalue = 0.05f;
+        laser.setlidaropt(LidarPropMinRange, &f_optvalue, sizeof(float));
+        laser.setlidaropt(LidarPropScanFrequency, &frequency, sizeof(float));
+
+    \end{lstlisting}
+    \vskip 0.5cm
+    \subsubsection{Unidad de control}
+    La Raspberry Pi 4 B fue montada en el centro del robot para minimizar la longitud de
+        los cables de conexi\'on hacia los motores, el LiDAR y la c\'amara. Se utiliz\'o una
+        estructura de soporte para asegurar la Raspberry Pi en su lugar, proporcionando un
+        acceso f\'acil a sus puertos GPIO y UART.
+    \vskip 0.5cm
+    Se desarroll\'o un sistema de control centralizado en la Raspberry Pi, utilizando
+        programaci\'on en C++ para gestionar las se\~nales enviadas a los actuadores y procesarlos datos de los sensores. Este sistema permite la toma de decisiones en tiempo real,
+        como ajustar la trayectoria del robot seg\'un los datos del LiDAR.
+    \vskip 0.5cm
+    \begin{lstlisting}[language={C++}, caption={C\'odigo de ejemplo de Kinect y LiDAR}, label={Script}]
+        #include "CYdLidar.h"
+        #include <string>
+        #include <map>
+        #include <iostream>
+        #include <SFML/Graphics.hpp>
+        #include <opencv2/opencv.hpp>
+        #include <libfreenect.hpp>
+        #include <thread>
+        #include <atomic>
+        #include <vector>
+
+        using namespace std;
+        using namespace ydlidar;
+        using namespace cv;
+
+        #if defined(_MSC_VER)
+        #pragma comment(lib, "ydlidar_sdk.lib")
+        #endif
+
+        // Freenect variables
+        freenect_context *f_ctx;
+        freenect_device *f_dev;
+        Mat depthMat(Size(640, 480), CV_16UC1);
+        Mat rgbMat(Size(640, 480), CV_8UC4, Scalar(0, 0, 0, 0)); // Initialize with transparent
+        atomic<bool> is_running(true);
+
+        void depth_cb(freenect_device *dev, void *depth, uint32_t timestamp) {
+            Mat depth_tmp(Size(640, 480), CV_16UC1, depth);
+            depth_tmp.copyTo(depthMat);
+            cout << "Depth frame received at timestamp: " << timestamp << endl;
+        }
+
+        void rgb_cb(freenect_device *dev, void *rgb, uint32_t timestamp) {
+            Mat rgb_tmp(Size(640, 480), CV_8UC3, rgb);
+            cvtColor(rgb_tmp, rgbMat, COLOR_RGB2RGBA);
+            cout << "RGB frame received at timestamp: " << timestamp << endl;
+        }
+
+        void drawGrid(sf::RenderTarget &target, float gridSpacing, float offsetX, float offsetY) {
+            sf::Color gridColor(200, 200, 200); // Light gray color
+            for (float x = offsetX; x < target.getSize().x; x += gridSpacing) {
+                sf::Vertex line[] = {
+                    sf::Vertex(sf::Vector2f(x, 0), gridColor),
+                    sf::Vertex(sf::Vector2f(x, target.getSize().y), gridColor)
+                };
+                target.draw(line, 2, sf::Lines);
+            }
+            for (float x = offsetX; x > 0; x -= gridSpacing) {
+                sf::Vertex line[] = {
+                    sf::Vertex(sf::Vector2f(x, 0), gridColor),
+                    sf::Vertex(sf::Vector2f(x, target.getSize().y), gridColor)
+                };
+                target.draw(line, 2, sf::Lines);
+            }
+            for (float y = offsetY; y < target.getSize().y; y += gridSpacing) {
+                sf::Vertex line[] = {
+                    sf::Vertex(sf::Vector2f(0, y), gridColor),
+                    sf::Vertex(sf::Vector2f(target.getSize().x, y), gridColor)
+                };
+                target.draw(line, 2, sf::Lines);
+            }
+            for (float y = offsetY; y > 0; y -= gridSpacing) {
+                sf::Vertex line[] = {
+                    sf::Vertex(sf::Vector2f(0, y), gridColor),
+                    sf::Vertex(sf::Vector2f(target.getSize().x, y), gridColor)
+                };
+                target.draw(line, 2, sf::Lines);
+            }
+        }
+
+        sf::Color getPointColor(float distance, float maxRange) {
+            float ratio = distance / maxRange;
+            return sf::Color(255 * (1 - ratio), 255 * ratio, 0); // Color from red to green
+        }
+
+        void drawNorthIndicator(sf::RenderTexture &lidarTexture, float offsetX, float offsetY) {
+            sf::Color northColor(255, 0, 0); // Red color for the north indicator
+            float length = 50.0f; // Length of the north indicator line
+
+            sf::Vertex line[] = {
+                sf::Vertex(sf::Vector2f(offsetX, offsetY), northColor),
+                sf::Vertex(sf::Vector2f(offsetX, offsetY - length), northColor) // Line pointing upwards
+            };
+            lidarTexture.draw(line, 2, sf::Lines);
+        }
+
+        void detectAndDrawDepthObstacles(Mat &depthMat, sf::RenderTexture &lidarTexture, float offsetX, float offsetY, float scale, vector<Point2f> &depthObstacles) {
+            for (int y = 0; y < depthMat.rows; y += 10) {
+                for (int x = 0; x < depthMat.cols; x += 10) {
+                    uint16_t depth_value = depthMat.at<uint16_t>(y, x);
+                    if (depth_value > 0 && depth_value < 2047) {
+                        float depth_in_meters = depth_value / 1000.0f;
+
+                        float adjustedX = offsetX + (x - depthMat.cols / 2) * scale / depth_in_meters;
+                        float adjustedY = offsetY - (y - depthMat.rows / 2) * scale / depth_in_meters; // Invert Y to match screen coordinates
+
+                        sf::CircleShape circle(3); // Small circle to represent the obstacle
+                        circle.setPosition(adjustedX, adjustedY);
+                        circle.setFillColor(sf::Color::Red);
+
+                        lidarTexture.draw(circle);
+                        
+                        // Add the obstacle to the vector
+                        depthObstacles.push_back(Point2f(adjustedX, adjustedY));
+                    }
+                }
+            }
+        }
+
+        void compareObstacles(const vector<Point2f> &depthObstacles, const vector<Point2f> &lidarObstacles) {
+            cout << "Comparing Obstacles:" << endl;
+            for (const auto &d : depthObstacles) {
+                bool matchFound = false;
+                for (const auto &l : lidarObstacles) {
+                    float distance = sqrt(pow(d.x - l.x, 2) + pow(d.y - l.y, 2));
+                    if (distance < 10.0f) { // If the distance is less than a threshold, consider it a match
+                        matchFound = true;
+                        break;
+                    }
+                }
+                if (matchFound) {
+                    cout << "Match found for depth obstacle at (" << d.x << ", " << d.y << ")" << endl;
+                } else {
+                    cout << "No match for depth obstacle at (" << d.x << ", " << d.y << ")" << endl;
+                }
+            }
+        }
+
+        void freenect_thread_func() {
+            while (is_running) {
+                freenect_process_events(f_ctx);
+            }
+        }
+
+        void print_frame_modes() {
+            cout << "Available video modes:" << endl;
+            for (int res = FREENECT_RESOLUTION_LOW; res <= FREENECT_RESOLUTION_HIGH; ++res) {
+                for (int fmt = FREENECT_VIDEO_RGB; fmt <= FREENECT_VIDEO_IR_8BIT; ++fmt) {
+                    freenect_frame_mode mode = freenect_find_video_mode((freenect_resolution)res, (freenect_video_format)fmt);
+                    if (mode.is_valid) {
+                        cout << "Resolution: " << res << ", Format: " << fmt << ", Width: " << mode.width << ", Height: " << mode.height << ", Bytes per pixel: " << mode.data_bits_per_pixel << endl;
+                    }
+                }
+            }
+
+            cout << "Available depth modes:" << endl;
+            for (int res = FREENECT_RESOLUTION_LOW; res <= FREENECT_RESOLUTION_HIGH; ++res) {
+                for (int fmt = FREENECT_DEPTH_11BIT; fmt <= FREENECT_DEPTH_REGISTERED; ++fmt) {
+                    freenect_frame_mode mode = freenect_find_depth_mode((freenect_resolution)res, (freenect_depth_format)fmt);
+                    if (mode.is_valid) {
+                        cout << "Resolution: " << res << ", Format: " << fmt << ", Width: " << mode.width << ", Height: " << mode.height << ", Bytes per pixel: " << mode.data_bits_per_pixel << endl;
+                    }
+                }
+            }
+        }
+
+        int main(int argc, char *argv[]) {
+            std::string port;
+            ydlidar::os_init();
+
+            // Initialize Freenect
+            if (freenect_init(&f_ctx, NULL) < 0) {
+                cerr << "Freenect init failed" << endl;
+                return -1;
+            }
+            freenect_set_log_level(f_ctx, FREENECT_LOG_DEBUG);
+            int nr_devices = freenect_num_devices(f_ctx);
+            if (nr_devices < 1) {
+                cerr << "No Kinect devices found" << endl;
+                return -1;
+            }
+            if (freenect_open_device(f_ctx, &f_dev, 0) < 0) {
+                cerr << "Could not open Kinect device" << endl;
+                return -1;
+            }
+
+            // Print available frame modes
+            print_frame_modes();
+
+            // Set the video and depth modes
+            freenect_frame_mode video_mode = freenect_find_video_mode(FREENECT_RESOLUTION_MEDIUM, FREENECT_VIDEO_RGB);
+            if (!video_mode.is_valid) {
+                cerr << "Invalid video mode" << endl;
+                return -1;
+            }
+            freenect_frame_mode depth_mode = freenect_find_depth_mode(FREENECT_RESOLUTION_MEDIUM, FREENECT_DEPTH_11BIT);
+            if (!depth_mode.is_valid) {
+                cerr << "Invalid depth mode" << endl;
+                return -1;
+            }
+
+            if (freenect_set_video_mode(f_dev, video_mode) < 0) {
+                cerr << "Failed to set video mode" << endl;
+                return -1;
+            }
+
+            if (freenect_set_depth_mode(f_dev, depth_mode) < 0) {
+                cerr << "Failed to set depth mode" << endl;
+                return -1;
+            }
+
+            freenect_set_depth_callback(f_dev, depth_cb);
+            freenect_set_video_callback(f_dev, rgb_cb);
+            freenect_start_depth(f_dev);
+            freenect_start_video(f_dev);
+
+            // Start Kinect processing thread
+            std::thread freenect_thread(freenect_thread_func);
+
+            // Get available LiDAR ports
+            std::map<std::string, std::string> ports = ydlidar::lidarPortList();
+            if (ports.size() == 1) {
+                port = ports.begin()->second;
+            } else {
+                int id = 0;
+                for (auto it = ports.begin(); it != ports.end(); it++) {
+                    printf("%d. %s\n", id, it->first.c_str());
+                    id++;
+                }
+                if (ports.empty()) {
+                    printf("No LiDAR was detected. Please enter the LiDAR serial port:");
+                    std::cin >> port;
+                } else {
+                    while (ydlidar::os_isOk()) {
+                        printf("Please select the LiDAR port:");
+                        std::string number;
+                        std::cin >> number;
+                        if ((size_t)atoi(number.c_str()) >= ports.size()) continue;
+                        auto it = ports.begin();
+                        id = atoi(number.c_str());
+                        while (id) {
+                            id--;
+                            it++;
+                        }
+                        port = it->second;
+                        break;
+                    }
+                }
+            }
+
+            // Baud rate selection
+            int baudrate = 115200;
+            printf("Baudrate: %d\n", baudrate); 
+            if (!ydlidar::os_isOk()) {
+                return 0;
+            }
+
+            // Check for single channel communication
+            bool isSingleChannel = false;
+            std::string input_channel;
+            isSingleChannel = true;
+
+            if (!ydlidar::os_isOk()) {
+                return 0;
+            }
+
+            // Scan frequency
+            float frequency = 8.0;
+            while (ydlidar::os_isOk() && !isSingleChannel) {
+                printf("Please enter the LiDAR scan frequency[5-12]:");
+                std::string input_frequency;
+                std::cin >> input_frequency;
+                frequency = atof(input_frequency.c_str());
+                if (frequency <= 12 && frequency >= 5.0) {
+                    break;
+                }
+                fprintf(stderr, "Invalid scan frequency. The scanning frequency range is 5 to 12 Hz. Please re-enter.\n");
+            }
+
+            if (!ydlidar::os_isOk()) {
+                return 0;
+            }
+
+            CYdLidar laser;
+            //////////////////////string property/////////////////
+            laser.setlidaropt(LidarPropSerialPort, port.c_str(), port.size());
+            std::string ignore_array;
+            ignore_array.clear();
+            laser.setlidaropt(LidarPropIgnoreArray, ignore_array.c_str(), ignore_array.size());
+
+            //////////////////////int property/////////////////
+            laser.setlidaropt(LidarPropSerialBaudrate, &baudrate, sizeof(int));
+            int optval = TYPE_TRIANGLE;
+            laser.setlidaropt(LidarPropLidarType, &optval, sizeof(int));
+            optval = YDLIDAR_TYPE_SERIAL;
+            laser.setlidaropt(LidarPropDeviceType, &optval, sizeof(int));
+            optval = isSingleChannel ? 3 : 4;
+            laser.setlidaropt(LidarPropSampleRate, &optval, sizeof(int));
+            optval = 4;
+            laser.setlidaropt(LidarPropAbnormalCheckCount, &optval, sizeof(int));
+
+            //////////////////////bool property/////////////////
+            bool b_optvalue = false;
+            laser.setlidaropt(LidarPropFixedResolution, &b_optvalue, sizeof(bool));
+            laser.setlidaropt(LidarPropReversion, &b_optvalue, sizeof(bool));
+            laser.setlidaropt(LidarPropInverted, &b_optvalue, sizeof(bool));
+            b_optvalue = true;
+            laser.setlidaropt(LidarPropAutoReconnect, &b_optvalue, sizeof(bool));
+            laser.setlidaropt(LidarPropSingleChannel, &isSingleChannel, sizeof(bool));
+            b_optvalue = false;
+            laser.setlidaropt(LidarPropIntenstiy, &b_optvalue, sizeof(bool));
+            b_optvalue = true;
+            laser.setlidaropt(LidarPropSupportMotorDtrCtrl, &b_optvalue, sizeof(bool));
+            b_optvalue = false;
+            laser.setlidaropt(LidarPropSupportHeartBeat, &b_optvalue, sizeof(bool));
+
+            //////////////////////float property/////////////////
+            float f_optvalue = 180.0f;
+            laser.setlidaropt(LidarPropMaxAngle, &f_optvalue, sizeof(float));
+            f_optvalue = -180.0f;
+            laser.setlidaropt(LidarPropMinAngle, &f_optvalue, sizeof(float));
+            f_optvalue = 64.0f;
+            laser.setlidaropt(LidarPropMaxRange, &f_optvalue, sizeof(float));
+            f_optvalue = 0.05f;
+            laser.setlidaropt(LidarPropMinRange, &f_optvalue, sizeof(float));
+            laser.setlidaropt(LidarPropScanFrequency, &frequency, sizeof(float));
+
+            // Initialize LiDAR
+            bool ret = laser.initialize();
+            if (ret) {
+                // Start scanning
+                ret = laser.turnOn();
+            } else {
+                cerr << "Error initializing YDLIDAR: " << laser.DescribeError() << endl;
+                return -1;
+            }
+
+            sf::RenderWindow window(sf::VideoMode(1280, 720), "Camera and LiDAR Visualization");
+
+            // Create SFML texture and sprite for the camera feed
+            sf::Texture cameraTexture;
+            sf::Sprite cameraSprite;
+
+            // Main loop
+            while (ret && window.isOpen() && ydlidar::os_isOk()) {
+                sf::Event event;
+                while (window.pollEvent(event)) {
+                    if (event.type == sf::Event::Closed)
+                        window.close();
+                }
+
+                LaserScan scan;
+
+                if (laser.doProcessSimple(scan)) {
+                    window.clear();
+
+                    // Update the camera texture with the frame data
+                    if (!cameraTexture.create(rgbMat.cols, rgbMat.rows)) {
+                        cerr << "Failed to create texture" << endl;
+                        break;
+                    }
+                    cameraTexture.update(rgbMat.ptr());
+
+                    cameraSprite.setTexture(cameraTexture);
+                    cameraSprite.setScale(
+                        window.getSize().x / static_cast<float>(cameraTexture.getSize().x),
+                        window.getSize().y / static_cast<float>(cameraTexture.getSize().y)
+                    );
+
+                    // Draw the camera feed
+                    window.draw(cameraSprite);
+
+                    // Draw the LiDAR minimap
+                    sf::RenderTexture lidarTexture;
+                    lidarTexture.create(300, 300);
+                    lidarTexture.clear(sf::Color::White);
+
+                    float gridSpacing = 20.0f; // Grid spacing in pixels
+                    float offsetX = 150.0f; // Center of the minimap
+                    float offsetY = 150.0f; // Center of the minimap
+                    float scale = 50.0f; // Scale for LiDAR points
+
+                    drawGrid(lidarTexture, gridSpacing, offsetX, offsetY);
+                    drawNorthIndicator(lidarTexture, offsetX, offsetY);
+
+                    // Detect and draw obstacles from the depth sensor
+                    vector<Point2f> depthObstacles;
+                    detectAndDrawDepthObstacles(depthMat, lidarTexture, offsetX, offsetY, scale, depthObstacles);
+
+                    // Draw the LiDAR itself (center point)
+                    sf::CircleShape lidarShape(5); // Larger circle for the center
+                    lidarShape.setFillColor(sf::Color::Blue); // Blue color for the center
+                    lidarShape.setPosition(offsetX - lidarShape.getRadius(), offsetY - lidarShape.getRadius());
+                    lidarTexture.draw(lidarShape);
+
+                    // Draw the points from LiDAR
+                    vector<Point2f> lidarObstacles;
+                    for (const auto& point : scan.points) {
+                        // Convert polar coordinates to Cartesian coordinates
+                        float x = point.range * cos(point.angle);
+                        float y = point.range * sin(point.angle);
+
+                        // Scale and translate points to fit minimap
+                        float adjustedX = offsetX + x * scale;
+                        float adjustedY = offsetY - y * scale; // Invert Y to match screen coordinates
+
+                        // Set point color based on distance
+                        sf::Color pointColor = getPointColor(point.range, 64.0f); // Assuming max range is 64 meters
+
+                        sf::CircleShape circle(2); // Small circle to represent the point
+                        circle.setPosition(adjustedX, adjustedY);
+                        circle.setFillColor(pointColor);
+
+                        lidarTexture.draw(circle);
+
+                        // Add the obstacle to the vector
+                        lidarObstacles.push_back(Point2f(adjustedX, adjustedY));
+                    }
+
+                    // Compare the obstacles detected by the depth sensor and LiDAR
+                    compareObstacles(depthObstacles, lidarObstacles);
+
+                    lidarTexture.display();
+                    sf::Sprite lidarSprite(lidarTexture.getTexture());
+                    lidarSprite.setPosition(10, 10); // Position the minimap at the top-left corner
+                    window.draw(lidarSprite);
+
+                    window.display();
+                } else {
+                    cerr << "Failed to get LiDAR data" << endl;
+                }
+            }
+
+            // Stop scanning
+            laser.turnOff();
+            laser.disconnecting();
+            is_running = false;
+            freenect_thread.join();
+            freenect_stop_depth(f_dev);
+            freenect_stop_video(f_dev);
+            freenect_close_device(f_dev);
+            freenect_shutdown(f_ctx);
+
+            return 0;
+        }
+
+    \end{lstlisting}
+
+    \subsubsection{Sistema de visualizaci\'on}
+    El sistema de visualizaci\'on est\'a compuesto por una c\'amara infrarroja de 5 MP
+        conectada a la Raspberry Pi mediante el puerto CSI. La c\'amara fue montada en la parte
+        frontal del robot, permitiendo la captura de im\'agenes en tiempo real.
+    \vskip 0.5cm
+    Se desarroll\'o un c\'odigo en C++ utilizando la biblioteca OpenCV para capturar y
+        procesar las im\'agenes de la c\'amara. El sistema de visualizaci\'on muestra la imagen
+        capturada en una ventana de la interfaz gr\'afica, permitiendo la observaci\'on del entorno
+        del robot. El c\'odigo de ejemplo se muestra en el script anterior.
+    \vskip 0.5cm
+    \subsubsection{Integraci\'on de m\'odulos}
+    Todos los m\'odulos fueron integrados f\'isicamente en la estructura del robot. Se utiliz\'o
+        una disposici\'on centralizada para la Raspberry Pi, con los cables de conexi\'on
+        organizados de manera que se minimicen las interferencias y se optimice el espacio
+        dentro del chasis del robot.
+    \vskip 0.5cm
+    Se integraron todos los sistemas de control, detecci\'on de obst\'aculos y visualizaci\'on,
+        permitiendo que el robot funcione de manera aut\'onoma. La coordinaci\'on entre los
+        motores, el sensor LiDAR y la c\'amara se logr\'o mediante la programaci\'on en la
+        Raspberry Pi.
+    \vskip 0.5cm
+    %Listings 
+    \begin{lstlisting}[language={C++}, caption={C\'odigo de pruebas de integraci\'organismo}, label={Script}]
+        #include <iostream>
+        #include <cassert>
+        #include <thread>
+        #include <chrono>
+        #include <atomic>
+        #include "CYdLidar.h"
+        #include <pigpio.h>
+
+        using namespace std;
+        using namespace ydlidar;
+
+        // Prototipos de funciones (se extraen del c\'odigo original para modularizaci\'on)
+        void setMotorSpeed(int motor, int frequency);
+        void setMotorDirection(int motor, int direction);
+        void stopMotors();
+        void moveForward();
+        void moveBackward();
+        void turnLeft();
+        void turnRight();
+        void testMotors();
+        void testLidar();
+        void testLidarObstacleDetection(CYdLidar &laser);
+
+        // Variables globales de prueba
+        std::atomic<bool> is_running(true);
+        std::atomic<bool> is_manual_mode(true);
+
+        // Funci\'on de prueba para el control de motores
+        void testMotors() {
+            // Inicializar pigpio
+            assert(gpioInitialise() >= 0 && "Error al inicializar pigpio.");
+
+            // Configurar pines de direcci\'on como salida
+            for (int i = 0; i < 4; ++i) {
+                gpioSetMode(DIR_PINS[i], PI_OUTPUT);
+                gpioSetMode(PWM_PINS[i], PI_OUTPUT);
+                setMotorSpeed(i, frequency);  // Inicializar PWM con frecuencia inicial
+            }
+
+            std::cout << "Prueba: Movimientos b\'asicos de los motores" << std::endl;
+
+            // Prueba de movimiento hacia adelante
+            moveForward();
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            assert(is_manual_mode == true && "Error: el modo manual no est\'a activo durante la prueba de movimiento hacia adelante.");
+
+            // Prueba de movimiento hacia atr\'as
+            moveBackward();
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+
+            // Prueba de giro a la izquierda
+            turnLeft();
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+
+            // Prueba de giro a la derecha
+            turnRight();
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+
+            // Detener los motores
+            stopMotors();
+            std::cout << "Prueba de motores completada correctamente." << std::endl;
+
+            gpioTerminate();
+        }
+
+        // Funci\'on de prueba para el sensor LiDAR
+        void testLidar() {
+            std::string port;
+            ydlidar::os_init();
+
+            // Obtener los puertos disponibles de LiDAR
+            std::map<std::string, std::string> ports = ydlidar::lidarPortList();
+            if (ports.size() > 1) {
+                auto it = ports.begin();
+                std::advance(it, 1); // Selecciona el segundo puerto disponible
+                port = it->second;
+            } else if (ports.size() == 1) {
+                port = ports.begin()->second;
+            } else {
+                std::cerr << "No se detect\'o ning\'un LiDAR. Verifica la conexi\'on." << std::endl;
+                assert(false && "Error: No se detect\'o LiDAR.");
+                return;
+            }
+
+            CYdLidar laser;
+            int baudrate = 115200;
+            laser.setlidaropt(LidarPropSerialPort, port.c_str(), port.size());
+            laser.setlidaropt(LidarPropSerialBaudrate, &baudrate, sizeof(int));
+
+            bool isSingleChannel = true;
+            laser.setlidaropt(LidarPropSingleChannel, &isSingleChannel, sizeof(bool));
+
+            float max_range = 8.0f;
+            float min_range = 0.1f;
+            float max_angle = 180.0f;
+            float min_angle = -180.0f;
+            float frequency = 8.0f;
+
+            laser.setlidaropt(LidarPropMaxRange, &max_range, sizeof(float));
+            laser.setlidaropt(LidarPropMinRange, &min_range, sizeof(float));
+            laser.setlidaropt(LidarPropMaxAngle, &max_angle, sizeof(float));
+            laser.setlidaropt(LidarPropMinAngle, &min_angle, sizeof(float));
+            laser.setlidaropt(LidarPropScanFrequency, &frequency, sizeof(float));
+
+            // Inicializar LiDAR
+            assert(laser.initialize() && "Error al inicializar el LiDAR.");
+            assert(laser.turnOn() && "Error al encender el LiDAR.");
+
+            std::cout << "Prueba: LiDAR encendido y funcionando." << std::endl;
+
+            // Simular un escaneo
+            LaserScan scan;
+            assert(laser.doProcessSimple(scan) && "Error al procesar el escaneo LiDAR.");
+            std::cout << "Prueba de escaneo LiDAR completada correctamente." << std::endl;
+
+            // Apagar LiDAR
+            laser.turnOff();
+            laser.disconnecting();
+        }
+
+        // Funci\'on de prueba para la detecci\'on de obst\'aculos con LiDAR
+        void testLidarObstacleDetection(CYdLidar &laser) {
+            // Prueba de detecci\'on de obst\'aculos con el LiDAR
+            LaserScan scan;
+            if (laser.doProcessSimple(scan)) {
+                bool obstacle_detected = false;
+                for (const auto &point : scan.points) {
+                    if (point.range > 0 && point.range < 0.30) { // Condici\'on de obst\'aculo
+                        obstacle_detected = true;
+                        break;
+                    }
+                }
+                assert(obstacle_detected && "Error: No se detect\'o ning\'un obst\'aculo cuando se esperaba.");
+                std::cout << "Prueba: Detecci\'on de obst\'aculos correcta." << std::endl;
+            }
+        }
+
+        int main() {
+            std::cout << "Iniciando pruebas de integraci\'on..." << std::endl;
+
+            // Ejecutar prueba de motores
+            testMotors();
+
+            // Ejecutar prueba de LiDAR
+            testLidar();
+
+            // Ejecutar prueba de detecci\'on de obst\'aculos (simulada)
+            CYdLidar laser;
+            testLidarObstacleDetection(laser);
+
+            std::cout << "Todas las pruebas de integraci\'on se completaron correctamente." << std::endl;
+
+            return 0;
+        }
+
+
+    \end{lstlisting}
+    Las pruebas iniciales de integraci\'on mostraron que el robot es capaz de realizar todas
+        las funciones previstas: moverse, detectar obst\'aculos y visualizar su entorno en
+        tiempo real. Los resultados indican que los m\'odulos est\'an correctamente integrados
+        y listos para pruebas m\'as avanzadas en entornos complejos.
+    \vskip 0.5cm
