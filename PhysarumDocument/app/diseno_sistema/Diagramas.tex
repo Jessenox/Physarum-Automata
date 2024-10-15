@@ -1,0 +1,177 @@
+\subsection{Diagramas} % (fold)
+\label{sub:Diagramas}
+
+
+    %Parrafo
+        En esta secci\'on se presentan todos los diagramas necesarios para la implementaci\'on del sistema propuesto.
+        En primer lugar, se presenta un diagrama de arquitectura del sistema propuesto, el cual muestra la interacci\'on 
+        entre los diferentes componentes del sistema.
+        \vskip 0.5cm
+        % FIgura 
+            \begin{figure}[htbp]
+                \centering
+                \includegraphics[width=0.8\textwidth]{images/desarrollo/diagramas/ArquitecturaSistema.png}
+                \caption{Diagrama de arquitectura del sistema propuesto.}
+                \label{fig:ArquitecturaSistema}
+            \end{figure}
+        %Parrafo
+        \vskip 0.5cm
+        El sistema mostrado en el diagrama representa una arquitectura distribuida implementada para el control remoto 
+        de un robot mediante un algoritmo basado en \textbf{Physarum polycephalum} y la utilizaci\'on de datos obtenidos por un sensor LiDAR. 
+        La arquitectura se compone de tres capas principales: la capa de la aplicaci\'on m\'ovil, la capa de procesamiento en la nube 
+        y la capa f\'isica del robot.
+        \vskip 0.5cm
+        La \textbf{Physarum App} es la interfaz de usuario a trav\'es de la cual se env\'ian los comandos al sistema, 
+        los cuales son gestionados por un servidor HTTP ubicado en una instancia EC2 de Amazon Web Services. Esta instancia 
+        contiene tres servidores: un servidor HTTP que recibe los comandos de control, un servidor WebSocket que maneja la 
+        recepci\'on de los datos del sensor LiDAR enviados desde el robot, y el n\'ucleo del sistema, el algoritmo de \textbf{Physarum},
+        encargado de procesar esta informaci\'on para la toma de decisiones en tiempo real sobre el comportamiento del robot.
+        \vskip 0.5cm
+        En la capa f\'isica, el robot est\'a controlado 
+        mediante dos servidores Unix Socket. El \textbf{Unix Socket Server LiDAR} recibe 
+        y transmite los datos del sensor LiDAR al servidor WebSocket en la instancia EC2, 
+        mientras que el \textbf{Unix Socket Server Control} se encarga de recibir los comandos procesados y enviarlos al robot. 
+        Adem\'as, se utiliza un servidor Ngrok que permite la conexi\'on remota segura, facilitando el control del robot desde 
+        la aplicaci\'on m\'ovil.
+        \vskip 0.5cm
+        Esta arquitectura distribuida permite la integraci\'on fluida de los componentes del sistema, 
+        asegurando una correcta interacci\'on entre los datos sensoriales, el procesamiento en la nube y el control 
+        remoto del robot.
+        \vskip 0.5cm
+        Despu\'es de la presentaci\'on de la arquitectura del sistema, se presentan los diagramas de flujo de los dos
+        productos a desarrollar: el simulador de \textbf{Physarum polycephalum}, el sistema del robot aut\'onomo y el diagrama de flujo de la aplicaci\'on.
+        \vskip 0.5cm
+        % FIgura 
+            \begin{figure}[htbp]
+                \centering
+                \includegraphics[width=0.5\textwidth]{images/desarrollo/diagramas/FlujoSim.png}
+                \caption{Diagrama de flujo del simulador de \textbf{Physarum polycephalum}.}
+                \label{fig:FlujoSimulador}
+            \end{figure}
+        %Parrafo
+        \vskip 0.5cm
+
+        \vskip 0.5cm
+        % FIgura 
+            \begin{figure}[htbp]
+                \centering
+                \includegraphics[width=0.5\textwidth]{images/desarrollo/diagramas/FlujoRobot.png}
+                \caption{Diagrama de flujo del sistema del robot aut\'onomo.}
+                \label{fig:FlujoRobot}
+            \end{figure}
+        %Parrafo
+        \vskip 0.5cm
+        \vskip 0.5cm
+        % FIgura 
+            \begin{figure}[htbp]
+                \centering
+                \includegraphics[width=0.5\textwidth]{images/desarrollo/diagramas/FlujoApp.png}
+                \caption{Diagrama de flujo de la aplicaci\'on m\'ovil.}
+                \label{fig:FlujoApp}
+            \end{figure}
+        %Parrafo
+        \vskip 0.5cm
+        \clearpage
+        Despu\'es de la presentaci\'on de los diagramas de flujo, se presenta el diagrama de clases del sistema propuesto.
+        \vskip 0.5cm
+        % FIgura 
+            \begin{figure}[htbp]
+                \centering
+                \includegraphics[width=0.8\textwidth]{images/desarrollo/diagramas/Clases.jpeg}
+                \caption{Diagrama de clases del sistema propuesto.}
+                \label{fig:Clases}
+            \end{figure}
+        %Parrafo
+        \vskip 0.5cm
+        El diagrama de clases muestra la interacci\'on entre el usuario, el robot y un servidor en AWS. 
+        El \textbf{usuario} tiene un atributo para su direcci\'on IP y un m\'etodo \textit{EnviarMovimiento()} 
+        que le permite enviar \'ordenes al \textbf{robot}. Este \'ultimo, con atributos para su IP y su posici\'on en los ejes X, Y 
+        y Z, tiene m\'etodos para moverse (\textit{MoverRobot()}), evitar obst\'aculos (\textit{EvadirObstaculo()}), 
+        transmitir multimedia (\textit{EnviarMultimedia()}) y evaluar su direcci\'on de movimiento (\textit{EvaluarDirecci\'onMovimiento()}).
+        \vskip 0.5cm
+        El \textbf{servidor en AWS} cuenta con m\'etodos para transmitir multimedia y \'ordenes de movimiento hacia el robot. 
+        El servidor act\'ua como intermediario entre el robot y el sistema, facilitando la transmisi\'on de datos y el control 
+        remoto de manera segura y eficiente. El sistema asegura una comunicaci\'on \'unica y directa entre cada usuario y su robot, 
+        manteniendo una interacci\'on fluida y controlada.
+        % Parrafo
+        \vskip 0.5cm
+        Se presenta el diagrama de casos de usos del sistema propuesto.
+        \vskip 0.5cm
+        % FIgura 
+            \begin{figure}[htbp]
+                \centering
+                \includegraphics[width=0.8\textwidth]{images/desarrollo/diagramas/CasosDeUso.jpeg}
+                \caption{Diagrama de casos de uso del sistema propuesto.}
+                \label{fig:CasosDeUso}
+            \end{figure}
+        %Parrafo
+        \vskip 0.5cm
+        \begin{longtable}{|p{4cm}|p{10cm}|}
+        \caption{Descripci\'on del Caso de Uso: Manipulaci\'on del Robot} \\
+        \hline
+        \textbf{Identificador}     & CU-01 Manipulaci\'on del Robot \\ \hline
+        \textbf{Descripci\'on}       & El conductor controla los movimientos del robot, seleccionando el modo de operaci\'on, enviando comandos de movimiento y observando la transmisi\'on multimedia en tiempo real mientras AWS transmite las \'ordenes y multimedia. \\ \hline
+        \textbf{Actores}           & Conductor, Robot, Sistema AWS \\ \hline
+        \textbf{Precondiciones}    & 
+        \begin{itemize}
+            \item El sistema debe estar conectado a internet.
+            \item La latencia de la red debe ser adecuada para la transmisi\'on en tiempo real.
+        \end{itemize} \\ \hline
+        \textbf{Postcondiciones}   & 
+        \begin{itemize}
+            \item El robot ejecuta las \'ordenes de movimiento enviadas por el conductor.
+            \item El conductor puede observar la transmisi\'on multimedia en tiempo real.
+        \end{itemize} \\ \hline
+        \textbf{Secuencia Normal}  & 
+        \begin{enumerate}
+            \item El conductor selecciona el modo de operaci\'on del robot.
+            \item El conductor env\'ia una se\~nal de movimiento.
+            \item El sistema AWS recibe la se\~nal y la transmite al robot.
+            \item El robot recibe la se\~nal y ejecuta el movimiento seg\'un las instrucciones.
+            \item El robot evita colisiones mientras se mueve.
+            \item El robot transmite la se\~nal multimedia en tiempo real.
+            \item El conductor observa la multimedia transmitida en tiempo real.
+        \end{enumerate} \\ \hline
+        \textbf{Excepciones}       & 
+        \begin{enumerate}
+            \item Si la conexi\'on a internet se pierde o es inestable, el sistema notifica al conductor sobre la interrupci\'on en la transmisi\'on.
+            \item Si el robot detecta un obst\'aculo ineludible, detiene su movimiento y espera nuevas instrucciones.
+        \end{enumerate} \\ \hline
+        \textbf{Rendimiento}       & 
+        \begin{itemize}
+            \item El sistema debe procesar las \'ordenes de movimiento en menos de 1 segundo.
+            \item La transmisi\'on de la se\~nal multimedia debe tener un m\'aximo de 300ms de latencia.
+        \end{itemize} \\ \hline
+        \textbf{Frecuencia}        & Se espera que este caso de uso se realice continuamente durante la operaci\'on del robot. \\ \hline
+        \textbf{Importancia}       & Vital \\ \hline
+        \textbf{Urgencia}          & Inmediata, ya que el sistema debe responder en tiempo real. \\ \hline
+        \textbf{Comentarios}       & El sistema depende de la calidad de la conexi\'on a internet para mantener la comunicaci\'on en tiempo real entre el conductor y el robot. \\ \hline
+        \end{longtable}
+
+        \clearpage
+
+        Finalmente, se presenta el diagrama de secuencia del sistema propuesto.
+        \vskip 0.5cm
+        % FIgura 
+            \begin{figure}[htbp]
+                \centering
+                \includegraphics[width=0.8\textwidth]{images/desarrollo/diagramas/Secuencia.jpeg}
+                \caption{Diagrama de secuencia del sistema propuesto.}
+                \label{fig:Secuencia}
+            \end{figure}
+        %Parrafo
+        \vskip 0.5cm
+        El diagrama de secuencia muestra la interacci\'on entre el \textbf{robot}, el \textbf{servidor AWS}, y el \textbf{usuario}. Comienza cuando 
+        el usuario enciende el robot, lo que desencadena la transmisi\'on de multimedia desde el robot hacia AWS, que luego retransmite 
+        al usuario. Tras esto, se confirma la conexi\'on de multimedia entre el robot y AWS, asegurando que el sistema est\'e listo para 
+        recibir comandos.
+        \vskip 0.5cm
+        El usuario puede entonces enviar \'ordenes de movimiento al robot a trav\'es de AWS. El robot eval\'ua la direcci\'on del movimiento, 
+        y si es posible, procede a moverse mientras sigue enviando multimedia. En caso de encontrar un obst\'aculo, el robot intenta 
+        evadirlo. Si el movimiento no es posible, el robot notifica al usuario sobre la situaci\'on.
+        \vskip 0.5cm
+        Finalmente, cuando el usuario desea terminar la sesi\'on, se env\'ia la se\~nal para cerrar el uso del robot, lo que lleva al apagado 
+        del mismo. As\'i, el diagrama cubre desde el encendido y transmisi\'on de multimedia hasta la ejecuci\'on de movimientos y finalizaci\'on 
+        del uso del robot.
+        \vskip 0.5cm
+            
