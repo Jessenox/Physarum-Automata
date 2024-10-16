@@ -405,6 +405,9 @@ int main(int argc, char *argv[]) {
 
                 // Add the obstacle to the vector
                 lidarObstacles.push_back(Point2f(adjustedX, adjustedY));
+                //Print the LiDAR data
+                std::cout << "Point: (" << x << ", " << y << "), Distance: " << point.range << ", Angle: " << point.angle << " radians" << std::endl;
+
             }
 
             // Compare the obstacles detected by the depth sensor and LiDAR

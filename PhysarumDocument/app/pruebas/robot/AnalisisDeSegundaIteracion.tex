@@ -1,0 +1,48 @@
+\subsection{An\'alisis de Segunda Iteraci\'on de Datos de Sensores para Implementaci\'on de Interfaz G\'rafica} % (fold)
+
+    En esta secci\'on, se lleva a cabo un an\'alisis detallado de los datos obtenidos durante la 
+        segunda iteraci\'on de las pruebas con los sensores LiDAR y la c\'amara RGB. El objetivo 
+        principal es evaluar la calidad y precisi\'on de los datos de sensores que ser\'an utilizados 
+        posteriormente para la creaci\'on de una interfaz gr\'afica, sin centrarse a\'un en su visualizaci\'on. 
+        El an\'alisis se enfoca en los datos de distancia, profundidad y sincronizaci\'on temporal para asegurar 
+        una correcta representaci\'on del entorno.
+    \vskip 0.5cm
+    \begin{enumerate}
+        \item Datos de Sensor LiDAR: El sensor El sensor LiDAR proporcion\'o datos en forma de coordenadas cartesianas 
+            y distancias respecto a objetos en el entorno. Estos datos se organizaron en una matriz que incluye la 
+            posici\'on relativa y el \'angulo de cada punto detectado. A continuaci\'on, se presenta un ejemplo de los 
+            puntos obtenidos durante esta iteraci\'on:
+            \begin{itemize}
+                \item Punto 1: Coordenada (0.33839, -0.123582), Distancia: 0.36025 metros, \'angulo: -0.350157 radianes
+                \item Punto 2: Coordenada (2.6953, -0.417856), Distancia: 2.7275 metros, \'angulo: -0.153807 radianes
+                \item Punto 3: Coordenada (4.96504, 1.94797), Distancia: 5.3335 metros, \'angulo: 0.373882 radianes
+            \end{itemize}
+        Estos puntos demuestran c\'omo el LiDAR detecta objetos a distintas distancias y \'angulos. 
+            En la mayor\'ia de los casos, los datos obtenidos presentan un alto grado de consistencia, 
+            lo que indica que el sensor est\'a funcionando dentro de los par\'ametros esperados. Sin embargo, 
+            en algunos puntos m\'as lejanos se observaron ligeras variaciones en las distancias medidas, que 
+            deber\'an tenerse en cuenta para futuros refinamientos del procesamiento.
+        \item Otro aspecto crucial del an\'alisis es la sincronizaci\'on entre los datos del LiDAR y 
+            las im\'agenes capturadas por la c\'amara RGB. Durante esta iteraci\'on, se 
+            observaron mejoras significativas en la alineaci\'on temporal de los datos de ambos sensores. 
+            A continuaci\'on, se presenta un fragmento de los datos sincronizados para un cuadro de video 
+            y una serie de lecturas del LiDAR:
+            \begin{itemize}
+                \item Cuadro RGB (Timestamp: 3860869517)
+                \item LiDAR (Timestamp: 3861370540): Coordenada (0.3418, -0.11999), Distancia: 0.36225 metros
+            \end{itemize}
+        Esta sincronizaci\'on permite correlacionar los datos de profundidad obtenidos por el 
+            LiDAR con los elementos visuales capturados por la c\'amara, lo que es esencial para el 
+            proceso de construcci\'on de una representaci\'on tridimensional coherente.
+        \item An\'alisis de la Presici\'on: El an\'alisis de la precisi\'on se centr\'o en la 
+            consistencia de las distancias medidas por el LiDAR. A distancias cercanas (menores a 1 metro), 
+            se observ\'o una baja variabilidad en las lecturas. Por ejemplo, en varios puntos cercanos 
+            a 0.36 metros, las diferencias entre lecturas sucesivas fueron de menos de 0.01 metros. 
+            A mayores distancias (alrededor de 5 metros), la variabilidad aument\'o ligeramente, 
+            pero se mantuvo dentro de un margen aceptable para la mayor\'ia de los usos.
+            \begin{itemize}
+                \item Punto a 5 metros: Coordenada (4.96504, 1.94797), Distancia: 5.3335 metros, variaci\'on de +-0.03 metros entre lecturas sucesivas.
+            \end{itemize}
+            Este an\'alisis sugiere que el LiDAR est\'a calibrado adecuadamente para distancias cortas y medias, 
+                pero podr\'ia requerir ajustes para mejorar la precisi\'on en distancias mayores.
+    \end{enumerate}

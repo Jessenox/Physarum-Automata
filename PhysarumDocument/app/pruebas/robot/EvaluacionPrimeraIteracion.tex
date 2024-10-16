@@ -1,0 +1,23 @@
+\subsection{Evaluaci\'on de primera iteraci\'on del desempe\~no del robot de pruebas integrales}
+
+% Tabla de evaluaci\'on de la primera iteraci\'on
+\begin{table}[htbp]
+    \centering
+    \caption{Evaluaci\'on de la primera iteraci\'on del desempe\~no del robot de pruebas integrales}
+    \label{tab:EvaluacionPrimeraIteracion}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{|c|c|c|c|}
+    \hline
+    \rowcolor[HTML]{C0C0C0} 
+    \textbf{Criterio} & \textbf{Descripci\'on} & \textbf{Puntuaci\'on (1-5)} & \textbf{Observaciones} \\ \hline
+    \textbf{Precisi\'on de Detecci\'on del LiDAR} & Evaluar la capacidad del LiDAR para detectar obst\'aculos a diversas distancias, especialmente en rangos cortos (<10 cm). & 3 & Es bueno pero puede mejorar, mapea bien los espacios grandes \\ \hline
+    \textbf{Estabilidad del Hardware (Motores y Controlador)} & Evaluar si los motores y el controlador operan de manera estable, sin sobrecalentamientos o fallos. & 2.5 & Se sobrecalienta demasiado, a veces no se mueven ciertas ruedas. \\ \hline
+    \textbf{Navegaci\'on Aut\'onoma} & Evaluar la capacidad del robot para moverse de manera aut\'onoma y evitar obst\'aculos en un entorno controlado. & 1 & Es muy primitiva por no decir que no est\'a implementada todav\'ia. \\ \hline
+    \textbf{Reacci\'on a Obst\'aculos Peque\~nos/Din\'amicos} & Evaluar la rapidez y precisi\'on con que el robot detecta y responde a obst\'aculos peque\~nos o en movimiento. & 2 & Su rango de detecci\'on est\'a mal, ruido en los sensores. \\ \hline
+    \textbf{Resistencia al Funcionamiento Prolongado} & Evaluar si el robot puede operar de manera continua sin fallos durante largos per\'iodos de tiempo (pruebas de carga). & 3 & Se le acaba la pila f\'acilmente, pero no es culpa de las bater\'ias sino del cargador. \\ \hline
+    \textbf{Sincronizaci\'on de Sensores} & Evaluar la capacidad del sistema para sincronizar correctamente los datos del LiDAR y las c\'amaras (formato YUV/RGB). & 3 & Las c\'amaras en formato YUV funcionan mejor y s\'i funcionan. \\ \hline
+    \textbf{Capacidad de Esquivar Obst\'aculos} & Evaluar si el robot puede evitar colisiones con precisi\'on, bas\'andose en los datos del LiDAR. & 2 & Dura aproximadamente 1 hora encendido. \\ \hline
+    \textbf{Consumo Energ\'etico} & Evaluar la eficiencia energ\'etica del sistema durante el funcionamiento prolongado. & 4 & El consumo es relativamente eficiente. \\ \hline
+    \end{tabular}%
+    }
+\end{table}

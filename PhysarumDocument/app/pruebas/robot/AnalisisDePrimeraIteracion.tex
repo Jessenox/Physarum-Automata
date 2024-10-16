@@ -1,0 +1,40 @@
+\subsection{An\'alisis de Primera Iteraci\'on de Datos de Sensores } % (fold)
+    En esta primera iteraci\'on, se recopilaron y analizaron los datos de los sensores 
+        integrados en el sistema, con el objetivo de comprender el tipo de informaci\'on 
+        proporcionada por el LiDAR y las c\'amaras utilizadas, as\'i como su potencial para la 
+        implementaci\'on de una interfaz gr\'afica. Esta fase fue crucial, ya que marc\'o el punto 
+        de partida para la integraci\'on de los datos sensoriales en un entorno visual que permitiera 
+        la interpretaci\'on y el control en tiempo real.
+    \vskip 0.5cm
+    El sensor LiDAR proporcion\'o datos en formato de coordenadas cartesianas, calculadas a 
+        partir de distancias y \'angulos. Estos datos permiten la representaci\'on de un mapa 
+        del entorno en dos dimensiones, detectando la proximidad de objetos y obst\'aculos 
+        en el \'area circundante. La informaci\'on recopilada incluy\'o principalmente mediciones 
+        de distancia en mil\'imetros, asociadas a coordenadas angulares espec\'ificas, las cuales 
+        se convirtieron en valores cartesianas para su futura visualizaci\'on en una interfaz gr\'afica. 
+        Por ejemplo, las primeras mediciones capturadas del LiDAR ofrec\'ian distancias que oscilaban 
+        entre los 20 cm y los 5 metros, brindando una imagen b\'asica del espacio inmediato.
+    \vskip 0.5cm
+    Por otro lado, se evaluaron diferentes tipos de c\'amaras, las cuales proporcionaban datos en diversos 
+        formatos. Se analizaron c\'amaras que ofrec\'ian salidas en formatos como YUV (YUV420, YUV422) y 
+        RGB, siendo el formato YUV uno de los m\'as eficientes para transmisi\'on y procesamiento de video, 
+        especialmente en aplicaciones que requieren una compresi\'on de alta calidad. Este formato divide la 
+        informaci\'on de luminancia (Y) y crominancia (UV), lo que facilita la reducci\'on del ancho de banda 
+        necesario sin comprometer la calidad visual en exceso. Durante las pruebas iniciales, el formato YUV422 
+        mostr\'o ser particularmente adecuado para entornos donde la transmisi\'on r\'apida de im\'agenes era prioritaria, 
+        dado que proporcionaba una mayor eficiencia en t\'erminos de compresi\'on de datos en comparaci\'on con RGB, 
+        aunque con menos fidelidad en los detalles de color.
+    \vskip 0.5cm
+    La c\'amara RGB tambi\'en fue evaluada para obtener im\'agenes con una representaci\'on precisa de los colores del 
+        entorno. A diferencia del formato YUV, los datos RGB capturan la totalidad de la informaci\'on de color, 
+        lo que result\'o \'util en situaciones donde se requer\'ia una mayor claridad visual para la identificaci\'on 
+        de objetos. Sin embargo, el formato RGB mostr\'o ser menos eficiente en t\'erminos de tama\~no de archivo y 
+        procesamiento, lo que lo hac\'ia menos adecuado para aplicaciones en tiempo real donde la optimizaci\'on 
+        del rendimiento era cr\'itica.
+    \vskip 0.5cm
+    El an\'alisis de esta primera iteraci\'on fue fundamental para comprender las capacidades y limitaciones de los 
+        sensores, lo que permiti\'o decidir sobre los formatos de datos m\'as adecuados para su futura implementaci\'on 
+        en una interfaz gr\'afica. Se identific\'o que los datos del LiDAR ofrec\'ian una representaci\'on clara y precisa 
+        del entorno inmediato, mientras que las diferentes c\'amaras evaluadas proporcionaban flexibilidad en la 
+        captura de informaci\'on visual, dependiendo de los requisitos de resoluci\'on y velocidad de procesamiento.
+% subsection An\'alisis de Primera Iteraci\'on de Datos de Sensores  (end)

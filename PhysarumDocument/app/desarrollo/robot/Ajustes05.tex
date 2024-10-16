@@ -1,0 +1,967 @@
+\subsubsection{Ajustes de c\'odigo en funci\'on de las pruebas de carga 2} % (fold)
+%Aqui se mejoro el algoritmo de seguir ruta, y a\~nadio un nuevo apartado gr\'afico para mostrar las dimensiones del robot en 2d 
+% esto por que luego al manejarlo chocaban
+\label{sub:Ajustes de c\'odigo en funci\'on de las pruebas de carga 2}
+    Luego de realizar las pruebas de carga 2, se identificaron algunos problemas en el c\'odigo del robot, 
+        espec\'ificamente en el algoritmo de seguimiento de ruta. Se observ\'o que el robot ten\'ia dificultades 
+        para seguir la ruta de manera precisa, lo que resultaba en movimientos err\'aticos y desviaciones 
+        significativas de la trayectoria deseada. Para solucionar este problema, se realizaron los siguientes ajustes 
+        en el c\'odigo del robot:
+    \vskip 0.5cm
+    \begin{itemize}
+        \item Se mejor\'o el algoritmo de seguimiento de ruta para que el robot pudiera seguir la trayectoria de manera m\'as precisa. 
+            Se ajustaron los par\'ametros de control de velocidad y direcci\'on para minimizar las desviaciones y los errores en el 
+            seguimiento de la ruta.
+        \item Se a\~nadi\'o un nuevo apartado gr\'afico en la interfaz de usuario para mostrar las dimensiones del robot en 2D, 
+            lo que permiti\'o al operador visualizar
+            la posici\'on y orientaci\'on del robot en relaci\'on con la ruta planificada. Esto facilit\'o la supervisi\'on y el
+            control del robot durante la operaci\'on, y ayud\'o a prevenir colisiones y desviaciones no deseadas.
+    \end{itemize}
+    \vskip 0.5cm
+    Estos ajustes permitieron mejorar el desempe\~no del robot y garantizar un seguimiento preciso de la ruta, 
+        lo que result\'o en un funcionamiento m\'as eficiente y fiable del sistema en general.
+      \begin{lstlisting}[language={C++}, caption={Primer ajuste de c\'odigo}, label={Script}]
+        #include "CYdLidar.h"
+        #include <SFML/Graphics.hpp>
+        #include <opencv2/opencv.hpp>
+        #include <iostream>
+        #include <cstdlib>
+        #include <cstdio>
+        #include <pigpio.h>
+        #include <string>
+        #include <map>
+        #include <vector>
+        #include <atomic>
+        #include <thread>
+        #include <random>
+        #include <sys/socket.h>
+        #include <sys/un.h>
+        #include <unistd.h>
+        #include <cstring>
+        #include <pthread.h>
+        #include <vector>
+        #include <mutex>
+        #define PI 180.f
+        
+        using namespace std;
+        using namespace ydlidar;
+        
+        // Pines y configuracin para los motores
+        const int PWM_PINS[] = {13, 19, 18, 12};  // Pines PWM para los motores
+        const int DIR_PINS[] = {5, 6, 23, 24};    // Pines de direccin para los motores
+        const int SENSOR_PROFUNIDAD_PINS[] = {2, 3};
+        int frequency = 400; // Frecuencia inicial
+        const sf::Vector2f robotFixedPosition(110, 110);
+        std::atomic<bool> is_running(true);
+        std::atomic<bool> is_manual_mode(true);
+        
+        void setMotorSpeed(int motor, int frequency) {
+            if (motor >= 0 && motor < 4) {
+                gpioSetPWMfrequency(PWM_PINS[motor], frequency);
+            }
+        }
+        
+        void setMotorDirection(int motor, int direction) {
+            if (motor >= 0 && motor < 4) {
+                gpioWrite(DIR_PINS[motor], direction);
+            }
+        }
+        
+        void stopMotors() {
+            for (int i = 0; i < 4; ++i) {
+                gpioPWM(PWM_PINS[i], 0);
+            }
+        }
+        
+        void moveForward() {
+            for (int i = 0; i < 4; ++i) {
+                gpioPWM(PWM_PINS[i], 128);  // Establecer ciclo de trabajo al 50%
+            }
+            setMotorDirection(0, 0); // Motor 1
+            setMotorDirection(2, 0); // Motor 3
+            setMotorDirection(1, 1); // Motor 2
+            setMotorDirection(3, 1); // Motor 4
+        }
+        
+        void moveBackward() {
+            for (int i = 0; i < 4; ++i) {
+                gpioPWM(PWM_PINS[i], 128);  // Establecer ciclo de trabajo al 50%
+            }
+            setMotorDirection(0, 1); // Motor 1
+            setMotorDirection(2, 1); // Motor 3
+            setMotorDirection(1, 0); // Motor 2
+            setMotorDirection(3, 0); // Motor 4
+        }
+        
+        void turnLeft() {
+            std::cout << "Turning left" << std::endl;
+            for (int i = 0; i < 4; ++i) {
+                gpioPWM(PWM_PINS[i], 128);  // Establecer ciclo de trabajo al 50%
+            }
+            setMotorDirection(0, 1); // Motor 1
+            setMotorDirection(2, 1); // Motor 3
+            setMotorDirection(1, 1); // Motor 2
+            setMotorDirection(3, 1); // Motor 4
+        }
+        
+        void turnRight() {
+            std::cout << "Turning right" << std::endl;
+            for (int i = 0; i < 4; ++i) {
+                gpioPWM(PWM_PINS[i], 128);  // Establecer ciclo de trabajo al 50%
+            }
+            setMotorDirection(0, 0); // Motor 1
+            setMotorDirection(2, 0); // Motor 3
+            setMotorDirection(1, 0); // Motor 2
+            setMotorDirection(3, 0); // Motor 4
+        }
+        
+        void increaseSpeed() {
+            if (frequency < 2000) {
+                frequency += 100;
+                if (frequency > 2000) frequency = 2000;
+                for (int i = 0; i < 4; ++i) {
+                    setMotorSpeed(i, frequency);
+                }
+            }
+        }
+        
+        void decreaseSpeed() {
+            if (frequency > 400) {
+                frequency -= 100;
+                if (frequency < 400) frequency = 400;
+                for (int i = 0; i < 4; ++i) {
+                    setMotorSpeed(i, frequency);
+                }
+            }
+        }
+        
+        
+        sf::Color getPointColor(float distance, float maxRange) {
+            float ratio = distance / maxRange;
+            return sf::Color(255 * (1 - ratio), 255 * ratio, 0); // Color de rojo a verde
+        }
+        
+        
+        std::vector<sf::Vector2f> routePoints;
+        bool isDrawing = false;  // Bandera para rastrear si el raton esta presionado
+        
+        
+        
+        
+        void drawLiDARPoints(sf::RenderWindow &window, const LaserScan &lidarPoints, const sf::Vector2f &robotPosition, float scale, float max_range) {
+            for (const auto& point : lidarPoints.points) {
+                float x = point.range * cos(point.angle);
+                float y = point.range * sin(point.angle);
+        
+                float adjustedX = robotFixedPosition.x + (x * scale) - robotPosition.x;
+                float adjustedY = robotFixedPosition.y - (y * scale) - robotPosition.y;  // Invertir Y para la pantalla
+        
+                if (point.range > 0.05) {  // Excluir puntos cercanos al centro
+                    sf::CircleShape lidarPoint(2);  // Tamao del punto
+                    lidarPoint.setPosition(adjustedX, adjustedY);
+                    lidarPoint.setFillColor(getPointColor(point.range, max_range));  // Color basado en la distancia
+        
+                    window.draw(lidarPoint);
+                }
+            }
+        }
+        
+        
+        
+        
+        
+        
+        void handleMouseClick(const sf::Event &event, const sf::RectangleShape &minimap) {
+            // Verificar si el raton esta presionado
+            if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+                isDrawing = true;  // Marcar que estamos dibujando
+        
+            // Verificar si el raton fue soltado
+            } else if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left) {
+                isDrawing = false;  // Dejar de dibujar
+            }
+        }
+        
+        void updateRoute(const sf::RectangleShape &minimap, sf::RenderWindow &window) {
+            // Si el raton esta presionado, agregar puntos a la ruta
+            if (isDrawing) {
+                // Obtener la posicion actual del raton
+                sf::Vector2i mousePosition = sf::Mouse::getPosition(window);
+                sf::Vector2f clickPosition(static_cast<float>(mousePosition.x), static_cast<float>(mousePosition.y));
+        
+                // Verificar si la posicion del raton esta dentro del minimapa
+                if (minimap.getGlobalBounds().contains(clickPosition)) {
+                    sf::Vector2f relativePosition = clickPosition - minimap.getPosition();
+                    routePoints.push_back(relativePosition);
+                    std::cout << "Dibujando punto: (" << relativePosition.x << ", " << relativePosition.y << ")" << std::endl;
+                }
+            }
+        }
+        
+        
+        
+        void drawRoute(sf::RenderWindow &window, const std::vector<sf::Vector2f> &routePoints, const sf::Vector2f &robotPosition) {
+            if (routePoints.size() > 1) {
+                for (size_t i = 0; i < routePoints.size() - 1; ++i) {
+                    // Dibujar las lneas de la ruta, ajustando las coordenadas en funcin de la posicin del robot
+                    sf::Vertex line[] = {
+                        sf::Vertex(robotFixedPosition + (routePoints[i] - robotPosition), sf::Color::Red),  // Ajustar posicin en funcin del robot
+                        sf::Vertex(robotFixedPosition + (routePoints[i + 1] - robotPosition), sf::Color::Red)
+                    };
+                    window.draw(line, 2, sf::Lines);
+                }
+            }
+        }
+        
+        
+        
+        
+        
+        // Ajustar la referencia para que el norte sea -1.57 rad (sur en coordenadas cartesianas es 0 rad)
+        float adjustAngleForNorth(float angle) {
+            float adjustedAngle = angle - (-M_PI / 2);  // Ajuste de 90 (norte en -90)
+            
+            // Asegurarse de que el angulo este dentro de los limites de -PI a PI
+            if (adjustedAngle > M_PI) {
+                adjustedAngle -= 2 * M_PI;
+            } else if (adjustedAngle < -M_PI) {
+                adjustedAngle += 2 * M_PI;
+            }
+            
+            return adjustedAngle;
+        }
+        
+        
+        
+        
+        
+        
+        
+        void rotateTowardsPoint(float currentAngle, float targetAngle) {
+            float angleDifference = targetAngle - currentAngle;
+        
+            // Asegurate de que el angulo este entre -PI y PI
+            if (angleDifference > M_PI) {
+                angleDifference -= 2 * M_PI;
+            } else if (angleDifference < -M_PI) {
+                angleDifference += 2 * M_PI;
+            }
+        
+            // Gira en la direccion correcta
+            if (angleDifference > 0) {
+                turnRight();  // Girar hacia la derecha
+            } else {
+                turnLeft();  // Girar hacia la izquierda
+            }
+        
+            // Esperar hasta que el robot este alineado
+            std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(std::fabs(angleDifference) * 1000)));
+            
+            stopMotors();
+        }
+        
+        
+        
+        
+        
+        
+        void moveTowardsPoint(float distance) {
+            moveForward();  // Mover el robot hacia adelante
+        
+            // Esperar un tiempo proporcional a la distancia
+            std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(distance * 1000)));
+            
+            stopMotors();  // Detener el robot
+        }
+        
+        
+        
+        
+        void moveTo(sf::Vector2f point, sf::Vector2f &robotPosition, float &currentAngle) {
+            // Calcular la diferencia en X e Y
+            float deltaX = point.x - robotPosition.x;
+            float deltaY = robotPosition.y - point.y;  // Invertir la Y para la pantalla
+        
+            // Calcular la distancia al punto
+            float distanceToPoint = sqrt(deltaX * deltaX + deltaY * deltaY);
+        
+            // Si la distancia es mayor a un umbral, mover el robot
+            const float threshold = 5.0f;  // Tolerancia para considerar que el punto ha sido alcanzado
+            if (distanceToPoint > threshold) {
+                // Calcular el angulo hacia el punto de destino
+                float targetAngle = atan2(deltaY, deltaX);
+                // Ajustar el angulo para que el norte sea -90
+                targetAngle = adjustAngleForNorth(targetAngle);
+        
+                // Girar hacia el angulo correcto
+                rotateTowardsPoint(currentAngle, targetAngle);  // Funcin para girar hacia el ngulo
+        
+                // Mover hacia el punto
+                moveTowardsPoint(distanceToPoint);
+                
+                // Actualizar la posicion y el ngulo del robot
+                robotPosition = point;
+                currentAngle = targetAngle;
+            }
+        }
+        
+        
+        
+        void followRoute(sf::RenderWindow &window, std::vector<sf::Vector2f> &routePoints, const LaserScan &lidarPoints, const sf::Vector2f &minimapPosition, float max_range) {
+            sf::Vector2f robotPosition(110, 110);  // Posicin inicial del robot en el minimapa
+            float currentAngle = -M_PI / 2;  // ngulo inicial del robot (norte en -90)
+        
+            while (!routePoints.empty()) {
+                sf::Vector2f targetPoint = routePoints.front();
+        
+                moveTo(targetPoint, robotPosition, currentAngle);
+        
+                routePoints.erase(routePoints.begin());
+        
+                drawRoute(window, routePoints, minimapPosition);
+                drawLiDARPoints(window, lidarPoints, robotPosition, 25.0f, max_range);
+            }
+        }
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        int contadorObstaculoTotal = 0;
+        int obstaculoHola = 0;
+        int obsRelativo = 0;
+        int idTipoObstaculo = 0;
+        void randomMovement(CYdLidar &laser) {
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::discrete_distribution<> dist({0, 5}); // Distribucin para la probabilidad de movimiento
+        
+            const float FRONT_MIN_ANGLE = -10.0f * (M_PI / 180.0f); // -15 grados en radaianes
+            const float FRONT_MAX_ANGLE = 10.0f * (M_PI / 180.0f);  // 15 grados en radianes
+            const float DETECTION_RADIUS = 0.25f; // 35 cm
+        
+            std::vector<float> previousScanPoints;
+        
+            while (is_running) {
+                if (!is_manual_mode) {
+                    LaserScan scan;
+                    if (laser.doProcessSimple(scan)) {
+                        bool obstacle_detected = false;
+                        std::vector<float> currentScanPoints;
+                        
+                        for (const auto &point : scan.points) {
+                            // Convertir el ngulo del punto al ngulo relativo al "sur" del robot
+                            float adjusted_angle = point.angle + PI;
+                            //std::cout << "Er " << point.range << std::endl;
+                            // Verificar si el punto est dentro del rango frontal de 30
+                            //std::cout << point.angle << std::endl;
+                            if (point.range > 0 && point.range < 0.30 && ( point.angle <= -0.5235f  && point.angle >= -2.617f)) { // Norte
+                                obstacle_detected = true;
+                                currentScanPoints.push_back(point.range);
+                                idTipoObstaculo = 1;
+                                std::cout << "Obstacle distance N: " << (float)point.range  << " Y en el angulo  "<<point.angle << std::endl;
+                                break;
+                            } else if(point.range > 0 && point.range < 0.25 && (point.angle <= 0.872f  && point.angle>= -0.5235f)){ // Este
+                                obstacle_detected = true;
+                                currentScanPoints.push_back(point.range);
+                                idTipoObstaculo = 2;
+                                std::cout << "Obstacle distance E: " << (float)point.range  << " Y en el angulo  "<<point.angle << std::endl;
+                                break;
+                            }else if(point.range > 0 && point.range < 0.45 && (point.angle <= 2.26f && point.angle >= 0.872f)){ // Sur
+                                obstacle_detected = true;
+                                currentScanPoints.push_back(point.range);
+                                idTipoObstaculo = 3;
+                                std::cout << "Obstacle distance S:" << (float)point.range  << " Y en el angulo  "<<point.angle << std::endl;
+                                break;
+                            }else if (point.range > 0 && point.range < 0.25 && (point.angle <= -2.61f  || point.angle >= 2.27f)){ // Oeste
+                                obstacle_detected = true;
+                                currentScanPoints.push_back(point.range);
+                                idTipoObstaculo = 4;
+                                std::cout << "Obstacle distance O:" << (float)point.range  << " Y en el angulo  "<<point.angle << std::endl;
+                                break;
+                            }
+                            
+                            
+                        }
+                        
+                        if (obstacle_detected) {
+                            // Si detecta un obstculo, retrocede por 4 segundos
+                            contadorObstaculoTotal++;
+                            std::cout << "Obs: " << contadorObstaculoTotal << std::endl;
+                            //obsRelativo++;
+                            stopMotors();
+                            //Luego gira aleatoriamente a la izquierda o derecha
+                            switch(idTipoObstaculo) {
+                                case 1: {
+                                    int turn = dist(gen) % 2;
+                                    moveBackward();
+                                    std::this_thread::sleep_for(std::chrono::seconds(5));
+                                    if (turn == 0) {
+                                        turnLeft();
+                                        std::this_thread::sleep_for(std::chrono::seconds(5));
+                                    } else {
+                                        turnRight();
+                                        std::this_thread::sleep_for(std::chrono::seconds(5));
+                                    }
+                                    std::this_thread::sleep_for(std::chrono::seconds(2));
+                                    stopMotors();
+                                }
+                                break;
+                                
+                                case 2:
+                                    turnLeft();
+                                    std::this_thread::sleep_for(std::chrono::seconds(5));
+                                    std::this_thread::sleep_for(std::chrono::seconds(2));
+                                    stopMotors();
+                                break;
+                                
+                                case 3:// este es el 4 y el de abajo el 3
+                                    moveForward();
+                                    std::this_thread::sleep_for(std::chrono::seconds(2));
+                                    stopMotors();
+                                    
+                                break;
+                                
+                                case 4:
+                                    turnRight();
+                                    std::this_thread::sleep_for(std::chrono::seconds(7));
+                                    stopMotors();
+                                break;
+                                
+                                default: {
+                                    int turn = dist(gen) % 2;
+                                    if (turn == 0) {
+                                        turnLeft();
+                                        std::this_thread::sleep_for(std::chrono::seconds(5));
+                                    } else {
+                                        turnRight();
+                                        std::this_thread::sleep_for(std::chrono::seconds(5));
+                                    }
+                                    std::this_thread::sleep_for(std::chrono::seconds(2));
+                                    stopMotors();
+                                }
+                                break;
+                            }
+        
+                            
+                            if(!previousScanPoints.empty() && previousScanPoints.size() == currentScanPoints.size()){
+                                    bool mismoObs = true;
+                                    for(size_t i = 0; i < currentScanPoints.size(); ++i){
+                                        if(fabs(currentScanPoints[i] - previousScanPoints[i]) > 0.05){
+                                                mismoObs = false;
+                                                break;
+                                        }
+                                    }
+                                    if(mismoObs){
+                                        obsRelativo++;
+                                    }else{
+                                        obsRelativo = 0;
+                                    }
+                            }
+                            
+                            previousScanPoints = currentScanPoints;
+                            
+                            if((obsRelativo > 3)){
+                                //obsRelativo = 0;
+                                moveBackward();
+                                std::this_thread::sleep_for(std::chrono::seconds(3));
+                                stopMotors();
+                                
+                                
+                                switch(idTipoObstaculo) {
+                                    case 1: {
+                                        int turn = dist(gen) % 2;
+                                        moveBackward();
+                                        std::this_thread::sleep_for(std::chrono::seconds(5));
+                                        if (turn == 0) {
+                                            turnLeft();
+                                            std::this_thread::sleep_for(std::chrono::seconds(5));
+                                        } else {
+                                            turnRight();
+                                            std::this_thread::sleep_for(std::chrono::seconds(5));
+                                        }
+                                        std::this_thread::sleep_for(std::chrono::seconds(2));
+                                        stopMotors();
+                                    }
+                                    break;
+                                    
+                                    case 2:
+                                        turnLeft();
+                                        std::this_thread::sleep_for(std::chrono::seconds(5));
+                                        std::this_thread::sleep_for(std::chrono::seconds(2));
+                                        stopMotors();
+                                    break;
+                                    
+                                    case 3:
+                                        turnRight();
+                                        std::this_thread::sleep_for(std::chrono::seconds(7));
+                                        stopMotors();
+                                    break;
+                                    
+                                    case 4:
+                                        moveForward();
+                                        std::this_thread::sleep_for(std::chrono::seconds(2));
+                                        stopMotors();
+                                    break;
+                                    
+                                    default: {
+                                        int turn = dist(gen) % 2;
+                                        if (turn == 0) {
+                                            turnLeft();
+                                            std::this_thread::sleep_for(std::chrono::seconds(5));
+                                        } else {
+                                            turnRight();
+                                            std::this_thread::sleep_for(std::chrono::seconds(5));
+                                        }
+                                        std::this_thread::sleep_for(std::chrono::seconds(2));
+                                        stopMotors();
+                                    }
+                                    break;
+                                }
+        
+                                
+                                
+                            }
+                        } else {
+                            moveForward();
+                            // Si no hay obstculo, elige un movimiento aleatorio
+                            //
+                            //int move = dist(gen);
+                            //switch (move) {
+                              //  case 0: moveBackward(); break;
+                              //  case 1: turnRight(); break;
+                              //  case 2: turnLeft(); break;
+                              //  case 3: moveForward(); break;
+                            //}
+                        }
+                    }
+                    
+                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                    //stopMotors();
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+        }
+        
+        
+        // Definir las dimensiones del robot en el minimapa
+            const float frontDistance = 15.0f;   // cm hacia adelante
+            const float backDistance = 35.0f;    // cm hacia atrs
+            const float rightDistance = 21.0f;   // cm hacia la derecha
+            const float leftDistance = 21.0f;    // cm hacia la izquierda
+        
+            // Escalar las distancias al minimapa (considera ajustar el factor de escala segn lo necesites)
+            float scale = 0.4f;  // Cambia este valor si necesitas ajustar el tamao del robot en el minimapa
+        
+        
+        void drawRobot(sf::RenderWindow &window, const sf::Vector2f &robotPosition, const sf::RectangleShape &minimap) {
+            
+        
+            float width = (leftDistance + rightDistance) * scale;
+            float height = (frontDistance + backDistance) * scale;
+        
+            // Dibujar el rectngulo representando al robot
+            sf::RectangleShape robotShape(sf::Vector2f(width, height));
+            robotShape.setFillColor(sf::Color(100, 100, 255, 150));  // Color azul claro con algo de transparencia
+        
+            // Ajustar el origen del rectngulo al punto donde est el LiDAR, es decir, al centro del robot
+            robotShape.setOrigin(leftDistance * scale, backDistance * scale);
+        
+            // Establecer la posicin del rectngulo del robot en el minimapa, centrado en la posicin del LiDAR
+            robotShape.setPosition(105, 105); // Usamos la misma posicin del LiDAR para centrar el robot
+        
+            window.draw(robotShape);
+        }
+        
+        
+        
+        
+        void moveAlongRoute(const std::vector<int> &route) {
+            // Las celdas est\'an numeradas de 1 a N como en la imagen proporcionada.
+            std::map<int, std::pair<int, int>> cellCoordinates = {
+                {1, {0, 0}}, {2, {0, 1}}, {3, {0, 2}},
+                {4, {1, 0}}, {5, {1, 1}}, {6, {1, 2}},
+                {7, {2, 0}}, {8, {2, 1}}, {9, {2, 2}},
+                // Contin\'ua con el resto de las celdas de la cuadr\'icula...
+                {10,{3, 0}}, {11,{3, 1}}, {12,{3, 2}},
+                {13,{4, 0}}, {14,{4, 1}}, {15,{4, 2}},
+                {16,{5, 0}}, {17,{5, 1}}, {18,{5, 2}},
+                {19,{6, 0}}, {20,{6, 1}}, {21,{6, 2}},
+                {22,{7, 0}}, {23,{7, 1}}, {24,{7, 2}}
+            };
+        
+            std::cout << "Moviendo a lo largo de la ruta..." << std::endl;
+            std::cout << "La ruta es: " << std::endl;
+            for (int cell : route) {
+                std::cout << cell << " ";
+            }
+            std::cout << std::endl;
+            for (size_t i = 0; i < route.size() - 1; ++i) {
+                int currentCell = route[i];
+                int nextCell = route[i + 1];
+                std::cout << "Current cell: " << currentCell << " Next cell: " << nextCell << endl;
+                auto currentCoord = cellCoordinates[currentCell];
+                auto nextCoord = cellCoordinates[nextCell];
+        
+                // Calculamos la direcci\'on en la que el robot debe moverse.
+                int deltaX = nextCoord.first - currentCoord.first;
+                int deltaY = nextCoord.second - currentCoord.second;
+                is_manual_mode = false;
+                std::cout << "Delta X: " << deltaX << " Delta Y: " << deltaY << endl;
+                if (deltaX == 0 && deltaY == 1) {
+                    // Movimiento hacia la derecha.
+                    stopMotors();
+                    std::cout << "Girando hacia la derecha y avanzando..." << std::endl;
+                    turnRight();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(4500));  // Girar por 4.35 segundos.
+                    stopMotors();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(500));   // Pausa antes de avanzar.
+                    moveForward();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(5000));  // Avanzar por 5 segundos.
+                    stopMotors();
+                } else if (deltaX == 0 && deltaY == -1) {
+                    // Movimiento hacia la izquierda.
+                    stopMotors();
+                    std::cout << "Girando hacia la izquierda y avanzando..." << std::endl;
+                    turnLeft();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(4350));  // Girar por 4.35 segundos.
+                    stopMotors();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(500));   // Pausa antes de avanzar.
+                    moveForward();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(5000));  // Avanzar por 5 segundos.
+                    stopMotors();
+                } else if (deltaX == 1 && deltaY == 0) {
+                    // Movimiento hacia adelante (eje X positivo).
+                    stopMotors();
+                    std::cout << "Avanzando hacia adelante..." << std::endl;
+                    moveForward();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(5000));  // Avanzar por 5 segundos.
+                    stopMotors();
+                } else if (deltaX == -1 && deltaY == 0) {
+                    // Movimiento hacia atr\'as (eje X negativo).
+                    std::cout << "Retrocediendo..." << std::endl;
+                    moveBackward();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(5000));  // Retroceder por 5 segundos.
+                    stopMotors();
+                } else {
+                    std::cerr << "Movimiento no soportado entre las celdas: " << currentCell << " y " << nextCell << std::endl;
+                }
+                std::cout << "Movimiento completado." << std::endl;
+                stopMotors();
+                // Pausa entre movimientos para evitar sobrecargar los motores.
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            }
+        }
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        void drawGrid(sf::RenderWindow &window, const sf::RectangleShape &minimap) {
+            const float cellSizeCm = 50.0f;  // Tama\~no de cada celda en cent\'imetros
+            const float scaleFactor = 10.0f; // Relaci\'on 1 cm = 10 p\'ixeles en el minimapa
+            const float cellSizePx = cellSizeCm * scaleFactor;  // Tama\~no de cada celda en p\'ixeles
+        
+            // Obtener la posici\'on y tama\~no del minimapa
+            sf::Vector2f minimapPosition = minimap.getPosition();
+            sf::Vector2f minimapSize = minimap.getSize();
+        
+            // Calcular el origen del grid para mantenerlo fijo respecto al robot centrado en (105, 105)
+            float originX = minimapPosition.x - fmod(minimapPosition.x + 105.0f, cellSizePx);
+            float originY = minimapPosition.y - fmod(minimapPosition.y + 105.0f, cellSizePx);
+        
+            // Dibujar las l\'ineas verticales de la cuadr\'icula
+            for (float x = originX; x <= minimapPosition.x + minimapSize.x; x += cellSizePx) {
+                sf::Vertex verticalLine[] = {
+                    sf::Vertex(sf::Vector2f(x, minimapPosition.y), sf::Color(150, 150, 150, 200)),
+                    sf::Vertex(sf::Vector2f(x, minimapPosition.y + minimapSize.y), sf::Color(150, 150, 150, 200))
+                };
+                window.draw(verticalLine, 2, sf::Lines);
+            }
+        
+            // Dibujar las l\'ineas horizontales de la cuadr\'icula
+            for (float y = originY; y <= minimapPosition.y + minimapSize.y; y += cellSizePx) {
+                sf::Vertex horizontalLine[] = {
+                    sf::Vertex(sf::Vector2f(minimapPosition.x, y), sf::Color(150, 150, 150, 200)),
+                    sf::Vertex(sf::Vector2f(minimapPosition.x + minimapSize.x, y), sf::Color(150, 150, 150, 200))
+                };
+                window.draw(horizontalLine, 2, sf::Lines);
+            }
+        }
+        
+        
+        
+        
+        
+        
+        
+        int main() {
+            // Inicializar pigpio
+            if (gpioInitialise() < 0) {
+                std::cerr << "Error: No se pudo inicializar pigpio." << std::endl;
+                return -1;
+            }
+        
+            // Configurar pines de direccin como salida
+            for (int i = 0; i < 4; ++i) {
+                gpioSetMode(DIR_PINS[i], PI_OUTPUT);
+                gpioSetMode(PWM_PINS[i], PI_OUTPUT);
+                setMotorSpeed(i, frequency);  // Inicializar PWM con frecuencia inicial
+            }
+        
+            // Asegrate de establecer XDG_RUNTIME_DIR
+            if (getenv("XDG_RUNTIME_DIR") == nullptr) {
+                setenv("XDG_RUNTIME_DIR", "/tmp/runtime-$(id -u)", 1);
+            }
+        
+            // Ejecuta libcamera-vid en un proceso separado y captura la salida en YUV, sin previsualizacn
+            FILE* pipe = popen("libcamera-vid -t 0 --codec yuv420 --nopreview -o -", "r");
+            if (!pipe) {
+                std::cerr << "Error: No se pudo ejecutar libcamera-vid." << std::endl;
+                return -1;
+            }
+        
+            // Configura la ventana SFML
+            sf::RenderWindow window(sf::VideoMode(1280, 720), "Camera Visualization with LiDAR");
+            sf::Texture cameraTexture;
+            sf::Sprite cameraSprite;
+        
+            // Buffer para leer los datos de video
+            const int width = 640;
+            const int height = 480;
+            std::vector<uint8_t> buffer(width * height * 3 / 2); // Ajusta el tamao del buffer para YUV420
+        
+            cv::Mat yuvImage(height + height / 2, width, CV_8UC1, buffer.data());
+            cv::Mat rgbImage(height, width, CV_8UC3);
+        
+            std::string port;
+            ydlidar::os_init();
+        
+            // Obtener los puertos disponibles de LiDAR
+            std::map<std::string, std::string> ports = ydlidar::lidarPortList();
+            if (ports.size() > 1) {
+                auto it = ports.begin();
+                std::advance(it, 1); // Selecciona el segundo puerto disponible
+                port = it->second;
+            } else if (ports.size() == 1) {
+                port = ports.begin()->second;
+            } else {
+                std::cerr << "No se detect ningn LiDAR. Verifica la conexin." << std::endl;
+                return -1;
+            }
+        
+            // Configuracin del LiDAR
+            int baudrate = 115200;
+            std::cout << "Baudrate: " << baudrate << std::endl;
+        
+            CYdLidar laser;
+            laser.setlidaropt(LidarPropSerialPort, port.c_str(), port.size());
+            laser.setlidaropt(LidarPropSerialBaudrate, &baudrate, sizeof(int));
+        
+            bool isSingleChannel = true;
+            laser.setlidaropt(LidarPropSingleChannel, &isSingleChannel, sizeof(bool));
+        
+            float max_range = 8.0f;
+            float min_range = 0.1f;
+            float max_angle = 180.0f;
+            float min_angle = -180.0f;
+            float frequency = 8.0f;
+        
+            laser.setlidaropt(LidarPropMaxRange, &max_range, sizeof(float));
+            laser.setlidaropt(LidarPropMinRange, &min_range, sizeof(float));
+            laser.setlidaropt(LidarPropMaxAngle, &max_angle, sizeof(float));
+            laser.setlidaropt(LidarPropMinAngle, &min_angle, sizeof(float));
+            laser.setlidaropt(LidarPropScanFrequency, &frequency, sizeof(float));
+        
+            // Inicializar LiDAR
+            if (!laser.initialize()) {
+                std::cerr << "Error al inicializar el LiDAR." << std::endl;
+                return -1;
+            }
+        
+            // Iniciar el escaneo
+            if (!laser.turnOn()) {
+                std::cerr << "Error al encender el LiDAR." << std::endl;
+                return -1;
+            }
+        
+            // Thread para movimiento aleatorio
+            std::thread randomMoveThread(randomMovement, std::ref(laser));
+        
+            while (window.isOpen()) {
+                // Crear un minimapa para el LiDAR
+                sf::RectangleShape minimap(sf::Vector2f(200, 200));
+                minimap.setFillColor(sf::Color(200, 200, 200, 150)); // Fondo semitransparente
+                minimap.setPosition(10, 10); // Esquina superior izquierda
+                
+        
+                // Leer los datos del video desde la tubera
+                size_t bytesRead = fread(buffer.data(), 1, buffer.size(), pipe);
+                if (bytesRead != buffer.size()) {
+                    std::cerr << "Error: No se pudo leer suficientes datos de video." << std::endl;
+                    continue;
+                }
+        
+                // Convertir YUV420 a RGB
+                cv::cvtColor(yuvImage, rgbImage, cv::COLOR_YUV2RGB_I420);
+        
+                // Convertir a RGBA aadiendo un canal alfa
+                cv::Mat frame_rgba;
+                cv::cvtColor(rgbImage, frame_rgba, cv::COLOR_RGB2RGBA);
+        
+                // Actualizar la textura de la cmara con los datos del frame
+                if (!cameraTexture.create(frame_rgba.cols, frame_rgba.rows)) {
+                    std::cerr << "Error: No se pudo crear la textura." << std::endl;
+                    continue;
+                }
+                cameraTexture.update(frame_rgba.ptr());
+        
+                cameraSprite.setTexture(cameraTexture);
+                cameraSprite.setScale(
+                    window.getSize().x / static_cast<float>(cameraTexture.getSize().x),
+                    window.getSize().y / static_cast<float>(cameraTexture.getSize().y)
+                );
+        
+        
+                // Actualizar la ruta en el minimapa
+                
+                window.clear();
+                window.draw(cameraSprite);
+        
+                
+                window.draw(minimap);
+                drawGrid(window, minimap);
+                updateRoute(minimap, window);
+                // Dibujar la ruta en el minimapa
+                drawRoute(window, routePoints, minimap.getPosition());
+                // Dibujar el centro del LiDAR (color azul)
+                drawRobot(window, robotFixedPosition, minimap);
+        
+        
+                // Calcular el centro del rectngulo del robot para dibujar la lnea que indica el norte
+                sf::Vector2f robotCenter = minimap.getPosition() + robotFixedPosition;
+        
+                // Dibujar la lnea hacia el norte (ajustada al centro del rectngulo)
+                sf::Vertex line[] =
+                {
+                    sf::Vertex(sf::Vector2f(105, 105), sf::Color::Black), // Posicin inicial de la lnea
+                    sf::Vertex(sf::Vector2f(105, 160), sf::Color::Black)   // Posicin final hacia arriba
+                };
+        
+                // Dibujar la lnea que representa el norte
+                window.draw(line, 2, sf::Lines);
+        
+        
+        
+                LaserScan scan;
+                if (laser.doProcessSimple(scan)) {
+                    drawLiDARPoints(window, scan, minimap.getPosition(), 25.0f, max_range);
+                }else {
+                    std::cerr << "No se pudieron obtener los datos del LiDAR." << std::endl;
+                }
+        
+                sf::Event event;
+                while (window.pollEvent(event)) {
+                    if (event.type == sf::Event::Closed){
+                        window.close();
+                    }
+        
+                    if(event.type == sf::Event::MouseButtonPressed){
+                        std::cout << "Mouse pressed" << std::endl;
+                        handleMouseClick(event, minimap);
+                    }else if(event.type == sf::Event::MouseButtonReleased){
+                        std::cout << "Mouse released" << std::endl;
+                        handleMouseClick(event, minimap);
+                        isDrawing = false;
+                    }
+                    
+        
+        
+        
+                    if (event.type == sf::Event::KeyPressed) {
+                        switch (event.key.code) {
+                            case sf::Keyboard::W:
+                                is_manual_mode = true;
+                                std::cout << "W" << std::endl;
+                                moveForward();
+                                break;
+                            case sf::Keyboard::S:
+                                is_manual_mode = true;
+                                std::cout << "S" << std::endl;
+                                moveBackward();
+                                break;
+                            case sf::Keyboard::A:
+                                is_manual_mode = true;
+                                std::cout << "A" << std::endl;
+                                turnLeft();
+                                break;
+                            case sf::Keyboard::D:
+                                is_manual_mode = true;
+                                std::cout << "D" << std::endl;
+                                turnRight();
+                                break;
+                            case sf::Keyboard::V:
+                                is_manual_mode = true;
+                                std::cout << "V" << std::endl;
+                                increaseSpeed();
+                                break;
+                            case sf::Keyboard::B:
+                                is_manual_mode = true;
+                                std::cout << "B" << std::endl;
+                                decreaseSpeed();
+                                break;
+                            case sf::Keyboard::Space:
+                                is_manual_mode = true;
+                                std::cout << "Space" << std::endl;
+                                stopMotors();
+                                break;
+                            case sf::Keyboard::R: {
+                                is_manual_mode = false;
+                                std::vector<int> route = {1, 2, 5, 8, 11, 14, 13, 16};
+                                moveAlongRoute(route);
+                                //std::thread routeThread(followRoute, std::ref(window), std::ref(routePoints), std::ref(scan), minimap.getPosition(), max_range);
+                                //routeThread.detach();
+                                break;
+                            }
+                            case sf::Keyboard::K:
+                                is_manual_mode = false;
+                                std::cout << "K" << std::endl;
+                                break;
+                            case sf::Keyboard::M:
+                                is_manual_mode = true;
+                                std::cout << "M" << std::endl;
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+        
+        
+                window.display();
+            }
+        
+            // Detener el escaneo del LiDAR
+            laser.turnOff();
+            laser.disconnecting();
+        
+            // Cierra la tubera, detiene los motores y apaga el robot
+            pclose(pipe);
+            stopMotors();
+            gpioTerminate();
+        
+            is_running = false;
+            randomMoveThread.join();
+        
+            return 0;
+        }
+    \end{lstlisting}

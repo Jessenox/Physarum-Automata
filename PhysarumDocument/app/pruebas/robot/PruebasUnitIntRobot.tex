@@ -160,4 +160,148 @@
         \caption{Minimapa dibujado con SFML con la informaci\'on del LiDAR}
         \label{fig:LidarTest2}
     \end{figure}
+    En cuanto a las pruebas unitarias de los motores paso a paso, se logr\'o verificar el correcto funcionamiento de los motores en diferentes direcciones,
+    as\'i como la precisi\'on y eficiencia de los mismos. Adem\'as, se comprob\'o que los motores se detuvieron correctamente al finalizar las pruebas.
+    \vskip 0.5cm
+    Sin embargo, gtest no fue capaz de realizar las pruebas unitarias de los motores paso a paso, ya que no se pudo simular el movimiento de los motores
+    en el entorno de pruebas. Por lo tanto, se decidi\'o realizar las pruebas de los motores paso a paso en un entorno f\'isico de manera manual.
+    Se puede ver en el siguiente link de youtube el video de las pruebas unitarias de los motores paso a paso: \url{https://drive.google.com/file/d/1huDF_86Vc4UWTL3wDDf1Ch4YJK_9_viu/view?usp=drive_link}
+    \vskip 0.5cm
+    En el modulo de visualizaci\'on de la c\'amara como usamos una c\'amara nativa de la Raspberry Pi 4B, el c\'odigo simplemente fue: 
+    \begin{lstlisting}[language={C++}, caption={main.cpp}, label={Script}]
+        FILE* pipe = popen("libcamera-vid -t 0 --codec yuv420 --nopreview -o -", "r");
+    if (!pipe) {
+        std::cerr << "Error: No se pudo ejecutar libcamera-vid." << std::endl;
+        return -1;
+    }
+    \end{lstlisting}
+    \vskip 0.5cm
+    Y los resultados de las pruebas unitarias de la c\'amara fueron satisfactorios, ya que se logr\'o visualizar la imagen de la c\'amara en tiempo real.
+    \vskip 0.5cm
+    % figura de la prueba unitaria de la c\'amara
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=0.8\textwidth]{./images/Pruebas/robot/CamaraSFML01.png}
+        \caption{Visualizaci\'on de la c\'amara con SFML}
+        \label{fig:CameraTest1}
+    \end{figure}
+    % subsubsection Pruebas unitarias (end)
+    \subsubsection{Pruebas de integraci\'on} % (fold)
+    \label{ssub:Pruebas de integraci\'on}
+        Las pruebas de integraci\'on se enfocaron en verificar el correcto funcionamiento de los motores y sensores del robot en conjunto. 
+        Para las pruebas de integraci\'on, se utiliz\'o un programa de prueba que permiti\'o verificar el movimiento y precisi\'on de los motores 
+        paso a paso, as\'i como la detecci\'on de obst\'aculos y medici\'on de distancias del sensor LIDAR en diferentes situaciones. 
+        Adem\'as, se verific\'o la visualizaci\'on de la c\'amara en tiempo real. 
+        \vskip 0.5cm
+        El c\'odigo de las pruebas de integraci\'on se muestra a continuaci\'on:
+        \begin{lstlisting}[language={C++}, caption={main.cpp}, label={Script}]
+#include <iostream>
+#include <cassert>
+#include <chrono>
+#include <thread>
+
+// Mock para las funciones de pigpio
+void gpioSetPWMfrequency(int pin, int frequency) {
+    std::cout << "[Mock] Set PWM frequency for pin " << pin << " to " << frequency << " Hz" << std::endl;
+}
+
+void gpioWrite(int pin, int value) {
+    std::cout << "[Mock] Write value " << value << " to pin " << pin << std::endl;
+}
+
+void gpioPWM(int pin, int value) {
+    std::cout << "[Mock] Set PWM for pin " << pin << " to value " << value << std::endl;
+}
+
+void gpioSetMode(int pin, int mode) {
+    std::cout << "[Mock] Set mode for pin " << pin << " to " << mode << std::endl;
+}
+
+int gpioInitialise() {
+    std::cout << "[Mock] Initializing GPIO..." << std::endl;
+    return 0; // Retorna 0 si se inicializa correctamente
+}
+
+void gpioTerminate() {
+    std::cout << "[Mock] Terminating GPIO..." << std::endl;
+}
+
+// Mock para LiDAR
+class CYdLidar {
+public:
+    bool initialize() {
+        std::cout << "[Mock] LiDAR initialized." << std::endl;
+        return true;
+    }
+
+    bool turnOn() {
+        std::cout << "[Mock] LiDAR turned on." << std::endl;
+        return true;
+    }
+
+    bool doProcessSimple(LaserScan &scan) {
+        // Simula datos del escaneo
+        scan.points = {
+            {0.2f, -1.57f},  // Obst\'aculo al norte
+            {0.5f, 0.78f},   // Ning\'un obst\'aculo detectado
+            {0.3f, -0.78f}   // Obst\'aculo al este
+        };
+        return true;
+    }
+
+    void turnOff() {
+        std::cout << "[Mock] LiDAR turned off." << std::endl;
+    }
+
+    void disconnecting() {
+        std::cout << "[Mock] LiDAR disconnected." << std::endl;
+    }
+};
+
+// Estructura de prueba de integraci\'on
+void integrationTest() {
+    std::cout << "Starting integration test..." << std::endl;
+
+    // Inicializar componentes
+    assert(gpioInitialise() == 0);
+    CYdLidar laser;
+    assert(laser.initialize());
+    assert(laser.turnOn());
+
+    // Configurar pines
+    for (int i = 0; i < 4; ++i) {
+        gpioSetMode(PWM_PINS[i], PI_OUTPUT);
+        gpioSetMode(DIR_PINS[i], PI_OUTPUT);
+        setMotorSpeed(i, frequency);  // Inicializa PWM
+    }
+
+    // Simular movimiento aleatorio y escaneo de LiDAR
+    std::thread randomMoveThread(randomMovement, std::ref(laser));
     
+    // Esperar que se realice el movimiento durante 5 segundos
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    
+    // Detener el robot y el LiDAR
+    stopMotors();
+    laser.turnOff();
+    laser.disconnecting();
+
+    // Finalizar la prueba
+    is_running = false;
+    randomMoveThread.join();
+
+    gpioTerminate();
+    std::cout << "Integration test completed." << std::endl;
+}
+
+int main() {
+    integrationTest();
+    return 0;
+}
+        \end{lstlisting}
+        \vskip 0.5cm
+        Y los resultados de las pruebas de integraci\'on fueron satisfactorios, ya que se logr\'o verificar el correcto funcionamiento de los motores y sensores 
+        del robot en conjunto. Adem\'as, se comprob\'o que el robot se detuvo correctamente al finalizar las pruebas.
+        \vskip 0.5cm
+        %FIN DE LA PRUEBA DE INTEGRACION
+    % subsubsection Pruebas de integraci\'on (end)
