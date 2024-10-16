@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(lidar_udp)
+project(utils)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 add_definitions(-std=c++11) # Use C++11
@@ -56,7 +56,37 @@ include_directories(${Boost_INCLUDE_DIRS})
 
 
 # Add executable
-add_executable(${PROJECT_NAME} lidar_udp.cpp)
+add_library(${PROJECT_NAME} STATIC utils.cpp)
 
 # Link your project to ydlidar_sdk, SFML, OpenCV, libusb, and libfreenect libraries
 target_link_libraries(${PROJECT_NAME} ${YDLIDAR_SDK_LIBRARIES} ${SFML_LIBRARIES} ${OpenCV_LIBS} ${LIBUSB_LIBRARIES} freenect)
+# Añadir Google Test
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/release-1.12.1.zip
+)
+# For Windows: Prevent overriding the parent project's compiler/linker settings
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(googletest)
+
+enable_testing()
+
+# Añadir el ejecutable de pruebas
+add_executable(tests tests.cpp utils.cpp)
+
+# Vincular las bibliotecas necesarias
+target_link_libraries(tests
+    gtest
+    gtest_main
+    ${OpenCV_LIBS}
+    ${SFML_LIBRARIES}
+    ${YDLIDAR_SDK_LIBRARIES}  # Añadir la biblioteca YDLIDAR
+    ${LIBUSB_LIBRARIES}       # Añadir libusb
+    freenect                  # Añadir la biblioteca Freenect
+)
+
+# Registrar las pruebas
+include(GoogleTest)
+gtest_discover_tests(tests)

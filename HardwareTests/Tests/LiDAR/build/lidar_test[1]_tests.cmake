@@ -1,0 +1,7 @@
+add_test([=[LidarTest.InitializeSuccess]=]  /home/eduardo-hernadez-vergara/Documentos/TrabajoTerminal/Physarum-Automata/HardwareTests/Tests/LiDAR/build/lidar_test [==[--gtest_filter=LidarTest.InitializeSuccess]==] --gtest_also_run_disabled_tests)
+set_tests_properties([=[LidarTest.InitializeSuccess]=]  PROPERTIES WORKING_DIRECTORY /home/eduardo-hernadez-vergara/Documentos/TrabajoTerminal/Physarum-Automata/HardwareTests/Tests/LiDAR/build SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==])
+add_test([=[LidarTest.TurnOnSuccess]=]  /home/eduardo-hernadez-vergara/Documentos/TrabajoTerminal/Physarum-Automata/HardwareTests/Tests/LiDAR/build/lidar_test [==[--gtest_filter=LidarTest.TurnOnSuccess]==] --gtest_also_run_disabled_tests)
+set_tests_properties([=[LidarTest.TurnOnSuccess]=]  PROPERTIES WORKING_DIRECTORY /home/eduardo-hernadez-vergara/Documentos/TrabajoTerminal/Physarum-Automata/HardwareTests/Tests/LiDAR/build SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==])
+add_test([=[LidarTest.ProcessDataSuccess]=]  /home/eduardo-hernadez-vergara/Documentos/TrabajoTerminal/Physarum-Automata/HardwareTests/Tests/LiDAR/build/lidar_test [==[--gtest_filter=LidarTest.ProcessDataSuccess]==] --gtest_also_run_disabled_tests)
+set_tests_properties([=[LidarTest.ProcessDataSuccess]=]  PROPERTIES WORKING_DIRECTORY /home/eduardo-hernadez-vergara/Documentos/TrabajoTerminal/Physarum-Automata/HardwareTests/Tests/LiDAR/build SKIP_REGULAR_EXPRESSION [==[\[  SKIPPED \]]==])
+set(  lidar_test_TESTS LidarTest.InitializeSuccess LidarTest.TurnOnSuccess LidarTest.ProcessDataSuccess)

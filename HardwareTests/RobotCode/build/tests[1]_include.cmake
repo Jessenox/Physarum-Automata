@@ -1,0 +1,5 @@
+if(EXISTS "/home/eduardo-hernadez-vergara/Documentos/TrabajoTerminal/Physarum-Automata/HardwareTests/RobotCode/build/tests[1]_tests.cmake")
+  include("/home/eduardo-hernadez-vergara/Documentos/TrabajoTerminal/Physarum-Automata/HardwareTests/RobotCode/build/tests[1]_tests.cmake")
+else()
+  add_test(tests_NOT_BUILT tests_NOT_BUILT)
+endif()

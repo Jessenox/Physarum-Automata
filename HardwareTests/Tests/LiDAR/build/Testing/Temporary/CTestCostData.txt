@@ -1,0 +1,4 @@
+LidarTest.InitializeSuccess 2 0.0012092
+LidarTest.TurnOnSuccess 2 0.000987723
+LidarTest.ProcessDataSuccess 2 0.0010598
+---
