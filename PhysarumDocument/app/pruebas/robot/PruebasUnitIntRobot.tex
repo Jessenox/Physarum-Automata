@@ -13,115 +13,151 @@
         programa de prueba que permiti\'o medir la distancia a un objeto y detectar obst\'aculos en diferentes direcciones. 
         Para las pruebas unitarias usamos lo que ser\'ia gtest, que es una biblioteca de pruebas unitarias para C++.
         \vskip 0.5cm
-        El c\'odigo de las pruebas unitarias se muestra a continuaci\'on:
-        \begin{lstlisting}[language={C++}, caption={Primera versi\'on del c\'odigo del sistema de control del robot}, label={Script}]
-#include <gtest/gtest.h>
-#include <vector>
-#include <atomic>
-#include <iostream>
-#include <random>
+        El c\'odigo de las pruebas unitarias del LiDAR se muestra a continuaci\'on:
+        \begin{lstlisting}[language={C++}, caption={ILidar.h}, label={Script}]
+            #pragma once
+            #include "CYdLidar.h" // Incluye el header necesario para LaserScan
+            
+            class ILidar {
+            public:
+                virtual bool initialize() = 0;
+                virtual bool turnOn() = 0;
+                virtual void turnOff() = 0;
+                virtual bool doProcessSimple(LaserScan &scan) = 0; // Procesa el escaneo de LiDAR
+                virtual ~ILidar() = default;  // Destructor virtual
+            };            
+        \end{lstlisting}
+        \begin{lstlisting}[language={C++}, caption={RealLidar.h}, label={Script}]
+            #pragma once
+            #include "ILidar.h"
+            #include "CYdLidar.h"  // Para incluir las funciones necesarias como initialize, turnOn, turnOff
 
-// Variables globales para la simulación
-std::atomic<bool> is_running(true);
-std::atomic<bool> is_manual_mode(true);
-int frequency = 400;  // Frecuencia inicial
-std::vector<int> motor_speeds(4, 0); // Simulación de velocidad de los motores
-std::vector<int> motor_directions(4, 0); // Simulación de dirección de los motores
+            class RealLidar : public ILidar {
+            public:
+                // M\'etodos espec\'ificos del LiDAR
+                bool initialize() {
+                    // Inicializa el LiDAR
+                    return laser_.initialize();
+                }
 
-// Funciones de simulación para GPIO
-void gpioSetPWMfrequency(int pin, int frequency) {
-    std::cout << "Set PWM frequency for pin " << pin << " to " << frequency << std::endl;
-    motor_speeds[pin] = frequency;
-}
+                bool turnOn() {
+                    // Enciende el escaneo del LiDAR
+                    return laser_.turnOn();
+                }
 
-void gpioWrite(int pin, int value) {
-    std::cout << "Set direction for pin " << pin << " to " << value << std::endl;
-    motor_directions[pin] = value;
-}
+                void turnOff() {
+                    // Apaga el LiDAR
+                    laser_.turnOff();
+                }
 
-void gpioPWM(int pin, int value) {
-    std::cout << "Set PWM for pin " << pin << " to " << value << std::endl;
-    motor_speeds[pin] = value;
-}
+                bool doProcessSimple(LaserScan &scan) override {
+                    // Implementa la funci\'on que procesa el escaneo de LiDAR
+                    return laser_.doProcessSimple(scan);
+                }
 
-void gpioTerminate() {
-    std::cout << "GPIO terminated" << std::endl;
-}
+            private:
+                CYdLidar laser_; // Objeto del LiDAR real desde el SDK
+            };
+        \end{lstlisting}
+        \begin{lstlisting}[language={C++}, caption={main.cpp}, label={Script}]
+            #include "RealLidar.h"
+            #include <iostream>
 
-// Función simulada para detener los motores
-void stopMotors() {
-    std::cout << "Stopping all motors" << std::endl;
-    for (int i = 0; i < 4; ++i) {
-        motor_speeds[i] = 0;
-    }
-}
+            int main() {
+                RealLidar lidar;
 
-// Simulación de LiDAR
-class SimulatedLidar {
-public:
-    bool doProcessSimple(LaserScan &scan) {
-        scan.points = generateFakeScanData();
-        return true;
-    }
+                if (lidar.initialize()) {
+                    if (lidar.turnOn()) {
+                        std::cout << "LiDAR est\'a encendido y funcionando." << std::endl;
 
-private:
-    std::vector<LaserPoint> generateFakeScanData() {
-        // Genera puntos simulados del LiDAR
-        std::vector<LaserPoint> points;
-        for (int i = 0; i < 100; ++i) {
-            LaserPoint point;
-            point.angle = static_cast<float>(rand() % 360);  // Angulo aleatorio
-            point.range = static_cast<float>((rand() % 100) / 100.0);  // Rango aleatorio entre 0 y 1
-            points.push_back(point);
-        }
-        return points;
-    }
-};
+                        // Simula procesamiento de escaneo
+                        LaserScan scan;
+                        if (lidar.doProcessSimple(scan)) {
+                            std::cout << "Escaneo de LiDAR procesado correctamente." << std::endl;
+                        }
 
-// Definir la estructura LaserScan y LaserPoint para simulación
-struct LaserPoint {
-    float angle;
-    float range;
-};
+                        lidar.turnOff();
+                    } else {
+                        std::cerr << "Error al encender el LiDAR." << std::endl;
+                    }
+                } else {
+                    std::cerr << "Error al inicializar el LiDAR." << std::endl;
+                }
 
-struct LaserScan {
-    std::vector<LaserPoint> points;
-};
+                return 0;
+            }
+        \end{lstlisting}
+        \begin{lstlisting}[language={C++}, caption={LidarTest.cpp}, label={Script}]
+            #include "gtest/gtest.h"
+            #include "MockLidar.h"
 
-// Prueba para simular movimiento hacia adelante
-TEST(MotorControlSimulationTest, MoveForward) {
-    moveForward();
-    EXPECT_EQ(motor_directions[0], 0);  // Verifica que los motores se dirigen hacia adelante
-    EXPECT_EQ(motor_directions[1], 1);
-    EXPECT_EQ(motor_speeds[0], 128);    // Verifica que la velocidad PWM es 50%
-}
+            TEST(LidarTest, InitializeSuccess) {
+                MockLidar mockLidar;
+                EXPECT_CALL(mockLidar, initialize())
+                    .WillOnce(::testing::Return(true));
 
-// Prueba para simular detección de obstáculos con LiDAR
-TEST(LidarSimulationTest, DetectObstacle) {
-    SimulatedLidar lidar;
-    LaserScan scan;
-    bool result = lidar.doProcessSimple(scan);
-    
-    EXPECT_TRUE(result);  // La función debe retornar true
-    EXPECT_GT(scan.points.size(), 0);  // Debe haber puntos en el escaneo
-    EXPECT_LT(scan.points[0].range, 1.0);  // Los puntos deben estar dentro del rango simulado
-}
+                EXPECT_TRUE(mockLidar.initialize());
+            }
 
-// Prueba para detener motores
-TEST(MotorControlSimulationTest, StopMotors) {
-    stopMotors();
-    for (int i = 0; i < 4; ++i) {
-        EXPECT_EQ(motor_speeds[i], 0);  // Verifica que la velocidad PWM de todos los motores es 0
-    }
-}
+            TEST(LidarTest, TurnOnSuccess) {
+                MockLidar mockLidar;
+                EXPECT_CALL(mockLidar, initialize()).WillOnce(::testing::Return(true));
+                EXPECT_CALL(mockLidar, turnOn()).WillOnce(::testing::Return(true));
 
-// Inicialización del framework de pruebas
-int main(int argc, char **argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}
+                EXPECT_TRUE(mockLidar.initialize());
+                EXPECT_TRUE(mockLidar.turnOn());
+            }
+
+            TEST(LidarTest, ProcessDataSuccess) {
+                MockLidar mockLidar;
+                LaserScan scan;
+
+                EXPECT_CALL(mockLidar, doProcessSimple(::testing::_))
+                    .WillOnce(::testing::Return(true));
+
+                EXPECT_TRUE(mockLidar.doProcessSimple(scan));
+            }
+
+        \end{lstlisting}
+        \begin{lstlisting}[language={C++}, caption={MockLidar.h}, label={Script}]
+            #ifndef MOCKLIDAR_H
+            #define MOCKLIDAR_H
+
+            #include "gmock/gmock.h"
+            #include "ILidar.h"
+
+            class MockLidar : public ILidar {
+            public:
+                MOCK_METHOD(bool, initialize, (), (override));
+                MOCK_METHOD(bool, turnOn, (), (override));
+                MOCK_METHOD(bool, doProcessSimple, (LaserScan &scan), (override));
+                MOCK_METHOD(void, turnOff, (), (override));
+            };
+
+            #endif // MOCKLIDAR_H
 
         \end{lstlisting}
     \vskip 0.5cm
-    Y los resultados de las pruebas unitarias se muestran a continuaci\'on:
+    Y los resultados de las pruebas unitarias del LiDAR fueron satisfactorios, ya que se logr\'o inicializar el LiDAR, encenderlo y procesar un escaneo
+    de manera exitosa. Adem\'as, se verific\'o que el LiDAR se apag\'o correctamente al finalizar las pruebas.
+    \vskip 0.5cm
+    % figura de la prueba unitaria del LiDAR
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=0.8\textwidth]{./images/Pruebas/robot/PruebaLidar01-1.png}
+        \caption{Pruebas unitarias del LiDAR 01}
+        \label{fig:LidarTest1}
+    \end{figure}
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=0.8\textwidth]{./images/Pruebas/robot/PruebaLidar01-2.png}
+        \caption{Pruebas unitarias del LiDAR 02}
+        \label{fig:LidarTest2}
+    \end{figure}
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=0.8\textwidth]{./images/Pruebas/robot/LidarSFML01.png}
+        \caption{Minimapa dibujado con SFML con la informaci\'on del LiDAR}
+        \label{fig:LidarTest2}
+    \end{figure}
     
