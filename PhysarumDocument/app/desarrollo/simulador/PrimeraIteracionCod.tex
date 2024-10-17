@@ -1,0 +1,63 @@
+\subsubsection{Codificaci\'on e implementaci\'on de algoritmo en el robot en la primera iteraci\'on 1} % (fold)
+\label{ssub:Codi}
+    Con las rutas que han sido generadas de acuerdo a cada una
+        de las simulaciones que fueron ejecutadas en el programa,
+        como ya se ha mencionado, se genera la informaci\'on con la
+        cual el robot realizar\'a el seguimiento de esta ruta para llegar
+        de un punto inicial al final. Esta informaci\'on corresponde a
+        la ruta que genera el Physarum cuando termina la simulaci\'on
+        de llegar desde su punto inicial de expansi\'on a un nutriente
+        con el cual se alimenta.
+    \vskip 0.5cm
+    Para poder hacer una correcta manipulaci\'on de la
+        informaci\'on, la cual pueda ser enviada al robot que este
+        pueda interpretarla y avanzar de acuerdo la ruta generada, es
+        necesario crear un espacio el cual represente la posici\'on del
+        robot en un determinado lugar, junto con el destino al cual se
+        quiere llegar, a partir de ah\'i pasar esta configuraci\'on al
+        modelo del Physarum, ejecutar la simulaci\'on y obtener la
+        ruta, finalizando con la recopilaci\'on de la informaci\'on
+        relacionada con la ruta y su almacenamiento, lo cual es
+        representado de la siguiente manera:
+    \vskip 0.5cm
+    \lstset{caption={Pseudo c\'odigo del simulador Physarum}}
+    \begin{lstlisting}
+    Iniciar programa
+    Colocar la configuraci\'on inicial
+    Coloca punto inicial
+    Coloca punto final
+    Ejecutar Simulador_Physarum
+    Si Simulador_Physarum obtuvo ruta, entonces:
+        Guardar las coordenadas del punto inicial
+        Guardar las coordenadas del punto final
+        Guardar las coordenadas de las c\'elulas por orden de aparici\'on
+        Desplegar todas las coordenadas en un archivo
+    Si no
+        Finaliza programa
+    Fin Si
+    \end{lstlisting}
+    \vskip 0.5cm
+    A partir de lo anterior, se comprende que al robot se le ser\'a
+        enviado las coordenadas correspondientes a la ruta obtenida
+        por el simulador del Physarum, con un punto inicial, el cual
+        marcar\'a su posici\'on actual, su punto final, representando el
+        destino al cual llegar\'a el robot y las c\'elulas del Physarum
+        ordenadas por orden de aparici\'on, las cuales son las
+        coordenadas por las cuales el robot tendr\'a que pasar para
+        llegar desde el punto inicial al final.
+    \vskip 0.5cm
+    Con lo anterior, es posible la creaci\'on de informaci\'on la cual
+        el robot sea capaz de leer y a partir de sus propias funciones,
+        llegar de un punto inicial al final. Esta informaci\'on es
+        almacenada en un archivo, el cual contiene cada una de las
+        coordenadas ordenadas, siendo la primera el punto inicial,
+        posteriormente cada una de las dem\'as coordenadas que
+        representan a cada una de las c\'elulas del Physarum,
+        ordenadas por orden de aparici\'on para que el robot tenga un
+        orden el cual seguir para poder llegar a su destino.
+    \vskip 0.5cm
+    Finalmente, la \'ultima coordenada corresponde a la
+        coordenada del punto final, el cual es el destino al cual el
+        robot deber\'a de llegar, finalizando as\'i su recorrido.
+        
+% subsubsection Codi (end)

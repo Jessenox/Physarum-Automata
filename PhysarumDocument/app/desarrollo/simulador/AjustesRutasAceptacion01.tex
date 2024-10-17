@@ -1,0 +1,108 @@
+\subsubsection{Ajustes de rutas basado en resultado de pruebas de aceptaci\'on 1}
+    Con los resultados que fueron obtenidos a partir de la
+        ejecuci\'on de las pruebas de aceptaci\'on, se toma en cuenta
+        que hay algunas configuraciones o ajustes que se deben de
+        hacer al algoritmo. Una de las primeras es generar una ruta
+        'mas limpia', es decir, una ruta en la cual existan mucho
+        menos celdas las cuales impidan o dificulten generar una
+        ruta un poco m\'as optima o que causan algunos
+        impedimentos a la hora de generar el ordenamiento de
+        coordenadas para ser enviadas al robot para la realizaci\'on de
+        su funcionalidad de llegar a su destino.    
+    \vskip 0.5cm
+    Una de las soluciones que se considera para poder obtener
+        las rutas un poco m\'as limpias y ajustarlas es limpiar un poco
+        el camino o ruta generada por el Physarum una vez esta
+        \'ultima siendo obtenida es eliminar las c\'elulas que conforman
+        al estado 8 y 5 respectivamente, las cuales no sean
+        necesarias para el c\'alculo de la ruta o que no formen parte
+        importante de la ruta que fue obtenida. Para esto se
+        consideran dos casos importantes
+    \vskip 0.5cm
+    \begin{enumerate}
+        \item Las c\'elulas alrededor de el punto inicial y el punto
+            final.
+        \item Las c\'elulas que no conectan una c\'elula con otra.
+    \end{enumerate}
+    \vskip 0.5cm
+    Una de las ideas para poder eliminar estas c\'elulas las cuales
+        dificultan la obtenci\'on correcta de las rutas es eliminar las
+        c\'elulas que est\'an alrededor del estado inicial y el estado
+        final, dejando \'unicamente las que tienen conexi\'on con otras
+        c\'elulas las cuales pertenecen a la ruta general.
+    \vskip 0.5cm
+    Esto se realiz\'o de la siguiente forma creando un nuevo
+        aut\'omata con las siguientes reglas:
+    \vskip 0.5cm
+    \begin{itemize}
+        \item Si el estado es 1 y alrededor no hay ning\'un estado 1, entonces es estado 0, sino, es estado 1.
+        \item Si el estado es 2 y alrededor no hay ning\'un estado 1, entonces es estado 0, sino, es estado 2.
+        \item Si el estado es 3, entonces es estado 7.
+        \item Si el estado es 4 y alrededor no hay ning\'un estado 1, entonces es estado 0, sino, es estado 4.
+        \item Si el estado es 5 y alrededor hay un punto inicial, entonces es estado 2, sino, si alrededor hay un nutriente, entonces es estado 4, sino es estado 1.
+        \item Si es estado 6, entonces es estado 9.
+        \item Si es estado 7, se queda en estado 7.
+        \item Si el estado es 8 y alrededor hay un punto inicial, entonces es estado 2, sino, si alrededor hay un nutriente, entonces es estado 4, sino es estado 1.
+        \item Si es estado 9, entonces se queda en estado 9.
+    \end{itemize}
+    \vskip 0.5cm    
+    Y queda plasmado con el siguiente c\'odigo:
+    \vskip 0.5cm
+    \begin{lstlisting}[language={C++}, caption={Ruta Ajuste 1}, label={Script}]
+        switch (tab[i][j]) {
+            case 1:
+                if (!aroundState1)
+                    cellsAux[i][j] = 0;
+                else
+                    cellsAux[i][j] = 1;
+            break;
+            case 2:
+                if (!aroundState1)
+                    cellsAux[i][j] = 0;
+                else
+                    cellsAux[i][j] = 2;
+            break;
+            case 3:
+                cellsAux[i][j] = 7;
+            break;
+            case 4:
+                if (!aroundState1)
+                    cellsAux[i][j] = 0;
+                else
+                    cellsAux[i][j] = 4;
+            break;
+            case 5:
+                cellsCounter++;
+                if (isInitialPointAround)
+                    cellsAux[i][j] = 2;
+                else if (isNutrientAround)
+                    cellsAux[i][j] = 4;
+                else
+                    cellsAux[i][j] = 1;
+            break;
+            case 6:
+                cellsAux[i][j] = 9;
+            break;
+            case 7:
+                cellsAux[i][j] = 7;
+            break;
+            case 8:
+                cellsCounter++;
+                if (isInitialPointAround)
+                    cellsAux[i][j] = 2;
+                else if(isNutrientAround)
+                    cellsAux[i][j] = 4;
+                else
+                    cellsAux[i][j] = 1;
+            break;
+            case 9:
+                cellsAux[i][j] = 9;
+            break;
+        }
+    \end{lstlisting}
+    % section Resultados de las pruebas (end)
+\vskip 0.5cm
+    Lo anterior se hace para poder obtener una ruta con una
+        mejor claridad y que dificulte menos el ordenamiento y la
+        manera en la cual se obtienen las coordenadas con las cuales
+        se realiza el recorrido.

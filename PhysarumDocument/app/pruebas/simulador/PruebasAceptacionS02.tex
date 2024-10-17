@@ -1,0 +1,116 @@
+\subsection{Pruebas de aceptaci\'on en entornos medianos}
+    Para la realizaci\'on de estas pruebas, se utilizaron
+        exactamente los mismos par\'ametros de las pruebas unitarias
+        anteriores, ya que la unica diferencia es que el lienzo es
+        mucho m\'as grande, por lo que esta prueba es agregada
+        tambi\'en.
+        \vskip 0.5cm
+    \subsubsection{1ra Prueba de aceptaci\'on: Modificaci\'on del tama\~no del lienzo}
+    Descripci\'on: En el c\'odigo se colocan las dimensiones del
+        lienzo y el arreglo de dimensi\'on n x n correspondiente al
+        aut\'omata celular, por lo que se quiere comprobar si la
+        modificaci\'on de estos valores cambia debidamente el
+        tama\~no del lienzo mostrado en pantalla.
+    \vskip 0.5cm
+    Flujo:
+    \vskip 0.5cm
+    \begin{itemize}
+        \item Se cambian los valores del lienzo en el c\'odigo
+        \item Se inicia el programa.
+        \item El programa muestra los cambios correspondientes a los
+        valores que fueron colocados en el c\'odigo al
+        desplegarse el lienzo.
+    \end{itemize}
+    \vskip 0.5cm
+    Criterios de aceptaci\'on:
+    \begin{itemize}
+        \item El programa inicia correctamente.
+        \item El tama\~no del lienzo es acorde a los valores colocados
+        en el c\'odigo.
+        \item Se pueden colocar estados en cualquier \'area
+        correspondiente al lienzo.
+    \end{itemize}
+    \vskip 0.5cm
+    El software cumple con cada uno de los criterios de
+        aceptaci\'on, adem\'as de seguir el flujo con el que se hab\'ia
+        planeado desde el inicio, as\'i que se considera a esta prueba
+        como finalizada y con buenos resultados obtenidos.
+    \subsubsection{2da Prueba de aceptaci\'on: Elecci\'on de estados a trav\'es del teclado.}
+    Descripci\'on: El usuario, al iniciar el programa, puede elegir
+        por medio de las teclas el estado actual que quiera colocar en
+        el lienzo desplegado.
+    \vskip 0.5cm
+    Flujo:
+    \vskip 0.5cm
+    \begin{itemize}
+        \item El programa es cargado.
+        \item Se le presenta el lienzo en pantalla.
+        \item Al elegir los estados con las teclas num\'ericas, estas son
+        reflejadas en la pantalla.
+    \end{itemize}
+    Criterios de aceptaci\'on:
+    \begin{itemize}
+        \item Al presionar una tecla num\'erica, cambia al
+            respectivo estado que representa.
+        \item El estado elegido es plasmado en el lienzo al dar clic.
+        \item Puede cambiar en cualquier momento el estado de su elecci\'on.
+    \end{itemize}
+    \vskip 0.5cm
+    Para la prueba anterior, los resultados fueron satisfactorios
+        puesto que cumpli\'o con todos los criterios de aceptaci\'on,
+        siguiendo el flujo que se describ\'ia en la prueba.
+    \subsubsection{3ra Prueba de aceptaci\'on: Colocaci\'on de los estados inicial y final.}
+    Descripci\'on: Al presionar con el bot\'on izquierdo del mouse
+        en el lienzo que se es desplegado, se colocan en pantalla el
+        estado correspondiente al seleccionado previamente con el
+        teclado. Particularmente se eval\'ua que se coloque el estado
+        inicial y el estado que corresponde al nutriente no
+        encontrado, siendo los principales componentes en el estado
+        inicial que es necesario para iniciar la simulaci\'on.
+    \vskip 0.5cm
+    Flujo:
+    \vskip 0.5cm
+    \begin{itemize}
+        \item Se despliega el lienzo en pantalla
+        \item Se elige por medio del teclado el estado deseado.
+        \item Al dar clic en pantalla, este estado es puesto en pantalla
+    \end{itemize}
+    Criterios de aceptaci\'on:
+    \begin{itemize}
+        \item El estado es colocado en el lienzo correctamente.
+        \item La pantalla muestra el estado actual y el color
+            correspondiente al teclado.
+        \item La colocaci\'on de los estados solo puede ser colocada
+            dentro del \'area del lienzo y no por fuera.
+    \end{itemize}
+    \vskip 0.5cm
+    En la segunda prueba, se lograron cumplir los criterios de
+        aceptaci\'on de manera satisfactoria, por lo que la prueba se
+        considera como realizada y cumplida correctamente.
+    \subsubsection{4ta Prueba de aceptaci\'on: Inicializaci\'on de la simulaci\'on.}
+    Al presionar el bot\'on de ENTER en el teclado, la simulaci\'on
+        del organismo Physarum es iniciada, y si fueron colocados
+        correctamente los estados correspondientes al estado inicial
+        y al nutriente no encontrado, entonces se genera una ruta
+        entre cada estado.
+    \vskip 0.5cm
+    Flujo:
+    \vskip 0.5cm
+    \begin{itemize}
+        \item El usuario coloca los estados deseados en pantalla.
+        \item El usuario presiona la tecla ENTER.
+        \item El programa inicia con la simulaci\'on y si son colocados
+        los estados necesarios, se crea una ruta entre estos.
+    \end{itemize}
+    \vskip 0.5cm
+    Criterios de aceptaci\'on:
+    \begin{itemize}
+        \item El n\'umero de generaciones aumenta.
+        \item Si es colocado el estado 3, entonces el Physarum inicia
+        su expansi\'on.
+        \item Si son colocados el estado 3 y 1, se genera una ruta entre
+        estos una vez finalizada la simulaci\'on.
+    \end{itemize}
+    La prueba anterior fue realizada y cumpli\'o con los criterios
+        de aceptaci\'on que fueron solicitados, por lo que esta prueba
+        se da por finalizada y con un resultado positivo.

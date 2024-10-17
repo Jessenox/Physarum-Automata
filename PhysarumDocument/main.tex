@@ -39,7 +39,15 @@
     morestring=[b]',
     morestring=[b]"
 }[keywords, comments, strings]
+\lstdefinelanguage{PseudoCode}{
+    morekeywords={Iniciar, programa, Colocar, configuraci\'on, inicial, Ejecutar, Simulador_Physarum, Si, entonces, Guardar, coordenadas, punto, inicial, final, Desplegar, archivo, noFinaliza, Fin},
+    sensitive=false,
+    morecomment=[l]{//},
+    keywordstyle=\color{blue}\bfseries,
+    basicstyle=\ttfamily,
+}
 
+\lstset{language=PseudoCode}
 %We define colors, in this case, orange, purpe, jsonblue, and the string for make prettier the code
 \definecolor{jsonorange}{RGB}{243,102,25}
 \definecolor{jsonpurple}{RGB}{186,33,132}
