@@ -114,7 +114,8 @@
         Neumann. Sin embargo, en la versi\'on propuesta aqu\'i, optamos por modificar el vecindario a uno de Moore, 
         facilitando as\'i el acceso a un mayor n\'umero de vecinos para comparaci\'on y permitiendo obtener una perspectiva m\'as clara de la direcci\'on \'optima 
         para el desplazamiento del agente.
-    Sin embargo, el uso del vecindario de Moore en lugar del vecindario de Von Neumann introduce ciertos desaf\'ios no presentes en el algoritmo original. 
+    \vskip 0.5cm
+    Sin embargo, el uso del vecindario de Moore en lugar del vecindario de von Neumann introduce ciertos desaf\'ios no presentes en el algoritmo original. 
         Uno de estos desaf\'ios surge en las esquinas (NW, NE, SW, SE), donde el repelente podr\'ia permitir que el agente escape, 
         contrario a lo deseado. Para abordar este inconveniente, se implement\'o una soluci\'on que consiste en colocar un repelente imaginario en la esquina cuando 
         dos esquinas adyacentes presentan repelentes en un \'angulo de 90\degree  entre s\'i. Este ajuste permite la creaci\'on de una gama m\'as amplia de formas, 

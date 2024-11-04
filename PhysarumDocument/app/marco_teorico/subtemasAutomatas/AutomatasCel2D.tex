@@ -3,8 +3,8 @@
 
     %Parrafo 1
     Los aut\'omatas celulares de 2 dimensiones son los que se usan en este trabajo terminal, por ello es necesario
-        explicarlos con m\'as detalle. Primero recordando lo ya explicado en anteriores subsecciones, un aut\'omata
-        celular de 2 dimensiones es una tupla $({\mathbb{Z}^{2}},S,N,f)$\ref{sec:AutomatasCelDefFormal} y este 
+        explicarlos con m\'as detalle. Primero recordando lo ya explicado en la subseccion \ref{sec:AutomatasCelDefFormal}, un aut\'omata
+        celular de 2 dimensiones es una tupla $({\mathbb{Z}^{2}},S,N,f)$ y este 
         necesita de 8 elementos para poder ser definido, los cuales son los siguientes:         
     \begin{enumerate}
         \item \textbf{Celdas}: Es la unidad b\'asica del aut\'omata celular. Cada celda ocupa una posici\'on en el espacio, 
@@ -14,14 +14,14 @@
             aut\'omatas celulares m\'as complejos, cada celda puede estar en uno de varios estados posibles. En el caso 
             en particular del Physarum polycephalum, cada celda puede estar en uno de nueve estados posibles 
             $\mathbb{P} = \{x \in \mathbb{Z}| 0 \leq x \leq 8\}$ entonces es $S = \mathbb{P}$.
-        \item \textbf{Cuadr\'icula o Red}: Las celdas estan dispuestas a lo largo del espacio euclidiano, en 
-            suelen ser dispuestas en una cuadr\'icula o red, en donde cada celda ocupa una posici\'on en el espacio. Es
+        \item \textbf{Cuadr\'icula o Red}: Las celdas estan dispuestas a lo largo del espacio euclidiano, estas 
+            suelen disponerse en una cuadr\'icula o red, en donde cada celda ocupa una posici\'on en el espacio. Es
             n-dimensional, pero en este caso es 2-dimensional, es decir, $n = 2$.
         \item \textbf{Vecindad}: Es el conjunto de celdas que se toman en cuenta para la actualizaci\'on de una celda. En el caso de
-            la vecindad de Moore que se puede ver en la secci\'on \ref{sec:Vecindario} $N = 8$
+            la vecindad de Moore, que se puede ver en la secci\'on \ref{sec:Vecindario}, esta es $N = 8$
         \item \textbf{Reglas de Transici\'on}: Son un conjunto de reglas que determinan como cambia el estado de la celula en 
-            funci\'on del estado actual de ella y de sus vecinos. Estas reglas se aplinan repetidamente a lo largo del tiempo,
-            generalmente de manera sincr\'ona, es decir, todas las celdas se actualizan al mismo tiempo. Estas estan definidas 
+            funci\'on del estado actual de ella y de sus vecinos. Estas reglas se aplican repetidamente a lo largo del tiempo,
+            generalmente de manera s\'incrona, es decir, todas las celdas se actualizan al mismo tiempo. Estas estan definidas 
             por la funci\'on de transici\'on local $f$. Ejemplificando lo anterior tenemos que en el juego de la vida de Conway
             \cite{Conway1970} donde tenemos que $C(x,y:t)$ que es la celda central y $N(x,y:t)$ que es la vecindad de Moore de la
             celda central, adem\'as tenemos que tiene $f: \{0,1\}^9 \rightarrow \{0,1\}$, entonces podemos deducir que la funci\'on de transici\'on 

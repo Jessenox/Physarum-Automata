@@ -5,7 +5,7 @@
         como la tupla que resulta de la suma componente a componente de $x$ y $y$, es decir, $(x \oplus y)_i = x_i + y_i$ para todo 
         $i \in \mathbb{Z}$.
     \vskip 0.5cm
-    Entonces tenemos que un aut\'omata celular es una tupla $({\mathbb{Z}^{n}},S,N,f)$ tal que la n dimensi\'on es al menos 1 donde 
+    Entonces tenemos que un aut\'omata celular es una tupla $({\mathbb{Z}^{n}},S,N,f)$ tal que la $n$ dimensi\'on es al menos $1$ donde 
         $n \in \mathbb{Z}^{+}$, $S$ es un conjunto finito no vac\'io de estados, $N$ es un conjunto finito no vac\'io de vecindades 
         perteneciente a ${\mathbb{Z}^{n}}$ y $f$ es una funci\'on de transici\'on local, es decir, $f: S^N \rightarrow S$ donde
         $S^N$ representa al conjunto de todas las posibles configuraciones de vecindad en $N$.
@@ -14,8 +14,8 @@
         La evoluci\'on de un aut\'omata celular es una funci\'on $F: S^{{\mathbb{Z}^{n}}} \rightarrow S^{{\mathbb{Z}^{n}}}$ que asigna una configuraci\'on a la siguiente
         configuraci\'on, es decir, $F(c) = c'$, donde $c'$ es la configuraci\'on resultante de aplicar la funci\'on de transici\'on local a cada
         celda de la configuraci\'on $c$, es decir, $c'(x) = f(c|_{x+N})$ para todo $x \in {\mathbb{Z}^{n}}$, donde $c|_{x+N}$ es la restricci\'on de $c$ a la vecindad $x+N$.
-        Esto tambi\'en aplica n dimensionalmente, es decir, que se podr\'ia decir que $c'(x,y) = f(c|_{(x,y)+N})$ para todo $(x,y) \in {\mathbb{Z}^{2}}$.
-        Otra notaci\'on que podemos usar, y de hecho es la que utilizaremos es C(x,y:t) donde C es el centro de la vecindad, x,y son las coordenadas de la celda y t es el tiempo,
+        Esto tambi\'en aplica $n$ dimensionalmente, es decir, que se podr\'ia decir que $c'(x,y) = f(c|_{(x,y)+N})$ para todo $(x,y) \in {\mathbb{Z}^{2}}$.
+        Otra notaci\'on que podemos usar, y de hecho es la que utilizaremos es $C(x,y:t)$ donde $C$ es el centro de la vecindad, $x$,$y$ son las coordenadas de la celda y $t$ es el tiempo,
         o generaciones.
     \vskip 0.5cm
     Cabe a\~nadir que puede haber reestricciones adicionales en el conjunto de vecindades $N$ y en la funci\'on de transici\'on local $f$.
@@ -32,6 +32,6 @@
         $(x,y)$ es la celda central de la vecindad. Y la funci\'on de transici\'on local $f$ es una funci\'on de 512 variables booleanas, es decir,
         $f: \{0,1\}^{9} \rightarrow \{0,1\}$.
     \vskip 0.5cm
-    Esta definici\'on formal de aut\'omata celular fue tomada de \cite{Codd1968}. Una vez explicada la defiinici\'on formal de aut\'omata celular,
-        podemos pasar a explicar a mas detalle los aut\'omatas celulares de 2 dimensiones, los cuales son los que se usan en este trabajo terminal.
+    Esta definici\'on formal de aut\'omata celular fue tomada de \cite{Codd1968}. Una vez explicada la definici\'on formal de aut\'omata celular,
+        podemos pasar a explicar a m\'as detalle los aut\'omatas celulares de 2 dimensiones, los cuales son los que se usan en este trabajo terminal.
     \vskip 0.5cm

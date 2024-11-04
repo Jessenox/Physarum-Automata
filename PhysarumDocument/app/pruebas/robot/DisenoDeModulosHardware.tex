@@ -48,7 +48,7 @@
     \end{longtable}
     \vskip 0.5cm
     Los motores est\'an conectados a los pines GPIO de la Raspberry Pi 4 B mediante un
-        controlador de moteres. El sistema de control utiliza se\~nales PWM para regular la
+        controlador de motores. El sistema de control utiliza se\~nales PWM para regular la
         velocidad de los motores, y se\~nales de direcci\'on para controlar el sentido de giro.
     \vskip 0.5cm
     Elegimos los Motores Nema 23 debido a su precisi\'on y capacidad de generar torque
@@ -68,7 +68,7 @@
     \subsubsection{M\'odulo de sensores (LiDAR)} % (fold)
     \label{ssub:modsen}
     El robot est\'a equipado por un sensor YLiDAR 2XL, que permite realizar un escaneo de
-        360° del entorno para detectar obst\'aculos y mapear el \'area de operaci\'on del robot. La
+        360\° del entorno para detectar obst\'aculos y mapear el \'area de operaci\'on del robot. La
         elecci\'on de este sensor se debe a su capacidad para medir distancias con alta
         precisi\'on y su adecuado rango de operaci\'on, lo que lo convierte en una opci\'on ideal
         para la navegaci\'on aut\'onoma en tiempo real.
@@ -78,7 +78,7 @@
     \vskip 0.5cm
     El sensor de distancia se eligi\'o por su capacidad de ofrecer un rango de detecci\'on de
         8 metros de di\'ametro y su alta precisi\'on en el mapeo de entornos. Su \'angulo de
-        escaneo de 360° permite que el robot detecte obst\'aculos en cualquier direcci\'on.
+        escaneo de 360\° permite que el robot detecte obst\'aculos en cualquier direcci\'on.
     \vskip 0.5cm
     Esta subsecci\'on no tiene un esquema de conexi\'on por que simplemente se conecta
         por USB tipo A.
@@ -164,7 +164,7 @@
                 \begin{enumerate}
                     \item Enviar se\~nales desde la unidad de control a los motores para probar el avance, retroceso y giros.
                     \item Ajustes la frecuencia PWM para probar diferentes velocidades de movimiento.
-                    \item Medir la precisi\'on del moviento en distacias cortas y largas.
+                    \item Medir la precisi\'on del movimiento en distacias cortas y largas.
                 \end{enumerate}
             \item M\'etrica de \'exito: Desviaci\'on m\'axima de 5cm en distancias cortas y de 10 cm en distancias largas.
             \item Criterios de \'exito: Los motores deben responder en menos de 500 ms

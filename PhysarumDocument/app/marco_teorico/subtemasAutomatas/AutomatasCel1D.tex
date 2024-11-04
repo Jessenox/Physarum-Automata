@@ -27,7 +27,7 @@
     En este caso la vecindad la forman la celda y sus dos vecinos, pero puede ser de cualquier tama\~no, siempre y cuando
         sea sim\'etrica, es decir, que la celda se encuentre en el centro de la vecindad. El estado de la celda puede ser
         cualquier valor, pero en este caso solo puede ser 0 o 1. La regla de evoluci\'on es la que determina el estado de
-        la celda en la siguiente generaci\'on, en este caso la regla de evoluci\'on 30, que se puede ver en la figura
+        la celda en la siguiente generaci\'on, en este caso la regla de evoluci\'on 30, que se puede ver en la figura anterior
         \ref{fig:automataCelular1D}, es la siguiente:
         \begin{table}[h!]
             \centering
@@ -42,8 +42,8 @@
             \label{tab:reglaEvolucion30}
         \end{table}
     \vskip 0.5cm
-    Como podemos ver en la tabla \ref{tab:reglaEvolucion30} la regla de evoluci\'on 30 es una regla de evoluci\'on local, 
-        es decir, que solo depende de la celda y sus vecinos, y no de toda la linea de celdas. En este caso la regla de evoluci\'on
+    Como podemos ver en el cuadro \ref{tab:reglaEvolucion30} la regla de evoluci\'on 30 es una regla de evoluci\'on local, 
+        es decir, que solo depende de la celda y sus vecinos, y no de toda la l\'inea de celdas. En este caso la regla de evoluci\'on
         30 es una regla de evoluci\'on determinista, es decir, que para una celda y sus vecinos siempre se obtiene el mismo resultado.
         Pero tambi\'en existen las reglas de evoluci\'on no deterministas, en las cuales para una celda y sus vecinos se puede obtener
         m\'as de un resultado. En este caso la regla de evoluci\'on 30 es una regla de evoluci\'on unidimensional, es decir, que la
@@ -69,7 +69,7 @@
             \item \textbf{Frontera} En este caso las celdas de los extremos tienen como vecinos a celdas con un valor fijo.
         \end{itemize}
     \vskip 0.5cm
-    En nuestro caso utilizaremos la condici\'on frontera peri\'odica, esta tiene forma de un toroide, como se puede ver en la figura
+    En nuestro caso, utilizaremos la condici\'on frontera peri\'odica; esta tiene forma de un toroide, como se puede ver en la figura
         \ref{fig:toroide}.
         \vskip 0.5cm
         
