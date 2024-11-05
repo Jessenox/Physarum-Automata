@@ -22,9 +22,10 @@
     \vskip 0.5cm
     Para poder controlar los motores, se desarroll\'o un c\'odigo en C++ que utiliz\'o la
         biblioteca pigpio para gestionar las se\~nales PWM. El c\'odigo permite ajustar tanto la
-        velocidad como la direcci\'on de los motores en tiempo real.
+        velocidad como la direcci\'on de los motores en tiempo real, se muestra un ejemplo en el
+        Listing \ref{mmot}.
     \vskip 0.5cm
-    \begin{lstlisting}[language={C++}, caption={C\'odigo de ejemplo de motores}, label={Script}]
+    \begin{lstlisting}[language={C++}, caption={C\'odigo de ejemplo de motores}, label={mmot}]
         void setMotorSpeed(int motor, int frequency) {
             if (motor >= 0 && motor < 4) {
                 gpioSetPWMfrequency(PWM_PINS[motor], frequency);
@@ -46,16 +47,16 @@
     El sensor LiDAR se configur\'o utilizando la biblioteca proporcionada por el fabricante
         (YLiDAR SDK) y se desarroll\'o un c\'odigo para la lectura continua de los datos de escaneo.
         Los datos obtenidos del LiDAR se procesaron en tiempo real para permitir la
-        navegaci\'on aut\'onoma y la detecci\'on de obst\'aculos.
+        navegaci\'on aut\'onoma y la detecci\'on de obst\'aculos, en la Listing \ref{jjue} se muestra un ejemplo de c\'odigo.
     \vskip 0.5cm
-    \begin{lstlisting}[language={C++}, caption={Primero se implementa la librer\'ia del LiDAR}, label={Script}]
+    \begin{lstlisting}[language={C++}, caption={Primero se implementa la librer\'ia del LiDAR}, label={jjue}]
         #include "CYdLidar.h"
         using namespace ydlidar;
     \end{lstlisting}
     \vskip 0.5cm
-    Despu\'es se inicializa el sensor y se obtienen los datos de escaneo:
+    Despu\'es se inicializa el sensor y se obtienen los datos de escaneo, se muestra un ejemplo en la Listing \ref{ere}.
     \vskip 0.5cm
-    \begin{lstlisting}[language={C++}, caption={Configuraci\'on de opciones del LiDAR}, label={Script}]
+    \begin{lstlisting}[language={C++}, caption={Configuraci\'on de opciones del LiDAR}, label={ere}]
         CYdLidar laser;
         laser.setlidaropt(LidarPropSerialPort, port.c_str(), port.size());
         std::string ignore_array;
@@ -106,9 +107,9 @@
     \vskip 0.5cm
     Se desarroll\'o un sistema de control centralizado en la Raspberry Pi, utilizando
         programaci\'on en C++ para gestionar las se\~nales enviadas a los actuadores y procesarlos datos de los sensores. Este sistema permite la toma de decisiones en tiempo real,
-        como ajustar la trayectoria del robot seg\'un los datos del LiDAR.
+        como ajustar la trayectoria del robot seg\'un los datos del LiDAR. Esto se ve en la Listing \ref{fresd}.
     \vskip 0.5cm
-    \begin{lstlisting}[language={C++}, caption={C\'odigo de ejemplo de Kinect y LiDAR}, label={Script}]
+    \begin{lstlisting}[language={C++}, caption={C\'odigo de ejemplo de Kinect y LiDAR}, label={fresd}]
         #include "CYdLidar.h"
         #include <string>
         #include <map>
@@ -566,10 +567,10 @@
     Se integraron todos los sistemas de control, detecci\'on de obst\'aculos y visualizaci\'on,
         permitiendo que el robot funcione de manera aut\'onoma. La coordinaci\'on entre los
         motores, el sensor LiDAR y la c\'amara se logr\'o mediante la programaci\'on en la
-        Raspberry Pi.
+        Raspberry Pi. Se puede observar un ejemplo de c\'odigo de pruebas de integraci\'on en la Listing \ref{swsa}.
     \vskip 0.5cm
     %Listings 
-    \begin{lstlisting}[language={C++}, caption={C\'odigo de pruebas de integraci\'organismo}, label={Script}]
+    \begin{lstlisting}[language={C++}, caption={C\'odigo de pruebas de integraci\'organismo}, label={swsa}]
         #include <iostream>
         #include <cassert>
         #include <thread>

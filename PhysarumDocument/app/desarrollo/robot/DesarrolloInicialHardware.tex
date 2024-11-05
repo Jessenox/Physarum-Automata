@@ -1,8 +1,8 @@
 \subsubsection{Desarrollo Inicial del Sistema del control del Robot}
 \label{sub:Desarrollo Inicial del Sistema del control del Robot}
-    En esta subsecci\'on nos centramos en desarrollar el c\'odigo inicial para poder controlar el robot, el cual es el siguiente c\'odigo:
+    En esta subsecci\'on nos centramos en desarrollar el c\'odigo inicial para poder controlar el robot, el cual se puede ver en el Listing \ref{PrimeraVersionCodigoRobot}.
     \vskip 0.5cm
-    \begin{lstlisting}[language={C++}, caption={Primera versi\'on del c\'odigo del sistema de control del robot}, label={Script}]
+    \begin{lstlisting}[language={C++}, caption={Primera versi\'on del c\'odigo del sistema de control del robot}, label={PrimeraVersionCodigoRobot}]
         #include "CYdLidar.h"
         #include <SFML/Graphics.hpp>
         #include <opencv2/opencv.hpp>
@@ -399,7 +399,7 @@
         }
     \end{lstlisting}
 
-    En este c\'odigo se inicializan los motores y se establecen las funciones para controlar el movimiento del robot. 
+    En el Listing \ref{PrimeraVersionCodigoRobot} se inicializan los motores y se establecen las funciones para controlar el movimiento del robot. 
         Adem\'as, se configura el LiDAR y se inicia el escaneo. El robot se mueve aleatoriamente y evita obst\'aculos 
         detectados por el LiDAR. La c\'amara muestra la vista del robot y el minimapa muestra los puntos detectados por 
         el LiDAR. El usuario puede controlar manualmente el robot con las teclas W, A, S y D para moverse hacia adelante, 

@@ -1,3 +1,4 @@
+\clearpage
 \subsection{Diagramas} % (fold)
 \label{sub:Diagramas}
 
@@ -5,7 +6,7 @@
     %Parrafo
         En esta secci\'on se presentan todos los diagramas necesarios para la implementaci\'on del sistema propuesto.
         En primer lugar, se presenta un diagrama de arquitectura del sistema propuesto, el cual muestra la interacci\'on 
-        entre los diferentes componentes del sistema.
+        entre los diferentes componentes del sistema. 
         \vskip 0.5cm
         % FIgura 
             \begin{figure}[htbp]
@@ -16,7 +17,7 @@
             \end{figure}
         %Parrafo
         \vskip 0.5cm
-        El sistema mostrado en el diagrama representa una arquitectura distribuida implementada para el control remoto 
+        Como se muestra en la Figura \ref{fig:ArquitecturaSistema}, el sistema mostrado en el diagrama representa una arquitectura distribuida implementada para el control remoto 
         de un robot mediante un algoritmo basado en \textbf{Physarum polycephalum} y la utilizaci\'on de datos obtenidos por un sensor LiDAR. 
         La arquitectura se compone de tres capas principales: la capa de la aplicaci\'on m\'ovil, la capa de procesamiento en la nube 
         y la capa f\'isica del robot.
@@ -38,8 +39,8 @@
         asegurando una correcta interacci\'on entre los datos sensoriales, el procesamiento en la nube y el control 
         remoto del robot.
         \vskip 0.5cm
-        Despu\'es de la presentaci\'on de la arquitectura del sistema, se presentan los diagramas de flujo de los dos
-        productos a desarrollar: el simulador de \textbf{Physarum polycephalum}, el sistema del robot aut\'onomo y el diagrama de flujo de la aplicaci\'on.
+        Despu\'es de la presentaci\'on de la arquitectura del sistema, se presentan los diagramas de flujo de las Figuras
+        \ref{fig:FlujoSimulador} - \ref{fig:FlujoApp}.
         \vskip 0.5cm
         % FIgura 
             \begin{figure}[htbp]
@@ -72,7 +73,7 @@
         %Parrafo
         \vskip 0.5cm
         \clearpage
-        Despu\'es de la presentaci\'on de los diagramas de flujo, se presenta el diagrama de clases del sistema propuesto.
+        Despu\'es de la presentaci\'on de los diagramas de flujo, en la Figura \ref{fig:Clases} se presenta el diagrama de clases del sistema propuesto.
         \vskip 0.5cm
         % FIgura 
             \begin{figure}[htbp]
@@ -95,7 +96,7 @@
         manteniendo una interacci\'on fluida y controlada.
         % Parrafo
         \vskip 0.5cm
-        Se presenta el diagrama de casos de usos del sistema propuesto.
+        En la figura \ref{fig:CasosDeUso} se presenta el diagrama de casos de usos del sistema propuesto.
         \vskip 0.5cm
         % FIgura 
             \begin{figure}[htbp]
@@ -106,8 +107,10 @@
             \end{figure}
         %Parrafo
         \vskip 0.5cm
+        \clearpage
+        Y el Cuadro \ref{tab:casosdesc} muestra la descripci\'on del caso de uso \textbf{Manipulaci\'on del Robot}.
         \begin{longtable}{|p{4cm}|p{10cm}|}
-        \caption{Descripci\'on del Caso de Uso: Manipulaci\'on del Robot} \\
+        \caption{Descripci\'on del Caso de Uso: Manipulaci\'on del Robot} \label{tab:casosdesc} \\
         \hline
         \textbf{Identificador}     & CU-01 Manipulaci\'on del Robot \\ \hline
         \textbf{Descripci\'on}       & El conductor controla los movimientos del robot, seleccionando el modo de operaci\'on, enviando comandos de movimiento y observando la transmisi\'on multimedia en tiempo real mientras AWS transmite las \'ordenes y multimedia. \\ \hline
@@ -150,7 +153,7 @@
 
         \clearpage
 
-        Finalmente, se presenta el diagrama de secuencia del sistema propuesto.
+        Finalmente, en la Figura \ref{fig:Secuencia} se presenta el diagrama de secuencia del sistema propuesto.
         \vskip 0.5cm
         % FIgura 
             \begin{figure}[htbp]

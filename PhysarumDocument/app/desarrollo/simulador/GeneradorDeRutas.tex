@@ -41,27 +41,29 @@
         expandir, siendo aplicadas cada una de las reglas en cada una
         de las celdas del arreglo. El algoritmo termina cuando la ruta
         es encontrada y el Physarum termina de contraerse, dicha
-        ruta es la que es enviada al robot para su seguimiento.Primeramente, se iniciaron las simulaciones en espacios
-        peque\~nos. La primera configuraci\'on creada fue la de un
+        ruta es la que es enviada al robot para su seguimiento.
+        Primeramente, se iniciaron las simulaciones en espacios
+        peque\~nos. La primera configuraci\'on como se puede ver en la Figura \ref{fig:10x1001} fue la de un
         lienzo de tama\~no 10 x 10.
     \vskip 0.5cm
     %FIgura
     \begin{figure}[htbp]
         \centering
         \includegraphics[width=0.5\textwidth]{./images/Pruebas/simulador/image001.png}
-        \caption{Lienzo de 10 x 10}
-        \label{fig:10x10}
+        \caption{Lienzo de 10 x 10 celdas '1'} 
+        \label{fig:10x1001}
     \end{figure}
     \vskip 0.5cm
     Posteriormente se colocaron los estados correspondientes a
-    el estado inicial y al nutriente no encontrado.
+    el estado inicial y al nutriente no encontrado. Como se puede
+    ver en la Figura \ref{fig:Estadosiniciales01}.
     \vskip 0.5cm
     %FIgura
     \begin{figure}[htbp]
         \centering
         \includegraphics[width=0.5\textwidth]{./images/Pruebas/simulador/image002.png}
-        \caption{Estados iniciales}
-        \label{fig:Estados iniciales}
+        \caption{Estados iniciales de la simulaci\'on '1'} 
+        \label{fig:Estadosiniciales01}
     \end{figure}
     \vskip 0.5cm
     Una vez colocada la configuraci\'on inicial, entonces se
@@ -69,15 +71,17 @@
         iteraciones se genera una ruta que va desde el estado inicial
         al nutriente no encontrado, el cual para este momento ha
         cambiado su estado a nutriente encontrado, cambiando a su
-        vez el color correspondiente a este estado.
+        vez el color correspondiente a este estado. Como se puede
+        ver en la Figura \ref{fig:Rutaencontrada01}.
     \vskip 0.5cm
     %FIgura
     \begin{figure}[htbp]
         \centering
         \includegraphics[width=0.5\textwidth]{./images/Pruebas/simulador/image003.png}
-        \caption{Ruta encontrada}
-        \label{fig:Ruta encontrada}
+        \caption{Ruta encontrada en la simulaci\'on '1'}
+        \label{fig:Rutaencontrada01}
     \end{figure}
+    \clearpage
     \vskip 0.5cm
     En el programa es posible ver en qu\'e generaci\'on es en la que
         se encuentra el algoritmo, adem\'as del estado en el cual en ese
@@ -88,30 +92,32 @@
         programa, donde se puede colocar los estados en distinta
         posici\'on, por lo que se muestran a continuaci\'on distintas
         configuraciones una vez finalizadas las simulaciones
-        correspondientes a cada una de ellas.
+        correspondientes a cada una de ellas. Esto se puede ver en
+        las Figuras \ref{fig:conf2} - \ref{fig:conf4}.
+
     \vskip 0.5cm
     %FIgura
     \begin{figure}[htbp]
         \centering
         \includegraphics[width=0.5\textwidth]{./images/Pruebas/simulador/image004.png}
-        \caption{Configuraci\'on 2}
-        \label{fig:10x10}
+        \caption{Resultados de una segunda configuraci\'on}
+        \label{fig:conf2}
     \end{figure}
     \vskip 0.5cm
     %FIgura
     \begin{figure}[htbp]
         \centering
         \includegraphics[width=0.5\textwidth]{./images/Pruebas/simulador/image005.png}
-        \caption{Configuraci\'on 3}
-        \label{fig:Estados iniciales}
+        \caption{Resultados de una tercera configuraci\'on}
+        \label{fig:conf3}
     \end{figure}
     \vskip 0.5cm
     %FIgura
     \begin{figure}[htbp]
         \centering
         \includegraphics[width=0.5\textwidth]{./images/Pruebas/simulador/image006.png}
-        \caption{Configuraci\'on 4}
-        \label{fig:Ruta encontrada}
+        \caption{Resultados de una cuarta configuraci\'on}
+        \label{fig:conf4}
     \end{figure}
     \vskip 0.5cm
     Las simulaciones realizadas nos han devuelto resultados

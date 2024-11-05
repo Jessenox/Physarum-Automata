@@ -43,7 +43,7 @@
     \end{aligned}
     \end{equation*}
     %Tabla de estados
-    Donde los estados del aut\'omata celular se definen en la \textbf{Tabla \ref{tab:estados}}.
+    Donde los estados del aut\'omata celular se definen en el \textbf{Cuadro \ref{tab:estados}}.
     \vskip 0.5cm
     \begin{table}[h]
         \begin{center}
@@ -66,52 +66,10 @@
         \caption{Estados del aut\'omata celular}
         \label{tab:estados}
     \end{table}
-    \begin{table}[h]
-        \begin{center}
-            \begin{tabular}{|c|c|c|}
-                \hline
-                \textbf{Color}&\textbf{State}&\textbf{Initial State Catacomb} \\
-                \hline
-                \cellcolor{blue} & 0 & 32,891  \\
-                \cellcolor{royalblue} & 1 & 1 \\
-                \cellcolor{red} & 2 & 967,105 \\
-                \cellcolor{black} & 3 & 2 \\
-                \cellcolor{yellow} & 4 & 0 \\
-                \cellcolor{darkgreen} & 5 & 0 \\
-                \cellcolor{lemon} & 6 & 0 \\
-                \cellcolor{darkgray} & 7 & 0 \\
-                \cellcolor{green} & 8 & 0 \\
-                \hline
-            \end{tabular}
-        \end{center}
-        \caption{Estados del aut\'omata celular}
-        \label{tab:estados}
-    \end{table}
-    \begin{table}[h]
-        \begin{center}
-            \begin{tabular}{|c|c|c|}
-                \hline
-                \textbf{Color}&\textbf{State}&\textbf{Initial State Cave} \\
-                \hline
-                \cellcolor{blue} & 0 & 853,861  \\
-                \cellcolor{royalblue} & 1 & 3 \\
-                \cellcolor{red} & 2 & 146,135 \\
-                \cellcolor{black} & 3 & 1 \\
-                \cellcolor{yellow} & 4 & 0 \\
-                \cellcolor{darkgreen} & 5 & 0 \\
-                \cellcolor{lemon} & 6 & 0 \\
-                \cellcolor{darkgray} & 7 & 0 \\
-                \cellcolor{green} & 8 & 0 \\
-                \hline
-            \end{tabular}
-        \end{center}
-        \caption{Estados del aut\'omata celular}
-        \label{tab:estados}
-    \end{table}
     \vskip 0.5cm
     %P\'arrafo x
-    En la fuente mencionada, se detalla el algoritmo b\'asico de Physarum Polycephalum, dise\~nado originalmente para operar con un vecindario de Von 
-        Neumann. Sin embargo, en la versi\'on propuesta aqu\'i, optamos por modificar el vecindario a uno de Moore, 
+    En la fuente mencionada, se detalla el algoritmo b\'asico de Physarum Polycephalum, dise\~nado originalmente para con
+        sistemas multiagentes. Sin embargo, en la versi\'on propuesta aqu\'i, optamos por realizar un aut\'omata celular de 2 dimensiones con la vecindad de Moore, 
         facilitando as\'i el acceso a un mayor n\'umero de vecinos para comparaci\'on y permitiendo obtener una perspectiva m\'as clara de la direcci\'on \'optima 
         para el desplazamiento del agente.
     \vskip 0.5cm
@@ -119,7 +77,7 @@
         Uno de estos desaf\'ios surge en las esquinas (NW, NE, SW, SE), donde el repelente podr\'ia permitir que el agente escape, 
         contrario a lo deseado. Para abordar este inconveniente, se implement\'o una soluci\'on que consiste en colocar un repelente imaginario en la esquina cuando 
         dos esquinas adyacentes presentan repelentes en un \'angulo de 90\degree  entre s\'i. Este ajuste permite la creaci\'on de una gama m\'as amplia de formas, 
-        como se ilustra en las Figs \ref{fig:physarumCircle1}, 
+        como se ilustra en las Figuras \ref{fig:physarumCircle1}, 
         \ref{fig:physarumRandom1} y \ref{fig:physarumObstacles1}. En estas im\'agenes, el n\'umero total de c\'elulas es de 50 x 50.
     \vskip 0.5cm
     \begin{figure}[htbp]
@@ -143,7 +101,7 @@
         de cuevas y catacumbas. Este enfoque mejora significativamente nuestra comprensi\'on 
         de la topograf\'ia del \'area explorada. Adem\'as, la diversidad en el mapeo facilita la identificaci\'on 
         del n\'umero y variedad de caminos disponibles, lo que se ha implementado mediante un algoritmo de mapeo de im\'agenes que 
-        ayuda en la representaci\'on gr\'afica de dicha topograf\'ia, como se muestra en la Fig \ref{fig:CaveSystemPhysarum}.
+        ayuda en la representaci\'on gr\'afica de dicha topograf\'ia, como se muestra en la Figura \ref{fig:CaveSystemPhysarum}.
     \vskip 0.5cm
         \begin{figure}[htbp]
             \centerline{\includegraphics[width=0.40\textwidth]{./images/desarrollo/physarum/CaveSystemPhysarum.png}}
@@ -152,23 +110,72 @@
         \end{figure}
         \vskip 0.2cm
         Tambi\'en el algoritmo ha sido probado en un entorno real, donde ha sido capaz de generar 
-            rutas \'optimas en la Catacumba de Par\'is, como se muestra en la Fig \ref{fig:Catacomb}. El espacio
+            rutas \'optimas en la Catacumba de Par\'is, como se muestra en la Figura \ref{fig:Catacomb}. El espacio
             explorado por el algoritmo es de 1000 x 1000 c\'elulas.
         \vskip 0.2cm
         \begin{figure}[htbp]
-            \centerline{\includegraphics[width=0.40\textwidth]{./images/desarrollo/physarum/CatacoumbParis.png}}
+            \centerline{\includegraphics[width=0.75\textwidth]{./images/desarrollo/physarum/CatacoumbParis.png}}
             \caption{Mapeo de la catacumba usando Physarum Polycephalum, utiliza 5264 pasos para obtener la ruta.}
             \label{fig:Catacomb}
         \end{figure}
         %P\'arrafo 4
+        \clearpage
+        \vskip 0.5cm
+        Como se puede observar en los Cuadros \ref{tab:estados02} y \ref{tab:estados03}, el algoritmo propuesto es capaz de resolver laberintos de manera eficiente, 
+            generando rutas \'optimas en entornos complejos y desconocidos. Adem\'as, el algoritmo es capaz de adaptarse a diferentes topograf\'ias, 
+            lo que lo convierte en una herramienta vers\'atil para la exploraci\'on de entornos desconocidos y nos es de ayuda en el monitoreo de poblaciones y sistemas relacionados.
+        \vskip 0.5cm
+        %P\'arrafo 5
+        \begin{table}[h]
+            \begin{center}
+                \begin{tabular}{|c|c|c|}
+                    \hline
+                    \textbf{Color}&\textbf{State}&\textbf{Initial State Catacomb} \\
+                    \hline
+                    \cellcolor{blue} & 0 & 32,891  \\
+                    \cellcolor{royalblue} & 1 & 1 \\
+                    \cellcolor{red} & 2 & 967,105 \\
+                    \cellcolor{black} & 3 & 2 \\
+                    \cellcolor{yellow} & 4 & 0 \\
+                    \cellcolor{darkgreen} & 5 & 0 \\
+                    \cellcolor{lemon} & 6 & 0 \\
+                    \cellcolor{darkgray} & 7 & 0 \\
+                    \cellcolor{green} & 8 & 0 \\
+                    \hline
+                \end{tabular}
+            \end{center}
+            \caption{Estado inicial de la catacumba}
+            \label{tab:estados02}
+        \end{table}
+        \begin{table}[h]
+            \begin{center}
+                \begin{tabular}{|c|c|c|}
+                    \hline
+                    \textbf{Color}&\textbf{State}&\textbf{Initial State Cave} \\
+                    \hline
+                    \cellcolor{blue} & 0 & 853,861  \\
+                    \cellcolor{royalblue} & 1 & 3 \\
+                    \cellcolor{red} & 2 & 146,135 \\
+                    \cellcolor{black} & 3 & 1 \\
+                    \cellcolor{yellow} & 4 & 0 \\
+                    \cellcolor{darkgreen} & 5 & 0 \\
+                    \cellcolor{lemon} & 6 & 0 \\
+                    \cellcolor{darkgray} & 7 & 0 \\
+                    \cellcolor{green} & 8 & 0 \\
+                    \hline
+                \end{tabular}
+            \end{center}
+            \caption{Estado inicial de la cueva}
+            \label{tab:estados03}
+        \end{table}
         Cabe se\~nalar que dado que el algoritmo est\'a bioinspirado, la funci\'on que simula el comportamiento del plasmodio 
             se asigna de manera pseudoaleatoria a un vecino adyacente, con una probabilidad de 1/8. Esta caracter\'istica permite 
             que la expansi\'on del algoritmo tome una forma circular en lugar de una expansi\'on cuadrada o lineal. Sin embargo, al 
             modificar la funci\'on de probabilidad, es posible lograr una expansi\'on m\'as irregular en lugar de simplemente circular.
         \clearpage
         En cuanto la implementaci\'on del algoritmo, se ha utilizado el lenguaje de programaci\'on C++ y la librer\'ia OpenCV para la 
-            obtenci\'on de im\'agenes. La parte de las esquinas que mencionamos con anterioridad se implement\'o de la siguiente manera: 
-        \begin{lstlisting}[language={C++}, caption={Implementaci\'on del problema de las esquinas}, label={Script}]
+            obtenci\'on de im\'agenes. La parte de las esquinas que mencionamos con anterioridad se implement\'o como se muestra en el Listing \ref{Script01}: 
+        \begin{lstlisting}[language={C++}, caption={Implementaci\'on del problema de las esquinas}, label={Script01}]
             std::vector<int> Physarum::isOnCorner(std::vector<int> neighboursData) {
             std::vector<int> corners;
                 if (neighboursData[0] == 2 && neighboursData[2] == 2) {
@@ -187,7 +194,7 @@
             }
         \end{lstlisting}
         %P\'arrafo 5
-        En el c\'odigo \ref{Script}, se muestra la implementaci\'on de la funci\'on que detecta si el agente se encuentra en una esquina. 
+        En el Listing \ref{Script01}, se muestra la implementaci\'on de la funci\'on que detecta si el agente se encuentra en una esquina. 
             La funci\'on recibe un vector de enteros que representa los estados de los vecinos adyacentes. Si dos esquinas adyacentes 
             presentan repelentes, la funci\'on devuelve un vector con las esquinas en las que se encuentra el agente. 
             En caso contrario, la funci\'on devuelve un vector vac\'io.

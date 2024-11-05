@@ -11,7 +11,8 @@
     Nuestro robot desarrollado consta de cuatro m\'odulos principales: actuadores,
         sensores, unidad de control y m\'odulo de visualizaci\'on. Cada uno de estos m\'odulos
         cumple una funci\'on especifica que permite al robot moverse, detectar obst\'aculos, y
-        seguir rutas predefinidas.
+        seguir rutas predefinidas. En la Figura \ref{fig:robot} se muestra el dise\~no de los pines
+        de configuraci\'on de los m\'odulos de hardware del robot.
     \vskip 0.5cm
     %Figura 1
     \begin{figure}[htbp]
@@ -31,7 +32,8 @@
     \vskip 0.5cm
     Los motores Nema 23 fueron elegidos debido a su precisi\'on en el posicionamiento y
         su capacidad para generar el torque necesario para mover la estructura del robot, que
-        est\'a construida con perfiles de aluminio y ruedas omnidireccionales.
+        est\'a construida con perfiles de aluminio y ruedas omnidireccionales. En el Cuadro
+        \ref{tab:motor} se muestran las especificaciones de los motores a pasos Nema 23.
     \vskip 0.5cm
     % tabla 1
     \begin{longtable}{|c|c|c|c|}
@@ -68,7 +70,7 @@
     \subsubsection{M\'odulo de sensores (LiDAR)} % (fold)
     \label{ssub:modsen}
     El robot est\'a equipado por un sensor YLiDAR 2XL, que permite realizar un escaneo de
-        360\° del entorno para detectar obst\'aculos y mapear el \'area de operaci\'on del robot. La
+        360$^{\circ}$  del entorno para detectar obst\'aculos y mapear el \'area de operaci\'on del robot. La
         elecci\'on de este sensor se debe a su capacidad para medir distancias con alta
         precisi\'on y su adecuado rango de operaci\'on, lo que lo convierte en una opci\'on ideal
         para la navegaci\'on aut\'onoma en tiempo real.
@@ -78,7 +80,7 @@
     \vskip 0.5cm
     El sensor de distancia se eligi\'o por su capacidad de ofrecer un rango de detecci\'on de
         8 metros de di\'ametro y su alta precisi\'on en el mapeo de entornos. Su \'angulo de
-        escaneo de 360\° permite que el robot detecte obst\'aculos en cualquier direcci\'on.
+        escaneo de 360$^{\circ}$   permite que el robot detecte obst\'aculos en cualquier direcci\'on.
     \vskip 0.5cm
     Esta subsecci\'on no tiene un esquema de conexi\'on por que simplemente se conecta
         por USB tipo A.
@@ -116,14 +118,15 @@
     \vskip 0.5cm
     El m\'odulo de visualizaci\'on est\'a dise\~nado para combinar la salida de la c\'amara con la
         representaci\'on gr\'afica de los datos del LiDAR, lo que facilita el monitoreo del entorno
-        en tiempo real y la toma de decisiones basadas en la informaci\'on recopilada.
+        en tiempo real y la toma de decisiones basadas en la informaci\'on recopilada. Se puede ver un 
+        ejemplo de la interfaz gr\'afica en la Figura \ref{fig:robot02}.
     \vskip 0.5cm
     %Imagen 2
     \begin{figure}[htbp]
         \centering
         \includegraphics[width=0.5\textwidth]{./images/Pruebas/robot/robot02.jpeg}
         \caption{Visualizaci\'on de la interfaz gr\'afica del robot.}
-        \label{fig:robot}
+        \label{fig:robot02}
     \end{figure}
     La c\'amara infrarroja nocturna se eligi\'o por su capacidad para capturar im\'agenes de alta
         calidad en condiciones de poca luz, lo que permite al robot operar en entornos con
