@@ -158,11 +158,13 @@
   <ItemGroup>
     <ClInclude Include="App.h" />
     <ClInclude Include="App.hpp" />
+    <ClInclude Include="Astar.hpp" />
     <ClInclude Include="DensityData.hpp" />
     <ClInclude Include="files_management.hpp" />
     <ClInclude Include="LoadMap.hpp" />
     <ClInclude Include="PerfectRouteAutomata.hpp" />
     <ClInclude Include="Physarum.hpp" />
+    <ClInclude Include="PhysarumNewmannVer.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

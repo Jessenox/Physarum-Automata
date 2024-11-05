@@ -9,9 +9,10 @@ App::App() : myWindow(sf::VideoMode(500, 700), "Physarum Test") {
     stateIndicator.setSize(sf::Vector2f(30, 30));
     stateIndicator.setPosition(10.f, 570.f);
     stateIndicator.setFillColor(stateColors[state]);
-
-    //loadmap.convertImageToMap("C:\\Users\\Angel\\Documents\\OpenGL\\Physarum-Automata\\PhyTest\\Physarum-Test\\MAPS\\espiral.png");
-    //loadmap.setDataToArray(physarum.cells, scale, scale);
+    /*
+    loadmap.convertImageToMap("C:\\Users\\Angel\\Downloads\\CircuitoIPN2.png");
+    loadmap.setDataToArray(physarum.cells, scale, scale);
+    */
 }
 
 void App::run() {
@@ -36,8 +37,8 @@ void App::processEvents() {
             handlePlayerInput(event.key.code, false);
             if (event.key.code == sf::Keyboard::S) {
                 std::string name = "Screenshot_" + std::to_string(screenshotTaked) + ".png";
-                baseTexture.getTexture().copyToImage().saveToFile("C:\\Users\\pikmi\\Pictures\\Screenshots\\PhysarumCaptures\\" + name);
-                //baseTexture.getTexture().copyToImage().saveToFile("C:\\Users\\Angel\\Pictures\\Screenshots\\PhysarumCaptures\\" + name);
+                //baseTexture.getTexture().copyToImage().saveToFile("C:\\Users\\pikmi\\Pictures\\Screenshots\\PhysarumCaptures\\" + name);
+                baseTexture.getTexture().copyToImage().saveToFile("C:\\Users\\Angel\\Pictures\\Screenshots\\PhysarumCaptures\\" + name);
                 std::cout << "Screenshot saved as: " << name << "\n";
                 screenshotTaked++;
             }
@@ -331,47 +332,20 @@ void App::update(sf::Time deltaTime) {
         physarumClock.restart();
 
         if (physarum.routed) {
-            //Reforce(physarum.cells, scale);
+            getFinalRoute(physarum.cells, scale);
+            /*
             PerfectRouteAutomata objAut;
             objAut.getPrevRoute(physarum.cells, scale);
-            saveDensityData("hola.txt", densityValues);
+            */
             play = false;
         }
         if (generation == 0) {
             saveInitialState(physarum.cells, scale);
-            // Get initial point and one nutrient
-            getInitialPoints();
         }
         generation++;
 
     }
 }
-
-void App::getInitialPoints() {
-    for (size_t i = 0; i < scale; i++) {
-        for (size_t j = 0; j < scale; j++) {
-            if (physarum.cells[i][j] == 3) {
-                _iniPoint = make_tuple('a', j, i); // Name, X, Y
-            }
-            if (physarum.cells[i][j] == 1) {
-                _endPoint = make_tuple('b', j, i); // Name, X, Y
-            }
-        }
-    }
-}
-
-void App::getPhysarumTempRoute() {
-    for (size_t i = 0; i < scale; i++) {
-        for (size_t j = 0; j < scale; j++) {
-            if (physarum.cells[i][j] == 5 || physarum.cells[i][j] == 8) {
-                // params (X, Y)
-                std::tuple<int, int> coords(j, i);
-                physarumCellsCoords.push_back(coords);
-            }
-        }
-    }
-}
-
 
 bool App::OpenFile() {
     std::cout << "Hola\n";
@@ -386,12 +360,46 @@ bool App::OpenFile() {
     * finish when point reach nutrient
     * Save route and send 
 */
-void App::Reforce(int **tab, int n) {
-    bool xReached = false, yReached = false;
+void App::getFinalRoute(int** tab, int n) {
+    int coordIndex = 0, auxIndex = 1;
+    bool finishedRouting = false, isNewPath;
+    PerfectRouteAutomata objAut;
+    objAut.getPrevRoute(tab, n);
+    saveDensityData("hola.txt", densityValues);
+    if (BrasenhamLine(tab, n, objAut.myCoords[0], objAut.myCoords[objAut.myCoords.size() - 1], false)) {
+        std::cout << "No obstaculo, ruta generada";
+        BrasenhamLine(tab, n, objAut.myCoords[0], objAut.myCoords[objAut.myCoords.size() - 1], true);
+    }
+    else {
+        std::cout << "Obstaculo, ruta no generada, recalculando";
+        while (!finishedRouting) {
+        
+            if (auxIndex == objAut.myCoords.size()) {
+                BrasenhamLine(tab, n, objAut.myCoords[coordIndex], objAut.myCoords[auxIndex - 1], true);
+                finishedRouting = true;
+            } else {
+                if (BrasenhamLine(tab, n, objAut.myCoords[coordIndex], objAut.myCoords[auxIndex], false)) {
+                    auxIndex++;
+                }
+                else {
+                    // Draw line at latest point without repellent
+                    std::cout << "Nuevo path\n";
+                    BrasenhamLine(tab, n, objAut.myCoords[coordIndex], objAut.myCoords[auxIndex - 1], true);
+                    coordIndex = auxIndex - 1;
+                }
+            }
+        
+
+        }
+    }
+}
+
+bool App::BrasenhamLine(int **tab, int n, std::tuple <int, int> _iniPoint, std::tuple  <int, int> _endPoint, bool draw) {
+    bool xReached = false, yReached = false, isRepellent = false;
     int Xc = 0, Yc = 0;
 
-    int dy = std::get<2>(_endPoint) - get<2>(_iniPoint);
-    int dx = std::get<1>(_endPoint) - get<1>(_iniPoint);
+    int dy = std::get<1>(_endPoint) - get<1>(_iniPoint);
+    int dx = std::get<0>(_endPoint) - get<0>(_iniPoint);
 
     int inXci = 0;
     int inYci = 0;
@@ -423,8 +431,8 @@ void App::Reforce(int **tab, int n) {
         dx = dy;
         dy = temp;
     }
-    Xc = std::get<1>(_iniPoint);
-    Yc = std::get<2>(_iniPoint);
+    Xc = std::get<0>(_iniPoint);
+    Yc = std::get<1>(_iniPoint);
 
     int avR = 0, av = 0, avI = 0;
     avR = (2 * dy);
@@ -432,8 +440,16 @@ void App::Reforce(int **tab, int n) {
     avI = (av - dx);
 
     do {
-        physarum.setCellState(Xc, Yc,  9);
-        std::cout << "x: " << Xc << "y: " << Yc << "\n";
+        if (physarum.cells[Yc][Xc] == 2) {
+            isRepellent = true;
+            std::cout << "Repelente encontrado\n";
+            std::cout << Xc << ", " << Yc << "\n";
+            break;
+        }
+        if (draw)
+            physarum.setCellState(Xc, Yc,  9);
+        std::cout << "x: " << Xc << ", y: " << Yc << "\n";
+        std::cout << "statea at: " << "x: " << Xc << ", y: " << Yc << " = " << physarum.cells[Xc][Yc] << "\n";
         if (av >= 0) {
             Xc = Xc + inXci;
             Yc = Yc + inYci;
@@ -444,7 +460,11 @@ void App::Reforce(int **tab, int n) {
             Yc = Yc + inYcr;
             av = av + avR;
         }
-        if (Xc == std::get<1>(_endPoint)) xReached = true;
-        if (Yc == std::get<2>(_endPoint)) yReached = true;
+        if (Xc == std::get<0>(_endPoint)) xReached = true;
+        if (Yc == std::get<1>(_endPoint)) yReached = true;
     } while (!xReached || !yReached);
+    if (isRepellent)
+        return false;
+    else
+        return true;
 }

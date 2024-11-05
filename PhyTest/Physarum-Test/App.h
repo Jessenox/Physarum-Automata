@@ -28,13 +28,12 @@ private:
     void textSettings();
     void updateText();
     bool setGeneralFont(std::string);
-    void getInitialPoints();
     void initializeColors();
     void setMemoryOnTexture();
-    void getPhysarumTempRoute();
+    
 
-    void Reforce(int** tab, int n);
-
+    bool BrasenhamLine(int** tab, int n, std::tuple <int, int>, std::tuple <int, int>, bool draw);
+    void getFinalRoute(int** tab, int n);
 private:
     sf::RenderWindow myWindow;
     sf::RenderTexture baseTexture;
@@ -57,13 +56,13 @@ private:
     std::vector<sf::Color> stateColors;
     std::vector<sf::Color> memoryStateColors;
 
-    Physarum physarum{ 50 };
+    Physarum physarum{ 20 };
     bool mNumOne = false, mNumTwo = false, mNumThree = false,
         mNumFour = false, mNumFive = false, mNumSix = false,
         mNumSeven = false, mNumEight = false, mNumNine = false,
         onLeftClick = false, mEnterKey = false, mSKey = false;
     bool play = false;
-    float scale = 50;
+    float scale = 20;
     short state = 0;
     int generation = 0;
     float interval = 10.f;
@@ -73,7 +72,5 @@ private:
     LoadMap loadmap;
 
     std::vector<DensityData> densityValues;
-    std::tuple <char, int, int> _iniPoint;
-    std::tuple <char, int, int> _endPoint;
     std::vector<std::tuple<int, int>> physarumCellsCoords;
 };

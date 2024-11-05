@@ -2,6 +2,7 @@
 #include <iostream>
 #include <thread>
 #include "RandomRange.hpp"
+#include "PhysarumNewmannVer.hpp"
 
 #if defined (_MSC_VER)  // Visual studio
 #define thread_local __declspec( thread )
@@ -27,7 +28,6 @@ class Physarum {
 		bool isOnMooreOffset(std::vector<int>, int);
 		std::vector<int> isOnCorner(std::vector<int>);
 		void cleanRouteData();
-		void threadableCalculation(int, int);
 		void resetAuxArray();
 		void matchArrays();
 		void initializeDensityValues();
@@ -147,13 +147,22 @@ void Physarum::evaluatePhysarum() {
 	*/
 	// Evaluate each cell for next generation
 
-	
+	PhysarumNewmannVer phyNewObj(cells, cellsAux, cellsMemory, size, nutrientFounded, nutrientNotFounded, physarumActualCells);
 	for (size_t i = 0; i < size; i++) {
 		for (size_t j = 0; j < size; j++) {
 			std::vector<int> neighboursData = getNeighbours(j, i, cells);
 			physarumTransitionConditions(i, j, cells[i][j], neighboursData);
 			cells[i][j] = cellsAux[i][j];
 			neighboursData.clear();
+			/*
+			std::vector<int> neighboursData = phyNewObj.getNeighboursNewmann(j, i, cells);
+			phyNewObj.physarumTransitionConditions(i, j, cells[i][j], neighboursData);
+			cells[i][j] = phyNewObj.cellsAux[i][j];
+			cellsMemory[i][j] = phyNewObj.cellsMemory[i][j];
+			nutrientNotFounded = phyNewObj.nutrientNotFounded;
+			nutrientFounded = phyNewObj.nutrientFounded;
+			physarumActualCells = phyNewObj.physarumActualCells;
+			*/
 		}
 	}
 	
@@ -358,17 +367,6 @@ std::vector<int> Physarum::isOnCorner(std::vector<int> neighboursData) {
 	return corners;
 }
 
-void Physarum::threadableCalculation(int start, int end) {
-	for (size_t i = start; i < end; i++) {
-		for (size_t j = 0; j < size; j++) {
-			std::vector<int> neighboursData = getNeighbours(j, i, cells);
-			physarumTransitionConditions(i, j, cells[i][j], neighboursData);
-			cells[i][j] = cellsAux[i][j];
-			neighboursData.clear();
-		}
-	}
-	
-}
 
 bool Physarum::getRoute() {
 	int i = 0;
@@ -457,4 +455,3 @@ std::vector<int> Physarum::getNeighbours(int j, int i, int ** actualArray) {
 	}
 	return data;
 }
-
