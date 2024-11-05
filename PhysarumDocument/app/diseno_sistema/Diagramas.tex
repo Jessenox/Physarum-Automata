@@ -23,7 +23,7 @@
         y la capa f\'isica del robot.
         \vskip 0.5cm
         La \textbf{Physarum App} es la interfaz de usuario a trav\'es de la cual se env\'ian los comandos al sistema, 
-        los cuales son gestionados por un servidor HTTP ubicado en una instancia EC2 de Amazon Web Services. Esta instancia 
+        los cuales son gestionados por un servidor Protocolo de Transferencia de Hipertexto (Hypertext Transfer Protocol, HTTP) ubicado en una instancia EC2 de Amazon Web Services. Esta instancia 
         contiene tres servidores: un servidor HTTP que recibe los comandos de control, un servidor WebSocket que maneja la 
         recepci\'on de los datos del sensor LiDAR enviados desde el robot, y el n\'ucleo del sistema, el algoritmo de \textbf{Physarum},
         encargado de procesar esta informaci\'on para la toma de decisiones en tiempo real sobre el comportamiento del robot.
@@ -84,7 +84,7 @@
             \end{figure}
         %Parrafo
         \vskip 0.5cm
-        El diagrama de clases muestra la interacci\'on entre el usuario, el robot y un servidor en AWS. 
+        El diagrama de clases muestra la interacci\'on entre el usuario, el robot y un servidor en Amazon Web Services (AWS). 
         El \textbf{usuario} tiene un atributo para su direcci\'on IP y un m\'etodo \textit{EnviarMovimiento()} 
         que le permite enviar \'ordenes al \textbf{robot}. Este \'ultimo, con atributos para su IP y su posici\'on en los ejes X, Y 
         y Z, tiene m\'etodos para moverse (\textit{MoverRobot()}), evitar obst\'aculos (\textit{EvadirObstaculo()}), 

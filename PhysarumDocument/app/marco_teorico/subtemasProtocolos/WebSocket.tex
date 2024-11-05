@@ -11,7 +11,7 @@
         A diferencia de los protocolos de comunicaci\'on tradicionales, WebSocket permite reducir la latencia en aplicaciones que 
             requieren una actualizaci\'on constante de datos, como juegos multijugador, chats en tiempo real, o plataformas de 
             trading financiero. Esta capacidad es posible gracias al establecimiento de una conexi\'on persistente a trav\'es de 
-            un \'unico canal TCP, que permanece abierta hasta que alguna de las partes decide cerrarla. Esto reduce la sobrecarga 
+            un \'unico canal Protocolo de Control de Transmisi\'on (Transmission Control Protocol, TCP), que permanece abierta hasta que alguna de las partes decide cerrarla. Esto reduce la sobrecarga 
             de establecer conexiones repetidas y mejora significativamente el rendimiento de las aplicaciones que requieren 
             actualizaciones constantes. \cite{RFC6455}
     \vskip 0.5cm
@@ -30,9 +30,11 @@
             son limitados, como dispositivos m\'oviles o redes con baja velocidad. \cite{WebSocketEfficiency}
     \vskip 0.5cm
         % P\'arrafo 5
-        Sin embargo, aunque WebSocket ofrece muchas ventajas en t\'erminos de rendimiento y latencia, su implementaci\'on 
-            puede tener desaf\'ios de seguridad, como la exposici\'on a ataques de "Cross-Site WebSocket Hijacking" (CSWSH)
-            o vulnerabilidades de inyecci\'on. Por esta raz\'on, es importante integrar medidas de seguridad, como el uso de 
-            WebSockets sobre TLS (WSS) para cifrar las comunicaciones, y pol\'iticas adecuadas de validaci\'on del origen de 
-            las conexiones. \cite{WebSocketSecurity}
+        Sin embargo, aunque WebSocket ofrece muchas ventajas en t\'erminos de rendimiento y latencia, 
+            su implementaci\'on puede presentar desaf\'ios de seguridad, como la exposici\'on a ataques 
+            de secuestro de WebSocket entre sitios (Cross-Site WebSocket Hijacking, CSWSH) o 
+            vulnerabilidades de inyecci\'on. Por esta raz\'on, es importante integrar medidas de seguridad, 
+            como el uso de WebSockets sobre el protocolo de Seguridad de la Capa de Transporte 
+            (Transport Layer Security, TLS), conocido como WSS para cifrar las comunicaciones, 
+            y pol\'iticas adecuadas de validaci\'on del origen de las conexiones \cite{WebSocketSecurity}.
     
