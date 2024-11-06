@@ -1,47 +1,50 @@
 \subsection{Simulador del Physarum Polycephalum} % (fold)
 \label{sub:subsection name}
 
-    El algoritmo propuesto se basa en el descrito por Jeff Jones en su obra 
-    'From Pattern Formation to Material Computation: Multi-agent Modelling of Physarum Polycephalum' \cite{Jones2015}.
+    El algoritmo propuesto en este documento est\'a inspirado en el modelo de agentes de Jones \cite{Jones2015}. 
+    El algoritmo es un aut\'omata celular que simula el comportamiento de \textit{Physarum polycephalum} en un laberinto, 
+    por lo que necesitamos definir algunos conceptos. Sea $\mathbb{Z}$ el conjunto de los n\'umeros enteros, y definamos la 
+    longitud de una tupla $x$ como $|x|$. Para todas las tuplas $x$ y $y$ donde $|x| = |y|$, denotamos $x \oplus y$ como 
+    el resultado de la suma de cada componente de $x$ y $y$, es decir, $(x \oplus y)_i = x_i + y_i$ para todo $i \in \mathbb{Z}$.
     \vskip 0.5cm
-    %P\'arrafo 2
-    El algoritmo es un aut\'omata celular que simula el comportamiento de Physarum Polycephalum en un laberinto, por lo que necesitamos definir algunos conceptos.
-        Primero, denotemos $\mathbb{Z}$ como el conjunto de enteros, es decir, $\mathbb{Z} = (-\infty, -1, 0, 1, \infty)$.
-        y la longitud de cualquier tupla $x$ como $|x|$. Para todas las tuplas $x$ e $y$ de la misma longitud, denotemos $x \oplus y$
-        como la tupla que resulta de la suma componente a componente de $x$ e $y$, es decir, $(x \oplus y)_i = x_i + y_i$ para todo
-    $i \in \mathbb{Z}$.
+    Un aut\'omata celular se define como una tupla $(\mathbb{Z}^{n}, S, N, f)$ donde $n$ es la dimensi\'on tal 
+    que $n \in \mathbb{Z}^{+}$, $S$ es un conjunto de estados finito y no vac\'io, $N$ es un conjunto no vac\'io y 
+    finito de vecindarios pertenecientes a $\mathbb{Z}^{n}$, y $f$ es una funci\'on de transici\'on local, es decir, 
+    $f: S^N \rightarrow S$ donde $S^N$ representa el conjunto de todas las configuraciones posibles de vecindarios en $N$.
     \vskip 0.5cm
-    %P\'arrafo 3
-    Entonces tenemos que un aut\'omata celular es una tupla $(\mathbb{Z}^{n}, S, N, f)$ tal que la dimensi\'on $n$ es al menos 1 donde 
-        $n \in \mathbb{Z}^{+}$, $S$ es un conjunto finito y no vac\'io de estados, $N$ es un conjunto finito y no vac\'io de vecindarios 
-        pertenecientes a $\mathbb{Z}^{n}$, y $f$ es una funci\'on de transici\'on local, es decir, $f: S^N \rightarrow S$ donde
-        $S^N$ representa el conjunto de todas las configuraciones de vecindarios posibles en $N$.
+    As\'i, el algoritmo propuesto en este trabajo se define como un aut\'omata celular $(\mathbb{Z}^{2}, S, N, f)$ 
+    donde $n = 2$, $S = \{0, 1, 2, 3, 4, 5, 6, 7, 8\}$, $N = \{0, 1, 2, 3, 4, 5, 6, 7, 8\}^9$, y $f : \{0, 1, 2, 3, 4, 5, 6, 7, 8\}^9 
+    \rightarrow \{0, 1, 2, 3, 4, 5, 6, 7, 8\}$.
     \vskip 0.5cm
-    %P\'arrafo 4
-    As\'i, el algoritmo propuesto en este trabajo se define como un aut\'omata celular $(\mathbb{Z}^{2}, S, N, f)$ donde $n = 2$, 
-        $S = \{0, 1, 2, 3, 4, 5, 6, 7, 8\}$, $N = \{0, 1, 2, 3, 4, 5, 6, 7, 8\}^9$, 
-        y $f : \{0, 1, 2, 3, 4, 5, 6, 7, 8\}^9 \rightarrow \{0, 1, 2, 3, 4, 5, 6, 7, 8\}$,\((C(x,y:t), N(x,y:t), M(x,y:t)) \) 
-        representa el estado combinado, vecindario y memoria de la c\'elula en la posici\'on \((x, y)\) en el tiempo \( t \). La funci\'on de transici\'on 
-        \( f \) se define como sigue:
-    \begin{equation*}
-    \begin{aligned}
-    f(C(x,y:t), N(x,y:t), M(x,y:t)) = & \begin{cases}
-        7 & \text{si } C(x,y:t) = 0 \text{ y } \exists N \in \{3, 4, 6\} \text{y } M(x,y:t) = 0 \\
-        6 & \text{si } C(x,y:t) = 1 \text{ y } \exists N \in \{5, 6\} \\
-        2 & \text{si } C(x,y:t) = 2 \\
-        3 & \text{si } C(x,y:t) = 3 \\
-        5 & \text{si } C(x,y:t) = 4 \text{ y } \exists N \in \{3, 5, 6\} \\
-        & \text{y } M(x,y:t) = 0 \text{ y } N \not\in \{0, 7\} \\
-        0 & \text{si } C(x,y:t) = 5 \text{ y } M(x,y:t) \not\in \{5, 8\} \\
-        & \text{y } N \not\in \{1, 3, 4, 6\} \\
-        8 & \text{si } C(x,y:t) = 5 \\
-        & \text{ y la condici\'on anterior no se cumple} \\
-        4 & \text{si } C(x,y:t) = 7 \text{ y } \exists N \in \{3, 4, 6\} \\
-        5 & \text{si } C(x,y:t) = 8 \\
-        1 & \text{si } C(x,y:t) = 1 \\
-    \end{cases}
-    \end{aligned}
-    \end{equation*}
+    Sea \( P = (C(x,y:t), N(x,y:t), M(x,y:t)) \) el estado combinado, vecindario y memoria de la c\'elula 
+    en la posici\'on \((x, y)\) en el tiempo \( t \). La funci\'on de transici\'on \( f \), que actualiza el 
+    estado de la c\'elula central en la siguiente generaci\'on, se define de la siguiente manera:
+    
+        \begin{equation*}
+            %\small
+                \begin{aligned}
+                f(P) = & \begin{cases}
+                    7 & \text{if } C(x,y:t) = 0 \\
+                      & \land \exists N_i \in \{3, 4, 6\} \\
+                      & \land M(x,y:t) = 0 \\
+                    6 & \text{if } C(x,y:t) = 1 \\
+                      & \land \exists N_i \in \{5, 6\} \\
+                    5 & \text{if } C(x,y:t) = 4 \\
+                      & \land \exists N_i \in \{3, 5, 6\} \\
+                      & \land M(x,y:t) = 0 \\
+                      & \land N_i \not\in \{0, 7\} \\
+                    0 & \text{if } C(x,y:t) = 5 \\
+                      & \land M(x,y:t) \not\in \{5, 8\} \\
+                      & \land N_i \not\in \{1, 3, 4, 6\} \\
+                    8 & \text{if } C(x,y:t) = 5 \\
+                      & \text{and the above condition is not met} \\
+                    4 & \text{if } C(x,y:t) = 7 \\
+                      & \land \exists N_i \in \{3, 4, 6\} \\
+                    5 & \text{if } C(x,y:t) = 8 \\
+                    C(x,y:t) & \text{otherwise}
+                \end{cases}
+                \end{aligned}
+            \end{equation*}
     %Tabla de estados
     Donde los estados del aut\'omata celular se definen en el \textbf{Cuadro \ref{tab:estados}}.
     \vskip 0.5cm
