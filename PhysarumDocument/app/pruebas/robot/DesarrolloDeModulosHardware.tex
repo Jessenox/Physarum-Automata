@@ -15,8 +15,8 @@
         respectivos controladores mediante cables blindados para reducir interferencias
         electromagn\'eticas.
     \vskip 0.5cm
-    Para el control de los motores, se utiliz\'o la Raspberry Pi, que env\'ia se\~nales PWM a
-        trav\'es de sus pines GPIO, controlando la velocidad y direcci\'on de los motores. Se
+    Para el control de los motores, se utiliz\'o la Raspberry Pi, que env\'ia se\~nales Modulaci\'on por Ancho de Pulso (Pulse Width Modulation, PWM) a
+        trav\'es de sus pines Entrada/Salida de Prop\'osito General (General Purpose Input/Output, GPIO), controlando la velocidad y direcci\'on de los motores. Se
         ajust\'o la frecuencia de las se\~nales PWM a 400 Hz, lo que permiti\'o un control suave y
         preciso del movimiento del robot.
     \vskip 0.5cm
@@ -103,7 +103,7 @@
     La Raspberry Pi 4 B fue montada en el centro del robot para minimizar la longitud de
         los cables de conexi\'on hacia los motores, el LiDAR y la c\'amara. Se utiliz\'o una
         estructura de soporte para asegurar la Raspberry Pi en su lugar, proporcionando un
-        acceso f\'acil a sus puertos GPIO y UART.
+        acceso f\'acil a sus puertos GPIO y Transmisor-Receptor As\'incrono Universal (Universal Asynchronous Receiver-Transmitter, UART).
     \vskip 0.5cm
     Se desarroll\'o un sistema de control centralizado en la Raspberry Pi, utilizando
         programaci\'on en C++ para gestionar las se\~nales enviadas a los actuadores y procesarlos datos de los sensores. Este sistema permite la toma de decisiones en tiempo real,
@@ -550,7 +550,7 @@
 
     \subsubsection{Sistema de visualizaci\'on}
     El sistema de visualizaci\'on est\'a compuesto por una c\'amara infrarroja de 5 MP
-        conectada a la Raspberry Pi mediante el puerto CSI. La c\'amara fue montada en la parte
+        conectada a la Raspberry Pi mediante el puerto Interfaz de C\'amara Serie (Camera Serial Interface, CSI). La c\'amara fue montada en la parte
         frontal del robot, permitiendo la captura de im\'agenes en tiempo real.
     \vskip 0.5cm
     Se desarroll\'o un c\'odigo en C++ utilizando la biblioteca OpenCV para capturar y

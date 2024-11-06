@@ -10,7 +10,7 @@
     %Parrafo 2
     Nuestro robot desarrollado consta de cuatro m\'odulos principales: actuadores,
         sensores, unidad de control y m\'odulo de visualizaci\'on. Cada uno de estos m\'odulos
-        cumple una funci\'on especifica que permite al robot moverse, detectar obst\'aculos, y
+        cumple una funci\'on espec\'ifica que permite al robot moverse, detectar obst\'aculos, y
         seguir rutas predefinidas. En la Figura \ref{fig:robot} se muestra el dise\~no de los pines
         de configuraci\'on de los m\'odulos de hardware del robot.
     \vskip 0.5cm
@@ -18,7 +18,7 @@
     \begin{figure}[htbp]
         \centering
         \includegraphics[width=0.5\textwidth]{./images/Pruebas/robot/robot01.png}
-        \caption{Dise\~no de los pines de configuracion de los m\'odulos de hardware del robot.}
+        \caption{Dise\~no de los pines de configuraci\'on de los m\'odulos de hardware del robot.}
         \label{fig:robot}
     \end{figure}
 
@@ -27,7 +27,7 @@
     El robot est\'a equipado por cuatro motores a pasos Nema 23, controlados a trav\'es de
         un controlador driver espec\'ifico para motores a pasos. Estos motores son
         responsables del movimiento del robot en las direcciones deseadas, permitiendo giros,
-        avances y retrocesos mediante la manipulaci\'on precisa de los pines de control PWM y
+        avances y retrocesos mediante la manipulaci\'on precisa de los pines de control Modulaci\'on por Ancho de Pulso (Pulse Width Modulation, PWM) y
         de direcci\'on.
     \vskip 0.5cm
     Los motores Nema 23 fueron elegidos debido a su precisi\'on en el posicionamiento y
@@ -49,7 +49,7 @@
         \label{tab:motor}
     \end{longtable}
     \vskip 0.5cm
-    Los motores est\'an conectados a los pines GPIO de la Raspberry Pi 4 B mediante un
+    Los motores est\'an conectados a los pines Entrada/Salida de Prop\'osito General (General Purpose Input/Output, GPIO) de la Raspberry Pi 4 B mediante un
         controlador de motores. El sistema de control utiliza se\~nales PWM para regular la
         velocidad de los motores, y se\~nales de direcci\'on para controlar el sentido de giro.
     \vskip 0.5cm
@@ -93,7 +93,7 @@
         la conectividad necesarias para integrar los diferentes componentes del sistema.
     \vskip 0.5cm
     La Raspberry Pi controla los motores mediante GPIO, recibe los datos del LiDAR a
-        trav\'es del puerto UART, y adem\'as se encarga de la visualizaci\'on de la informaci\'on
+        trav\'es del puerto Transmisor-Receptor As\'incrono Universal (Universal Asynchronous Receiver-Transmitter, UART), y adem\'as se encarga de la visualizaci\'on de la informaci\'on
         mediante una pantalla conectada o mediante el protocolo VNC.
     \vskip 0.5cm
     El dise\~no del m\'odulo de control se basa en la capacidad de la Raspberry Pi de gestionar
@@ -106,10 +106,10 @@
     \vskip 0.5cm
     \subsubsection{M\'odulo de visualizaci\'on} % (fold)
     \label{ssub:modvis}
-    El modulo de visualizaci\'on permite monitorizar el entorno y la posici\'on del robot en
+    El m\'odulo de visualizaci\'on permite monitorizar el entorno y la posici\'on del robot en
         tiempo real. Para ello, se utiliza una c\'amara de visi\'on nocturna conectada a la
         Raspberry Pi y un sistema de visualizaci\'on que integra los datos del sensor LiDAR en
-        un mapa gr\'afico. La visualizaci\'on se realiza mediante una interfaz grafica que muestra
+        un mapa gr\'afico. La visualizaci\'on se realiza mediante una interfaz gr\'afica que muestra
         tanto la imagen capturada por la c\'amara como el mapa generado por los datos del
         LiDAR.
     \vskip 0.5cm
@@ -167,7 +167,7 @@
                 \begin{enumerate}
                     \item Enviar se\~nales desde la unidad de control a los motores para probar el avance, retroceso y giros.
                     \item Ajustes la frecuencia PWM para probar diferentes velocidades de movimiento.
-                    \item Medir la precisi\'on del movimiento en distacias cortas y largas.
+                    \item Medir la precisi\'on del movimiento en distancias cortas y largas.
                 \end{enumerate}
             \item M\'etrica de \'exito: Desviaci\'on m\'axima de 5cm en distancias cortas y de 10 cm en distancias largas.
             \item Criterios de \'exito: Los motores deben responder en menos de 500 ms

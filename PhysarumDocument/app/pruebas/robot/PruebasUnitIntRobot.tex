@@ -169,7 +169,7 @@
     en el entorno de pruebas. Por lo tanto, se decidi\'o realizar las pruebas de los motores paso a paso en un entorno f\'isico de manera manual.
     Se puede ver en el siguiente link de youtube el video de las pruebas unitarias de los motores paso a paso: \url{https://drive.google.com/file/d/1huDF_86Vc4UWTL3wDDf1Ch4YJK_9_viu/view?usp=drive_link}
     \vskip 0.5cm
-    En el modulo de visualizaci\'on de la c\'amara como usamos una c\'amara nativa de la Raspberry Pi 4B, el c\'odigo se ve en el Listing \ref{cami}. 
+    En el m\'odulo de visualizaci\'on de la c\'amara como usamos una c\'amara nativa de la Raspberry Pi 4B, el c\'odigo se ve en el Listing \ref{cami}. 
     \begin{lstlisting}[language={C++}, caption={main.cpp}, label={cami}]
         FILE* pipe = popen("libcamera-vid -t 0 --codec yuv420 --nopreview -o -", "r");
     if (!pipe) {
