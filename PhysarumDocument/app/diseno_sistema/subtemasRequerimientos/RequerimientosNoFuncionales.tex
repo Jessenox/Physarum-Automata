@@ -10,15 +10,17 @@
     \vskip 0.5cm
     \begin{table}[h!]
         \centering
-        \begin{tabular}{|c|p{12cm}|}
+        \begin{tabular}{|c|c|p{12cm}|}
         \hline
-        \textbf{ID} & \textbf{Requerimiento No Funcional} \\
+        \textbf{ID} & \textbf{Nombre} &\textbf{Requerimiento No Funcional} \\
         \hline
-        RNF1 & El sistema debe ser eficiente en t\'erminos de tiempo de simulaci\'on para optimizar el tiempo de generaci\'on de cada iteraci\'on. \\
+        RNF1 & Rendimiento & El sistema debe responder a las solicitudes de inicio de simulaci\'on en menos de 3 segundos para mapas de hasta 1000 nodos. \\
         \hline
-        RNF2 & El sistema debe ser capaz de manejar simulaciones en mapas grandes y con obst\'aculos sin p\'erdida significativa de rendimiento. \\
+        RNF2 & Escalabilidad & El sistema debe poder manejar simulaciones en mapas con hasta 5000 nodos sin una ca\'ida de rendimiento superior al 5\%. \\
         \hline
-        RNF3 & El sistema debe ser compatible tanto con sistemas operativos Windows como Linux. \\
+        RNF3 & Portabilidad & El sistema debe ser portable y ejecutarse correctamente en sistemas operativos Windows 10 y Linux basados en Debian. \\
+        \hline
+        RNF4 & Facilidad de uso & El sistema debe ser comprensible y usable para un usuario novato tras un m\'aximo de 30 minutos de uso guiado. \\
         \hline
         \end{tabular}
         \caption{Requerimientos No funcionales del sistema}
