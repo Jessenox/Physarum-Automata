@@ -20,6 +20,7 @@
 \usepackage{array} % Mejora la calidad y la configuraci\'on de las tablas.
 \usepackage{url}
 \usepackage{gensymb}
+\usepackage{glossaries}
 %We define this the languaje javascript
 \definecolor{royalblue}{RGB}{65, 105, 225} % Define Royal Blue
 \definecolor{lemon}{RGB}{255, 250, 205} % Lemon color
@@ -154,8 +155,11 @@ backgroundcolor=\color{cloudwhite},
 \author{Eduardo Hernandez Vergara}
 \title{Dise\~no de un aut\'omata para monitoreo}
 \setcounter{tocdepth}{3}
+\input{./util/Glosario}
 \begin{document}
+    \include{./util/PortadaSup}
     \include{./util/Portada}
+    \include{./util/Advertencia.tex}
     \tableofcontents
     \include{./util/SeccionI}
     \include{./util/SeccionII}

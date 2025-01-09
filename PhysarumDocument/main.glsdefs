@@ -1,0 +1,924 @@
+\glsdefs@newdocentry{AutomataCelular}%
+{%
+name={Aut\'omata Celular},%
+sort={Aut\'omata Celular},%
+type={main},%
+first={Aut\'omata Celular},%
+firstplural={Aut\'omata Celulars},%
+text={Aut\'omata Celular},%
+plural={Aut\'omata Celulars},%
+description={Modelo matem\'atico que consiste en una red de celdas cuyos estados evolucionan en paralelo seg\'un reglas locales},%
+descriptionplural={Modelo matem\'atico que consiste en una red de celdas cuyos estados evolucionan en paralelo seg\'un reglas locales},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{PhysarumPolycephalum}%
+{%
+name={Physarum Polycephalum},%
+sort={Physarum Polycephalum},%
+type={main},%
+first={Physarum Polycephalum},%
+firstplural={Physarum Polycephalums},%
+text={Physarum Polycephalum},%
+plural={Physarum Polycephalums},%
+description={Un organismo unicelular con capacidad para resolver problemas complejos como rutas \'optimas y formaci\'on de redes},%
+descriptionplural={Un organismo unicelular con capacidad para resolver problemas complejos como rutas \'optimas y formaci\'on de redes},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{LiDAR}%
+{%
+name={LiDAR},%
+sort={LiDAR},%
+type={main},%
+first={LiDAR},%
+firstplural={LiDARs},%
+text={LiDAR},%
+plural={LiDARs},%
+description={Tecnolog\'ia de detecci\'on y rango de luz utilizada para medir distancias y detectar obst\'aculos mediante l\'aser},%
+descriptionplural={Tecnolog\'ia de detecci\'on y rango de luz utilizada para medir distancias y detectar obst\'aculos mediante l\'aser},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{SFML}%
+{%
+name={SFML},%
+sort={SFML},%
+type={main},%
+first={SFML},%
+firstplural={SFMLs},%
+text={SFML},%
+plural={SFMLs},%
+description={Biblioteca multimedia simple y r\'apida, utilizada para gr\'aficos en 2D y simulaciones},%
+descriptionplural={Biblioteca multimedia simple y r\'apida, utilizada para gr\'aficos en 2D y simulaciones},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{VecindadDeMoore}%
+{%
+name={Vecindad de Moore},%
+sort={Vecindad de Moore},%
+type={main},%
+first={Vecindad de Moore},%
+firstplural={Vecindad de Moores},%
+text={Vecindad de Moore},%
+plural={Vecindad de Moores},%
+description={Conjunto de celdas adyacentes que incluye la celda central y sus ocho vecinos en una cuadr\'icula},%
+descriptionplural={Conjunto de celdas adyacentes que incluye la celda central y sus ocho vecinos en una cuadr\'icula},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{VecindadDeVonNeumann}%
+{%
+name={Vecindad de von Neumann},%
+sort={Vecindad de von Neumann},%
+type={main},%
+first={Vecindad de von Neumann},%
+firstplural={Vecindad de von Neumanns},%
+text={Vecindad de von Neumann},%
+plural={Vecindad de von Neumanns},%
+description={Conjunto de celdas adyacentes que incluye la celda central y sus cuatro vecinos ortogonales en una cuadr\'icula},%
+descriptionplural={Conjunto de celdas adyacentes que incluye la celda central y sus cuatro vecinos ortogonales en una cuadr\'icula},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{ShannonEntropy}%
+{%
+name={Entrop\'ia de Shannon},%
+sort={Entrop\'ia de Shannon},%
+type={main},%
+first={Entrop\'ia de Shannon},%
+firstplural={Entrop\'ia de Shannons},%
+text={Entrop\'ia de Shannon},%
+plural={Entrop\'ia de Shannons},%
+description={Medida de incertidumbre o grado de desorden en un sistema basado en la teor\'ia de la informaci\'on},%
+descriptionplural={Medida de incertidumbre o grado de desorden en un sistema basado en la teor\'ia de la informaci\'on},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{RaspberryPi}%
+{%
+name={Raspberry Pi},%
+sort={Raspberry Pi},%
+type={main},%
+first={Raspberry Pi},%
+firstplural={Raspberry Pis},%
+text={Raspberry Pi},%
+plural={Raspberry Pis},%
+description={Microcomputadora de bajo costo utilizada en este proyecto para controlar el robot aut\'onomo},%
+descriptionplural={Microcomputadora de bajo costo utilizada en este proyecto para controlar el robot aut\'onomo},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{WebSocket}%
+{%
+name={WebSocket},%
+sort={WebSocket},%
+type={main},%
+first={WebSocket},%
+firstplural={WebSockets},%
+text={WebSocket},%
+plural={WebSockets},%
+description={Protocolo de comunicaci\'on que permite conexiones bidireccionales persistentes en tiempo real},%
+descriptionplural={Protocolo de comunicaci\'on que permite conexiones bidireccionales persistentes en tiempo real},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{WebRTC}%
+{%
+name={WebRTC},%
+sort={WebRTC},%
+type={main},%
+first={WebRTC},%
+firstplural={WebRTCs},%
+text={WebRTC},%
+plural={WebRTCs},%
+description={Tecnolog\'ia que permite la comunicaci\'on en tiempo real entre navegadores web y aplicaciones m\'oviles},%
+descriptionplural={Tecnolog\'ia que permite la comunicaci\'on en tiempo real entre navegadores web y aplicaciones m\'oviles},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{Autonomia}%
+{%
+name={Autonom\'ia},%
+sort={Autonom\'ia},%
+type={main},%
+first={Autonom\'ia},%
+firstplural={Autonom\'ias},%
+text={Autonom\'ia},%
+plural={Autonom\'ias},%
+description={Capacidad del sistema o robot de operar sin intervenci\'on humana},%
+descriptionplural={Capacidad del sistema o robot de operar sin intervenci\'on humana},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{Simulacion}%
+{%
+name={Simulaci\'on},%
+sort={Simulaci\'on},%
+type={main},%
+first={Simulaci\'on},%
+firstplural={Simulaci\'ons},%
+text={Simulaci\'on},%
+plural={Simulaci\'ons},%
+description={Representaci\'on computacional de un sistema o proceso para analizar su comportamiento},%
+descriptionplural={Representaci\'on computacional de un sistema o proceso para analizar su comportamiento},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{Robot}%
+{%
+name={Robot},%
+sort={Robot},%
+type={main},%
+first={Robot},%
+firstplural={Robots},%
+text={Robot},%
+plural={Robots},%
+description={Dispositivo mec\'anico programable que realiza tareas espec\'ificas en este proyecto},%
+descriptionplural={Dispositivo mec\'anico programable que realiza tareas espec\'ificas en este proyecto},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{SistemasDinamicos}%
+{%
+name={Sistemas Din\'amicos},%
+sort={Sistemas Din\'amicos},%
+type={main},%
+first={Sistemas Din\'amicos},%
+firstplural={Sistemas Din\'amicoss},%
+text={Sistemas Din\'amicos},%
+plural={Sistemas Din\'amicoss},%
+description={Enfoque para describir la evoluci\'on temporal de un sistema, clasificados en triviales, complejos y ca\'oticos},%
+descriptionplural={Enfoque para describir la evoluci\'on temporal de un sistema, clasificados en triviales, complejos y ca\'oticos},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{VecindadDeHexagonal}%
+{%
+name={Vecindad Hexagonal},%
+sort={Vecindad Hexagonal},%
+type={main},%
+first={Vecindad Hexagonal},%
+firstplural={Vecindad Hexagonals},%
+text={Vecindad Hexagonal},%
+plural={Vecindad Hexagonals},%
+description={Vecindad de una celda que incluye la celda y sus seis vecinos inmediatos en forma hexagonal},%
+descriptionplural={Vecindad de una celda que incluye la celda y sus seis vecinos inmediatos en forma hexagonal},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{Mixomiceto}%
+{%
+name={Mixomiceto},%
+sort={Mixomiceto},%
+type={main},%
+first={Mixomiceto},%
+firstplural={Mixomicetos},%
+text={Mixomiceto},%
+plural={Mixomicetos},%
+description={Organismo unicelular utilizado como modelo en simulaciones biol\'ogicas y computacionales},%
+descriptionplural={Organismo unicelular utilizado como modelo en simulaciones biol\'ogicas y computacionales},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{ControladorDeMotores}%
+{%
+name={Controlador de Motores},%
+sort={Controlador de Motores},%
+type={main},%
+first={Controlador de Motores},%
+firstplural={Controlador de Motoress},%
+text={Controlador de Motores},%
+plural={Controlador de Motoress},%
+description={Dispositivo que regula el movimiento de los motores en el robot, permitiendo su precisi\'on y direcci\'on},%
+descriptionplural={Dispositivo que regula el movimiento de los motores en el robot, permitiendo su precisi\'on y direcci\'on},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{PruebasUnitarias}%
+{%
+name={Pruebas Unitarias},%
+sort={Pruebas Unitarias},%
+type={main},%
+first={Pruebas Unitarias},%
+firstplural={Pruebas Unitariass},%
+text={Pruebas Unitarias},%
+plural={Pruebas Unitariass},%
+description={Evaluaciones realizadas para verificar el correcto funcionamiento de las partes individuales del sistema},%
+descriptionplural={Evaluaciones realizadas para verificar el correcto funcionamiento de las partes individuales del sistema},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{PruebasDeCarga}%
+{%
+name={Pruebas de Carga},%
+sort={Pruebas de Carga},%
+type={main},%
+first={Pruebas de Carga},%
+firstplural={Pruebas de Cargas},%
+text={Pruebas de Carga},%
+plural={Pruebas de Cargas},%
+description={Evaluaciones destinadas a analizar el comportamiento del sistema bajo condiciones de alta demanda},%
+descriptionplural={Evaluaciones destinadas a analizar el comportamiento del sistema bajo condiciones de alta demanda},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{CondicionesFrontera}%
+{%
+name={Condiciones Frontera},%
+sort={Condiciones Frontera},%
+type={main},%
+first={Condiciones Frontera},%
+firstplural={Condiciones Fronteras},%
+text={Condiciones Frontera},%
+plural={Condiciones Fronteras},%
+description={Restricciones aplicadas a los bordes de un aut\'omata celular para limitar su evoluci\'on},%
+descriptionplural={Restricciones aplicadas a los bordes de un aut\'omata celular para limitar su evoluci\'on},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{EstadoDeCelda}%
+{%
+name={Estado de Celda},%
+sort={Estado de Celda},%
+type={main},%
+first={Estado de Celda},%
+firstplural={Estado de Celdas},%
+text={Estado de Celda},%
+plural={Estado de Celdas},%
+description={Situaci\'on particular de una celda en un momento dado, que define su evoluci\'on seg\'un reglas predefinidas},%
+descriptionplural={Situaci\'on particular de una celda en un momento dado, que define su evoluci\'on seg\'un reglas predefinidas},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{EntornoReal}%
+{%
+name={Entorno Real},%
+sort={Entorno Real},%
+type={main},%
+first={Entorno Real},%
+firstplural={Entorno Reals},%
+text={Entorno Real},%
+plural={Entorno Reals},%
+description={Escenario f\'isico donde el robot realiza sus pruebas y evaluaciones},%
+descriptionplural={Escenario f\'isico donde el robot realiza sus pruebas y evaluaciones},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{Algoritmo}%
+{%
+name={Algoritmo},%
+sort={Algoritmo},%
+type={main},%
+first={Algoritmo},%
+firstplural={Algoritmos},%
+text={Algoritmo},%
+plural={Algoritmos},%
+description={Conjunto de instrucciones dise\~nadas para realizar tareas espec\'ificas, como la generaci\'on de rutas},%
+descriptionplural={Conjunto de instrucciones dise\~nadas para realizar tareas espec\'ificas, como la generaci\'on de rutas},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{InterfazGrafica}%
+{%
+name={Interfaz Gr\'afica},%
+sort={Interfaz Gr\'afica},%
+type={main},%
+first={Interfaz Gr\'afica},%
+firstplural={Interfaz Gr\'aficas},%
+text={Interfaz Gr\'afica},%
+plural={Interfaz Gr\'aficas},%
+description={Elemento visual que permite la interacci\'on con el usuario y el monitoreo del robot y simulaciones},%
+descriptionplural={Elemento visual que permite la interacci\'on con el usuario y el monitoreo del robot y simulaciones},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{Simulador}%
+{%
+name={Simulador},%
+sort={Simulador},%
+type={main},%
+first={Simulador},%
+firstplural={Simuladors},%
+text={Simulador},%
+plural={Simuladors},%
+description={Programa que recrea escenarios virtuales para probar y analizar el comportamiento de un sistema},%
+descriptionplural={Programa que recrea escenarios virtuales para probar y analizar el comportamiento de un sistema},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{Ruta}%
+{%
+name={Ruta},%
+sort={Ruta},%
+type={main},%
+first={Ruta},%
+firstplural={Rutas},%
+text={Ruta},%
+plural={Rutas},%
+description={Trayectoria calculada o generada para el desplazamiento del robot o modelo en un entorno definido},%
+descriptionplural={Trayectoria calculada o generada para el desplazamiento del robot o modelo en un entorno definido},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{PruebasDeAceptacion}%
+{%
+name={Pruebas de Aceptaci\'on},%
+sort={Pruebas de Aceptaci\'on},%
+type={main},%
+first={Pruebas de Aceptaci\'on},%
+firstplural={Pruebas de Aceptaci\'ons},%
+text={Pruebas de Aceptaci\'on},%
+plural={Pruebas de Aceptaci\'ons},%
+description={Evaluaciones finales realizadas para validar el sistema en condiciones reales o simuladas},%
+descriptionplural={Evaluaciones finales realizadas para validar el sistema en condiciones reales o simuladas},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{YUV}%
+{%
+name={YUV},%
+sort={YUV},%
+type={main},%
+first={YUV},%
+firstplural={YUVs},%
+text={YUV},%
+plural={YUVs},%
+description={Modelo de color que separa la luminancia (Y) de la crominancia (UV), utilizado para transmisiones eficientes de video},%
+descriptionplural={Modelo de color que separa la luminancia (Y) de la crominancia (UV), utilizado para transmisiones eficientes de video},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{RGB}%
+{%
+name={RGB},%
+sort={RGB},%
+type={main},%
+first={RGB},%
+firstplural={RGBs},%
+text={RGB},%
+plural={RGBs},%
+description={Modelo de color que combina componentes rojo, verde y azul para representar imágenes a todo color},%
+descriptionplural={Modelo de color que combina componentes rojo, verde y azul para representar imágenes a todo color},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{ModeladoAdamatzky}%
+{%
+name={Modelado de Adamatzky},%
+sort={Modelado de Adamatzky},%
+type={main},%
+first={Modelado de Adamatzky},%
+firstplural={Modelado de Adamatzkys},%
+text={Modelado de Adamatzky},%
+plural={Modelado de Adamatzkys},%
+description={Modelo que simula capacidades computacionales del Physarum Polycephalum como resolución de problemas y creación de redes},%
+descriptionplural={Modelo que simula capacidades computacionales del Physarum Polycephalum como resolución de problemas y creación de redes},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{ModeladoOlvera}%
+{%
+name={Modelado de Olvera},%
+sort={Modelado de Olvera},%
+type={main},%
+first={Modelado de Olvera},%
+firstplural={Modelado de Olveras},%
+text={Modelado de Olvera},%
+plural={Modelado de Olveras},%
+description={Modelo que utiliza aut\'omatas celulares para representar la propagaci\'on del Physarum Polycephalum},%
+descriptionplural={Modelo que utiliza aut\'omatas celulares para representar la propagaci\'on del Physarum Polycephalum},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{GradientesQuimicos}%
+{%
+name={Gradientes Qu\'imicos},%
+sort={Gradientes Qu\'imicos},%
+type={main},%
+first={Gradientes Qu\'imicos},%
+firstplural={Gradientes Qu\'imicoss},%
+text={Gradientes Qu\'imicos},%
+plural={Gradientes Qu\'imicoss},%
+description={Se\~nales utilizadas para guiar el movimiento y comportamiento de sistemas como el Physarum Polycephalum},%
+descriptionplural={Se\~nales utilizadas para guiar el movimiento y comportamiento de sistemas como el Physarum Polycephalum},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
+\glsdefs@newdocentry{RedesProtoplasmaticas}%
+{%
+name={Redes Protoplasm\'aticas},%
+sort={Redes Protoplasm\'aticas},%
+type={main},%
+first={Redes Protoplasm\'aticas},%
+firstplural={Redes Protoplasm\'aticass},%
+text={Redes Protoplasm\'aticas},%
+plural={Redes Protoplasm\'aticass},%
+description={Estructuras generadas por el Physarum Polycephalum que permiten el flujo de nutrientes y toma de decisiones óptima},%
+descriptionplural={Estructuras generadas por el Physarum Polycephalum que permiten el flujo de nutrientes y toma de decisiones óptima},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+
