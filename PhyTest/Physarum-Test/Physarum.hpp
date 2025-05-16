@@ -2,12 +2,7 @@
 #include <iostream>
 #include <thread>
 #include "RandomRange.hpp"
-
-#if defined (_MSC_VER)  // Visual studio
-#define thread_local __declspec( thread )
-#elif defined (__GCC__) // GCC
-#define thread_local __thread
-#endif
+#include "Matrix.hpp"
 
 class Physarum {
 	public:
@@ -40,6 +35,9 @@ class Physarum {
 		int physarumLastCells = 0;
 		int minimumPhysarumCells = 0;
 		int minimumCheck = 0;
+		std::vector<std::pair<int, int>> mooreOffsets = {
+			{-1, 0}, {-1, 1}, {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, -1}
+		};
 	public:
 		bool allNutrientsFounded = false;
 
@@ -47,9 +45,17 @@ class Physarum {
 		int** cells;
 		int** cellsMemory;
 		int statesDensity[9];
+
+		Matrix mtxAux;
+		Matrix mtxPhysarum;
+		Matrix mtxMemory;
 };
 
 Physarum::Physarum(int preSize) {
+	mtxAux.createMatrix(preSize, preSize);
+	mtxPhysarum.createMatrix(preSize, preSize);
+	mtxMemory.createMatrix(preSize, preSize);
+
 	size = preSize;
 	cells = new int* [size];
 	cellsMemory = new int* [size];
@@ -68,15 +74,21 @@ Physarum::Physarum(int preSize) {
 		for (size_t j = 0; j < size; j++) {
 			if (j == 0) {
 				cells[i][j] = 2;
+				mtxPhysarum.setAt(i, j, 2);
 			}
 			if (i == 0) {
 				cells[i][j] = 2;
+				mtxPhysarum.setAt(i, j, 2);
+
 			}
 			if (j == size - 1) {
 				cells[i][j] = 2;
+				mtxPhysarum.setAt(i, j, 2);
+
 			}
 			if (i == size - 1) {
 				cells[i][j] = 2;
+				mtxPhysarum.setAt(i, j, 2);
 			}
 			cellsMemory[i][j] = 0;
 		}
@@ -123,27 +135,14 @@ void Physarum::matchArrays() {
 
 void Physarum::evaluatePhysarum() {
 	matchArrays();
-	// Using threads to calculate Physarum
-	// First, how many threads are available to use
-	const int n_threads = std::thread::hardware_concurrency();
-	std::vector<std::thread> work_threads;
+	
 	// Get range and total cells
 	const int total_cells = size * size;
-	const int evaluation_range = total_cells / n_threads;
+
 	int lastValue = 0;
 
 	// Count each value per state
 	initializeDensityValues();
-	
-	/*
-
-	std::thread my_thread_1(&Physarum::threadableCalculation, this, 0, 20);
-	std::thread my_thread_2(&Physarum::threadableCalculation, this, 20, 40);
-	std::thread my_thread_3(&Physarum::threadableCalculation, this, 40, 60);
-	std::thread my_thread_4(&Physarum::threadableCalculation, this, 60, 80);
-	std::thread my_thread_5(&Physarum::threadableCalculation, this, 80, 100);
-	*/
-	// Evaluate each cell for next generation
 
 	
 	for (size_t i = 0; i < size; i++) {
@@ -154,16 +153,6 @@ void Physarum::evaluatePhysarum() {
 			neighboursData.clear();
 		}
 	}
-	
-	/*
-	my_thread_1.join();
-	my_thread_2.join();
-	my_thread_3.join();
-	my_thread_4.join();
-	my_thread_5.join();
-	*/
-	//threadableCalculation(tab, 50, 50);
-
 
 
 	// Validate to get route
@@ -313,7 +302,6 @@ bool Physarum::findState(int state, std::vector<int> neighboursData) {
 	for (size_t i = 0; i < neighboursData.size(); i++) 
 		if (neighboursData[i] == state)
 			return true;
-	
 	return false;
 }
 
@@ -377,8 +365,15 @@ bool Physarum::getRoute() {
 	return true;
 }
 
+
+
 std::vector<int> Physarum::getNeighbours(int j, int i, int ** actualArray) {
 	std::vector<int> data;
+
+	
+
+
+
 	if (i == 0) {
 		data.push_back(actualArray[size - 1][j]);
 		if (j == size - 1) {

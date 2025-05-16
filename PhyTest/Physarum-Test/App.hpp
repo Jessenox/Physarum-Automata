@@ -10,9 +10,14 @@ App::App() : myWindow(sf::VideoMode(1000, 700), "Physarum Test") {
     stateIndicator.setSize(sf::Vector2f(30, 30));
     stateIndicator.setPosition(10.f, 570.f);
     stateIndicator.setFillColor(stateColors[state]);
-
+    /*
     loadmap.convertImageToMap("C:\\Users\\Angel\\Pictures\\CircuitoIPN.png");
     loadmap.setDataToArray(physarum.cells, scale, scale);
+    */
+
+    mtxPhysarum.createMatrix(10, 10);
+    mtxPhysarum.setAt(5, 4, 10);
+    mtxPhysarum.showConsoleMatrix();
 }
 
 void App::run() {

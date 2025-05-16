@@ -6,6 +6,7 @@
 #include "files_management.hpp"
 #include "LoadMap.hpp"
 #include "DensityData.hpp"
+#include "Matrix.hpp"
 
 #define X 500.f
 #define Y 500.f
@@ -71,4 +72,5 @@ private:
     LoadMap loadmap;
 
     std::vector<DensityData> densityValues;
+    
 };
