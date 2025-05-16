@@ -15,9 +15,6 @@ App::App() : myWindow(sf::VideoMode(1000, 700), "Physarum Test") {
     loadmap.setDataToArray(physarum.cells, scale, scale);
     */
 
-    mtxPhysarum.createMatrix(10, 10);
-    mtxPhysarum.setAt(5, 4, 10);
-    mtxPhysarum.showConsoleMatrix();
 }
 
 void App::run() {
@@ -28,7 +25,7 @@ void App::run() {
         update(deltaTime);
         render();
     }
-    physarum.cleanCells();
+    //physarum.cleanCells();
 }
 
 void App::processEvents() {
@@ -179,7 +176,7 @@ void App::setMemoryOnTexture() {
             cell[2].position = sf::Vector2f(j * X / scale, i * Y / scale + Y / scale);
             cell[3].position = sf::Vector2f(j * X / scale + X / scale, i * Y / scale + Y / scale);
 
-            switch (physarum.cellsMemory[i][j]) {
+            switch (physarum.mtxMemory.getAt(i, j)) {
             case 1:
                 for (int k = 0; k < 4; k++)
                     cell[k].color = memoryStateColors[0];
@@ -231,7 +228,7 @@ void App::setPhysarumOnTexture() {
             cell[2].position = sf::Vector2f(j * X / scale, i * Y / scale + Y / scale);
             cell[3].position = sf::Vector2f(j * X / scale + X / scale, i * Y / scale + Y / scale);
 
-            switch (physarum.cells[i][j]) {
+            switch (physarum.mtxPhysarum.getAt(i, j)) {
             case 0:
                 for (int k = 0; k < 4; k++)
                     cell[k].color = stateColors[0];
@@ -336,21 +333,23 @@ void App::update(sf::Time deltaTime) {
 
     if (play && physarumClock.getElapsedTime().asMilliseconds() > interval) {
         physarum.evaluatePhysarum();
+        /*
         DensityData data(generation, physarum.statesDensity[0], physarum.statesDensity[1], physarum.statesDensity[2],
             physarum.statesDensity[3], physarum.statesDensity[4], physarum.statesDensity[5],
             physarum.statesDensity[6], physarum.statesDensity[7], physarum.statesDensity[8]);
         densityValues.push_back(data);
+        */
         physarumClock.restart();
 
         if (physarum.routed) {
             // std::cout << "Ruta obtenida\n";
             play = false;
-            saveDensityData("hola.txt", densityValues);
-            Reforce(physarum.cells, scale);
+            //saveDensityData("hola.txt", densityValues);
+            //Reforce(physarum.cells, scale);
             // std::cout << std::thread::hardware_concurrency() << std::endl;
         }
         if (generation == 0) {
-            saveInitialState(physarum.cells, scale);
+            //saveInitialState(physarum.cells, scale);
         }
         generation++;
 

@@ -5,7 +5,7 @@
 #include "DensityData.hpp"
 #pragma warning(disable : 4996) //_CRT_SECURE_NO_WARNINGS
 
-#define FOLDER_DATA_PATH "C:\\Users\\Angel\\Documents\\OpenGL\\Physarum-Automata\\PhyTest\\Physarum-Test\\SAVE_DATA\\"
+#define FOLDER_DATA_PATH "/"
 //#define FOLDER_DATA_PATH "C:\\Users\\pikmi\\Documents\\ESCOM\\TT\\Physarum-Automata\\PhyTest\\Physarum-Test\\SAVE_DATA\\"
 
 std::string getTimeStamp() {

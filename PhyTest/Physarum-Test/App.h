@@ -3,7 +3,7 @@
 #include <iostream>
 #include <ctime>
 #include <thread>
-#include "files_management.hpp"
+// #include "files_management.hpp"
 #include "LoadMap.hpp"
 #include "DensityData.hpp"
 #include "Matrix.hpp"
@@ -56,13 +56,13 @@ private:
     std::vector<sf::Color> stateColors;
     std::vector<sf::Color> memoryStateColors;
 
-    Physarum physarum{ 200 };
+    Physarum physarum{ 50 };
     bool mNumOne = false, mNumTwo = false, mNumThree = false,
         mNumFour = false, mNumFive = false, mNumSix = false,
         mNumSeven = false, mNumEight = false, mNumNine = false,
         onLeftClick = false, mEnterKey = false, mSKey = false;
     bool play = false;
-    float scale = 200;
+    float scale = 50;
     short state = 0;
     int generation = 0;
     float interval = 10.f;
