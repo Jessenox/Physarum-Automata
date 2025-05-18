@@ -137,14 +137,6 @@ void Physarum::evaluatePhysarum() {
 	// Count each value per state
 	initializeDensityValues();
 	
-	/*
-
-	std::thread my_thread_1(&Physarum::threadableCalculation, this, 0, 20);
-	std::thread my_thread_2(&Physarum::threadableCalculation, this, 20, 40);
-	std::thread my_thread_3(&Physarum::threadableCalculation, this, 40, 60);
-	std::thread my_thread_4(&Physarum::threadableCalculation, this, 60, 80);
-	std::thread my_thread_5(&Physarum::threadableCalculation, this, 80, 100);
-	*/
 	// Evaluate each cell for next generation
 
 	PhysarumNewmannVer phyNewObj(cells, cellsAux, cellsMemory, size, nutrientFounded, nutrientNotFounded, physarumActualCells);
@@ -154,29 +146,9 @@ void Physarum::evaluatePhysarum() {
 			physarumTransitionConditions(i, j, cells[i][j], neighboursData);
 			cells[i][j] = cellsAux[i][j];
 			neighboursData.clear();
-			/*
-			std::vector<int> neighboursData = phyNewObj.getNeighboursNewmann(j, i, cells);
-			phyNewObj.physarumTransitionConditions(i, j, cells[i][j], neighboursData);
-			cells[i][j] = phyNewObj.cellsAux[i][j];
-			cellsMemory[i][j] = phyNewObj.cellsMemory[i][j];
-			nutrientNotFounded = phyNewObj.nutrientNotFounded;
-			nutrientFounded = phyNewObj.nutrientFounded;
-			physarumActualCells = phyNewObj.physarumActualCells;
-			*/
 		}
 	}
 	
-	/*
-	my_thread_1.join();
-	my_thread_2.join();
-	my_thread_3.join();
-	my_thread_4.join();
-	my_thread_5.join();
-	*/
-	//threadableCalculation(tab, 50, 50);
-
-
-
 	// Validate to get route
 	if (nutrientNotFounded == 0 && nutrientFounded > 0) {
 		allNutrientsFounded = true;

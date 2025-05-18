@@ -10,7 +10,7 @@ App::App() : myWindow(sf::VideoMode(500, 700), "Physarum Test") {
     stateIndicator.setPosition(10.f, 570.f);
     stateIndicator.setFillColor(stateColors[state]);
     /*
-    loadmap.convertImageToMap("C:\\Users\\Angel\\Downloads\\CircuitoIPN2.png");
+    loadmap.convertImageToMap("C:\\Users\\Angel\\Pictures\\mapaLAB_UTE.png");
     loadmap.setDataToArray(physarum.cells, scale, scale);
     */
 }
@@ -58,7 +58,6 @@ void App::processEvents() {
             myWindow.close();
             break;
         }
-
     }
 }
 
@@ -123,6 +122,12 @@ void App::textSettings() {
         currentStateText.setCharacterSize(24);
         currentStateText.setFillColor(sf::Color::White);
         currentStateText.setPosition(50, 570);
+
+        infoText.setFont(generalFont);
+        infoText.setCharacterSize(16);
+        infoText.setFillColor(sf::Color::White);
+        infoText.setPosition(btnInfo.btnPosition.x + 5, btnInfo.btnPosition.y + 5);
+        infoText.setString("Information");
     }
 }
 
@@ -275,8 +280,10 @@ void App::setPhysarumOnTexture() {
 void App::render() {
     myWindow.clear();
 
-    myWindow.draw(generationText);
+    myWindow.draw(generationText); 
     myWindow.draw(currentStateText);
+    myWindow.draw(btnInfo.button);
+    myWindow.draw(infoText);
 
     myWindow.draw(stateIndicator);
     baseTexture.display();
@@ -316,6 +323,37 @@ void App::update(sf::Time deltaTime) {
         if (actualPosition.x < 500 && actualPosition.y < 500) {
             setCell(actualPosition);
         }
+        if ((actualPosition.x > btnInfo.btnPosition.x && actualPosition.x < btnInfo.btnPosition.x + btnInfo.button.getSize().x) &&
+            (actualPosition.y > btnInfo.btnPosition.y && actualPosition.y < btnInfo.btnPosition.y + btnInfo.button.getSize().y)) {
+            btnInfo.changeColor(sf::Color(209, 103, 46));
+            sf::RenderWindow window(sf::VideoMode(800, 600), "My window");
+            // Load Info image
+            
+            std::filesystem::path p = std::filesystem::current_path();
+            if (!infoTexture.loadFromFile(p.string() + "\\image.png")) {
+                std::cout << "No info image loaded, set Path\n";
+                std::cout << p << std::endl;
+            }
+            std::cout << p << std::endl;
+            spInfo.setTexture(infoTexture);
+            spInfo.setPosition(0,0);
+            while (window.isOpen()) {
+                // check all the window's events that were triggered since the last iteration of the loop
+                sf::Event event;
+                while (window.pollEvent(event))
+                {
+                    // "close requested" event: we close the window
+                    if (event.type == sf::Event::Closed) {
+                        window.close();
+                        
+                    }
+                }
+                window.clear(sf::Color::Green);
+                window.draw(spInfo);
+                window.display();
+            }
+        }
+        onLeftClick = false;
     }
 
     setPhysarumOnTexture();

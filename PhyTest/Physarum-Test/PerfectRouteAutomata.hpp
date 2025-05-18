@@ -183,7 +183,12 @@ std::vector<std::tuple<int, int>> PerfectRouteAutomata::getAutomataCoords(int** 
 			}
 		}
 	}
-
+	for (size_t i = 0; i < n; i++) {
+		for (size_t j = 0; j < n; j++) {
+			std::cout << cellsAux[i][j] << " ";
+		}
+		std::cout << "\n";
+	}
 
 	if (cellsAux != NULL) {
 		for (int i = 0; i < n; i++) {

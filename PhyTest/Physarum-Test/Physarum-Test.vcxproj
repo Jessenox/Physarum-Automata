@@ -161,6 +161,7 @@
     <ClInclude Include="Astar.hpp" />
     <ClInclude Include="DensityData.hpp" />
     <ClInclude Include="files_management.hpp" />
+    <ClInclude Include="InfoButton.hpp" />
     <ClInclude Include="LoadMap.hpp" />
     <ClInclude Include="PerfectRouteAutomata.hpp" />
     <ClInclude Include="Physarum.hpp" />

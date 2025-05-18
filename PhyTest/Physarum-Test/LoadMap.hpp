@@ -17,8 +17,8 @@ class LoadMap {
 		cv::Mat actualImage;
 		cv::Mat processedImage;
 		std::vector<std::vector<float>> rgbVector;
-		float threshold = 30;
-		int IMG_WIDTH = 500, IMG_HEIGHT = 500;
+		float threshold = 200;
+		int IMG_WIDTH = 35, IMG_HEIGHT = 35;
 };
 
 void LoadMap::setDataToRGBVector(int rows, int cols) {
@@ -51,7 +51,7 @@ void LoadMap::setDataToArray(int **array, int height, int width) {
 			}
 		}
 	}
-	imshow("Display window", processedImage);
+	//imshow("Display window", processedImage);
 }
 
 void LoadMap::convertImageToMap(std::string image_url) {

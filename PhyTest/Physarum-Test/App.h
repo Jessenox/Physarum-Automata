@@ -8,6 +8,8 @@
 #include "LoadMap.hpp"
 #include "DensityData.hpp"
 #include "PerfectRouteAutomata.hpp"
+#include "InfoButton.hpp"
+#include <filesystem>
 
 #define X 500.f
 #define Y 500.f
@@ -30,7 +32,7 @@ private:
     bool setGeneralFont(std::string);
     void initializeColors();
     void setMemoryOnTexture();
-    
+
 
     bool BrasenhamLine(int** tab, int n, std::tuple <int, int>, std::tuple <int, int>, bool draw);
     void getFinalRoute(int** tab, int n);
@@ -50,19 +52,20 @@ private:
 
     sf::Text generationText;
     sf::Text currentStateText;
+    sf::Text infoText;
 
     sf::Font generalFont;
 
     std::vector<sf::Color> stateColors;
     std::vector<sf::Color> memoryStateColors;
 
-    Physarum physarum{ 20 };
+    Physarum physarum{ 200 };
     bool mNumOne = false, mNumTwo = false, mNumThree = false,
         mNumFour = false, mNumFive = false, mNumSix = false,
         mNumSeven = false, mNumEight = false, mNumNine = false,
         onLeftClick = false, mEnterKey = false, mSKey = false;
     bool play = false;
-    float scale = 20;
+    float scale = 200;
     short state = 0;
     int generation = 0;
     float interval = 10.f;
@@ -73,4 +76,8 @@ private:
 
     std::vector<DensityData> densityValues;
     std::vector<std::tuple<int, int>> physarumCellsCoords;
+
+    sf::Texture infoTexture;
+    sf::Sprite spInfo;
+    InfoButton btnInfo{ 90, 40, 400, 600 };
 };
