@@ -1,10 +1,10 @@
 #include "App.h"
 
-App::App() : myWindow(sf::VideoMode(1000, 700), "Physarum Test") {
+App::App() : myWindow(sf::VideoMode(500, 700), "Physarum Test") {
     // Initialize color for physarum states
     initializeColors();
-    baseTexture.create(500, 500);
-    memoryTexture.create(500, 500);
+    //baseTexture.create(500, 500);
+    //memoryTexture.create(500, 500);
 
     textSettings();
     stateIndicator.setSize(sf::Vector2f(30, 30));
@@ -14,7 +14,18 @@ App::App() : myWindow(sf::VideoMode(1000, 700), "Physarum Test") {
     loadmap.convertImageToMap("C:\\Users\\Angel\\Pictures\\CircuitoIPN.png");
     loadmap.setDataToArray(physarum.cells, scale, scale);
     */
-
+    cellsMtx.setPrimitiveType(sf::Quads);
+    cellsMtx.resize(scale * scale * 4);
+    int cs{ 0 };
+    for (size_t i = 0; i < scale; i++) {
+        for (size_t j = 0; j < scale; j++) {
+            cellsMtx[cs].position = sf::Vector2f(j * X / scale, i * Y / scale);
+            cellsMtx[cs + 1].position = sf::Vector2f(j * X / scale + X / scale, i * Y / scale);
+            cellsMtx[cs + 2].position = sf::Vector2f(j * X / scale + X / scale, i * Y / scale + Y / scale);
+            cellsMtx[cs + 3].position = sf::Vector2f(j * X / scale, i * Y / scale + Y / scale);
+            cs += 4;
+        }
+    }
 }
 
 void App::run() {
@@ -39,7 +50,7 @@ void App::processEvents() {
             handlePlayerInput(event.key.code, false);
             if (event.key.code == sf::Keyboard::S) {
                 std::string name = "Screenshot_" + std::to_string(screenshotTaked) + ".png";
-                baseTexture.getTexture().copyToImage().saveToFile("C:\\Users\\pikmi\\Pictures\\Screenshots\\PhysarumCaptures\\" + name);
+                //baseTexture.getTexture().copyToImage().saveToFile("C:\\Users\\pikmi\\Pictures\\Screenshots\\PhysarumCaptures\\" + name);
                 //baseTexture.getTexture().copyToImage().saveToFile("C:\\Users\\Angel\\Pictures\\Screenshots\\PhysarumCaptures\\" + name);
                 std::cout << "Screenshot saved as: " << name << "\n";
                 screenshotTaked++;
@@ -219,59 +230,58 @@ void App::setMemoryOnTexture() {
 }
 
 void App::setPhysarumOnTexture() {
-    baseTexture.clear(sf::Color::Black);
+    //baseTexture.clear(sf::Color::Black);
+
+    int vertexCounter{ 0 };
+
+
     for (size_t i = 0; i < scale; i++) {
         for (size_t j = 0; j < scale; j++) {
-            sf::VertexArray cell(sf::TrianglesStrip, 4);
-            cell[0].position = sf::Vector2f(j * X / scale, i * Y / scale);
-            cell[1].position = sf::Vector2f(j * X / scale + X / scale, i * Y / scale);
-            cell[2].position = sf::Vector2f(j * X / scale, i * Y / scale + Y / scale);
-            cell[3].position = sf::Vector2f(j * X / scale + X / scale, i * Y / scale + Y / scale);
-
             switch (physarum.mtxPhysarum.getAt(i, j)) {
             case 0:
                 for (int k = 0; k < 4; k++)
-                    cell[k].color = stateColors[0];
+                    cellsMtx[vertexCounter + k].color = stateColors[0];
                 break;
             case 1:
                 for (int k = 0; k < 4; k++)
-                    cell[k].color = stateColors[1];
+                    cellsMtx[vertexCounter + k].color = stateColors[1];
                 break;
             case 2:
                 for (int k = 0; k < 4; k++)
-                    cell[k].color = stateColors[2];
+                    cellsMtx[vertexCounter + k].color = stateColors[2];
                 break;
             case 3:
                 for (int k = 0; k < 4; k++)
-                    cell[k].color = stateColors[3];
+                    cellsMtx[vertexCounter + k].color = stateColors[3];
                 break;
             case 4:
                 for (int k = 0; k < 4; k++)
-                    cell[k].color = stateColors[4];
+                    cellsMtx[vertexCounter + k].color = stateColors[4];
                 break;
             case 5:
                 for (int k = 0; k < 4; k++)
-                    cell[k].color = stateColors[5];
+                    cellsMtx[vertexCounter + k].color = stateColors[5];
                 break;
             case 6:
                 for (int k = 0; k < 4; k++)
-                    cell[k].color = stateColors[6];
+                    cellsMtx[vertexCounter + k].color = stateColors[6];
                 break;
             case 7:
                 for (int k = 0; k < 4; k++)
-                    cell[k].color = stateColors[7];
+                    cellsMtx[vertexCounter + k].color = stateColors[7];
                 break;
             case 8:
                 for (int k = 0; k < 4; k++)
-                    cell[k].color = stateColors[8];
+                    cellsMtx[vertexCounter + k].color = stateColors[8];
                 break;
             default:
                 break;
             }
-
-            baseTexture.draw(cell);
+            vertexCounter += 4;
         }
     }
+    //baseTexture.draw(cellsMtx);
+
 }
 
 
@@ -282,15 +292,15 @@ void App::render() {
     myWindow.draw(currentStateText);
 
     myWindow.draw(stateIndicator);
-    baseTexture.display();
-    memoryTexture.display();
+    //baseTexture.display();
+    //memoryTexture.display();
 
-    baseSprite.setTexture(baseTexture.getTexture());
-    memorySprite.setTexture(memoryTexture.getTexture());
-    memorySprite.setPosition(sf::Vector2f(500.f, 0.f));
+    //baseSprite.setTexture(baseTexture.getTexture());
+    //memorySprite.setTexture(memoryTexture.getTexture());
+    //memorySprite.setPosition(sf::Vector2f(500.f, 0.f));
 
-    myWindow.draw(baseSprite);
-    myWindow.draw(memorySprite);
+    myWindow.draw(cellsMtx);
+    //myWindow.draw(memorySprite);
 
     myWindow.display();
 }
@@ -323,15 +333,19 @@ void App::update(sf::Time deltaTime) {
             setCell(actualPosition);
         }
     }
-
-    setPhysarumOnTexture();
+    if (generation == 0 || play && generation > 0)
+        setPhysarumOnTexture();
+    /*
     if (!physarum.allNutrientsFounded) {
         setMemoryOnTexture();
     }
+    */
+
     updateText();
     stateIndicator.setFillColor(stateColors[state]);
 
     if (play && physarumClock.getElapsedTime().asMilliseconds() > interval) {
+        
         physarum.evaluatePhysarum();
         /*
         DensityData data(generation, physarum.statesDensity[0], physarum.statesDensity[1], physarum.statesDensity[2],
