@@ -230,8 +230,6 @@ void App::setMemoryOnTexture() {
 }
 
 void App::setPhysarumOnTexture() {
-    //baseTexture.clear(sf::Color::Black);
-
     int vertexCounter{ 0 };
 
 
@@ -345,8 +343,9 @@ void App::update(sf::Time deltaTime) {
     stateIndicator.setFillColor(stateColors[state]);
 
     if (play && physarumClock.getElapsedTime().asMilliseconds() > interval) {
-        
-        physarum.evaluatePhysarum();
+        std::thread evThread(&Physarum::evaluatePhysarum, &physarum);
+        evThread.detach();
+        //if (evThread.joinable()) evThread.join();
         /*
         DensityData data(generation, physarum.statesDensity[0], physarum.statesDensity[1], physarum.statesDensity[2],
             physarum.statesDensity[3], physarum.statesDensity[4], physarum.statesDensity[5],

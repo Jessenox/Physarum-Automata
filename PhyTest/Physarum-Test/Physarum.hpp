@@ -23,6 +23,7 @@ class Physarum {
 		void cleanRouteData();
 		void initializeDensityValues();
 		std::vector<int> getAllNeighbours(int, int, Matrix&);
+		void physarumThreadFunction(int, int);
 	private:
 		int size = 100;
 		int nutrientNotFounded = 0;
@@ -83,18 +84,45 @@ void Physarum::setCellState(int m, int n, int value) {
 	mtxPhysarum.setAt(n, m, value);
 }
 
+void Physarum::physarumThreadFunction(int startRow, int endRow) {
+	for (size_t i = startRow; i < endRow; i++) {
+		for (size_t j = 0; j < size; j++) {
+			std::vector<int> neighboursData = getAllNeighbours(i, j, mtxPhysarum);
+			physarumTransitionConditions(i, j, mtxPhysarum.getAt(i, j), neighboursData);
+
+			neighboursData.clear();
+		}
+	}
+}
 
 void Physarum::evaluatePhysarum() {
-	// Get range and total cells
-	const int total_cells = size * size;
-
-	int lastValue = 0;
-
 	// Count each value per state
 	initializeDensityValues();
 
 	mtxAux = std::move(mtxPhysarum);
 
+	// Creating threads vector
+	std::vector<std::thread> currentThreads;
+	// Counter for actual machine threads
+	const unsigned int nThreads = std::thread::hardware_concurrency() - 1;
+	//const unsigned int nThreads = 1;
+	// Rows per thread
+	const unsigned int rowsPerThread = nThreads / size;
+
+	int startRow{ 0 };
+	int endRow{ 0 };
+
+	for (size_t i = 0; i < nThreads; i++) {
+		startRow = i * rowsPerThread;
+		endRow = (nThreads - 1 == i) ? size : startRow + rowsPerThread;
+		currentThreads.emplace_back(&Physarum::physarumThreadFunction, this, startRow, endRow);
+	}
+
+	for (auto& t : currentThreads) {
+		if (t.joinable()) t.join();
+	}
+
+	/*
 	for (size_t i = 0; i < size; i++) {
 		for (size_t j = 0; j < size; j++) {
 			std::vector<int> neighboursData = getAllNeighbours(i, j, mtxPhysarum);
@@ -103,6 +131,8 @@ void Physarum::evaluatePhysarum() {
 			neighboursData.clear();
 		}
 	}
+	*/
+
 	mtxPhysarum = std::move(mtxAux);
 
 	// Validate to get route
@@ -205,8 +235,8 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, std::vector<
 			if (onState3 || onState4 || onState6) {
 				mtxAux.setAt(i, j, 4);
 			}
-			break;
 			statesDensity[7]++;
+			break;
 		case 8:
 			mtxAux.setAt(i, j, 5);
 			physarumActualCells++;
