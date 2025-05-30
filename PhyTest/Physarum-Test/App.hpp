@@ -231,8 +231,6 @@ void App::setMemoryOnTexture() {
 
 void App::setPhysarumOnTexture() {
     int vertexCounter{ 0 };
-
-
     for (size_t i = 0; i < scale; i++) {
         for (size_t j = 0; j < scale; j++) {
             switch (physarum.mtxPhysarum.getAt(i, j)) {
@@ -343,15 +341,16 @@ void App::update(sf::Time deltaTime) {
     stateIndicator.setFillColor(stateColors[state]);
 
     if (play && physarumClock.getElapsedTime().asMilliseconds() > interval) {
+        /*
         std::thread evThread(&Physarum::evaluatePhysarum, &physarum);
         evThread.detach();
         //if (evThread.joinable()) evThread.join();
-        /*
         DensityData data(generation, physarum.statesDensity[0], physarum.statesDensity[1], physarum.statesDensity[2],
             physarum.statesDensity[3], physarum.statesDensity[4], physarum.statesDensity[5],
             physarum.statesDensity[6], physarum.statesDensity[7], physarum.statesDensity[8]);
         densityValues.push_back(data);
         */
+        physarum.evaluatePhysarum();
         physarumClock.restart();
 
         if (physarum.routed) {
@@ -370,7 +369,7 @@ void App::update(sf::Time deltaTime) {
 }
 
 void App::physarumRoute() {
-    physarum.getRoute();
+    // physarum.getRoute();
 }
 
 
