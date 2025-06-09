@@ -180,18 +180,17 @@ void Physarum::evaluatePhysarum() {
 void Physarum::physarumTransitionConditions(unsigned int i, unsigned int j, int cell) {
 	const auto & cornerCells = isOnCorner();
 	// For corners cell (No escape)
-	if (!cornerCells.empty()) {
-		for (size_t i = 0; i < cornerCells.size(); i++) {
+	if (!cornerCells.empty()) 
+		for (size_t i = 0; i < cornerCells.size(); i++) 
 			neighboursData[cornerCells[i]] = 2;
-		}
-	}
+		
 	
 	const int & currentCellDirection = setCurrentDirection();
 
-	
 	getAllNeighbours(neighboursDirections, i, j, mtxMemory);
 	
 	findState();
+
 	// Evaluate current state of cell
 	switch (cell) {
 		case 0:

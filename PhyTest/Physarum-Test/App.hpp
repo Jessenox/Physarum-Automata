@@ -2,6 +2,9 @@
 
 App::App() : myWindow(sf::VideoMode(500, 700), "Physarum Test") {
     // Initialize color for physarum states
+
+    physarumStateColors.reserve(9);
+    memoryStateColors.reserve(9);
     initializeColors();
     //baseTexture.create(500, 500);
     //memoryTexture.create(500, 500);
@@ -9,7 +12,7 @@ App::App() : myWindow(sf::VideoMode(500, 700), "Physarum Test") {
     textSettings();
     stateIndicator.setSize(sf::Vector2f(30, 30));
     stateIndicator.setPosition(10.f, 570.f);
-    stateIndicator.setFillColor(stateColors[state]);
+    stateIndicator.setFillColor(physarumStateColors[state]);
     /*
     loadmap.convertImageToMap("C:\\Users\\Angel\\Pictures\\CircuitoIPN.png");
     loadmap.setDataToArray(physarum.cells, scale, scale);
@@ -149,24 +152,13 @@ void App::updateText() {
 
 void App::initializeColors() {
     // Actual colors for Physarum
-    stateColors.push_back(sf::Color(26, 26, 112)); // State 0
-    stateColors.push_back(sf::Color(122, 105, 237)); // State 1
-    stateColors.push_back(sf::Color(255, 0, 0)); // State 2
-    stateColors.push_back(sf::Color(0, 0, 0)); // State 3
-    stateColors.push_back(sf::Color(255, 224, 54)); // State 4
-    stateColors.push_back(sf::Color(0, 128, 0)); // State 5
-    stateColors.push_back(sf::Color(250, 232, 181)); // State 6
-    stateColors.push_back(sf::Color(46, 79, 79)); // State 7
-    stateColors.push_back(sf::Color(133, 186, 102)); // State 8
+    for (const auto & color: physarumColors) {
+        physarumStateColors.push_back(color);
+    }
 
-    memoryStateColors.push_back(sf::Color(250, 21, 5));
-    memoryStateColors.push_back(sf::Color(237, 31, 17));
-    memoryStateColors.push_back(sf::Color(207, 32, 21));
-    memoryStateColors.push_back(sf::Color(184, 33, 24));
-    memoryStateColors.push_back(sf::Color(163, 34, 26));
-    memoryStateColors.push_back(sf::Color(135, 32, 26));
-    memoryStateColors.push_back(sf::Color(112, 30, 25));
-    memoryStateColors.push_back(sf::Color(92, 27, 23));
+    for (const auto & color: memoryColors) {
+        memoryStateColors.push_back(color);
+    }
 }
 
 bool App::setGeneralFont(std::string fontName) {
@@ -233,46 +225,11 @@ void App::setPhysarumOnTexture() {
     int vertexCounter{ 0 };
     for (unsigned int i = 0; i < scale; i++) {
         for (unsigned int j = 0; j < scale; j++) {
-            switch (physarum.mtxPhysarum.getAt(i, j)) {
-            case 0:
-                for (int k = 0; k < 4; k++)
-                    cellsMtx[vertexCounter + k].color = stateColors[0];
-                break;
-            case 1:
-                for (int k = 0; k < 4; k++)
-                    cellsMtx[vertexCounter + k].color = stateColors[1];
-                break;
-            case 2:
-                for (int k = 0; k < 4; k++)
-                    cellsMtx[vertexCounter + k].color = stateColors[2];
-                break;
-            case 3:
-                for (int k = 0; k < 4; k++)
-                    cellsMtx[vertexCounter + k].color = stateColors[3];
-                break;
-            case 4:
-                for (int k = 0; k < 4; k++)
-                    cellsMtx[vertexCounter + k].color = stateColors[4];
-                break;
-            case 5:
-                for (int k = 0; k < 4; k++)
-                    cellsMtx[vertexCounter + k].color = stateColors[5];
-                break;
-            case 6:
-                for (int k = 0; k < 4; k++)
-                    cellsMtx[vertexCounter + k].color = stateColors[6];
-                break;
-            case 7:
-                for (int k = 0; k < 4; k++)
-                    cellsMtx[vertexCounter + k].color = stateColors[7];
-                break;
-            case 8:
-                for (int k = 0; k < 4; k++)
-                    cellsMtx[vertexCounter + k].color = stateColors[8];
-                break;
-            default:
-                break;
-            }
+
+            const unsigned int value = physarum.mtxPhysarum.getAt(i, j);
+            
+            for (int k = 0; k < 4; k++)
+                cellsMtx[vertexCounter + k].color = physarumStateColors[value];
             vertexCounter += 4;
         }
     }
@@ -338,7 +295,7 @@ void App::update(sf::Time deltaTime) {
     */
 
     updateText();
-    stateIndicator.setFillColor(stateColors[state]);
+    stateIndicator.setFillColor(physarumStateColors[state]);
 
     if (play && physarumClock.getElapsedTime().asMilliseconds() > interval) {
         /*
@@ -350,6 +307,10 @@ void App::update(sf::Time deltaTime) {
             physarum.statesDensity[6], physarum.statesDensity[7], physarum.statesDensity[8]);
         densityValues.push_back(data);
         */
+
+        //std::jthread t1(&Physarum::evaluatePhysarum, &physarum);
+
+
         physarum.evaluatePhysarum();
         physarumClock.restart();
 
