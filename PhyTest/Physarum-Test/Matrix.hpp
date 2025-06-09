@@ -10,7 +10,7 @@ public:
 	Matrix() {};
 	~Matrix();
 
-	unsigned short getAt(unsigned int i, unsigned int j);
+	unsigned short& getAt(unsigned int & i, unsigned int & j);
 	void setAt(unsigned int i, unsigned int j, unsigned short value);
 	void createMatrix(unsigned int width, unsigned int height);
 	void showConsoleMatrix();
@@ -23,7 +23,7 @@ private:
 
 };
 
-unsigned short Matrix::getAt(unsigned int i, unsigned int j) {
+unsigned short & Matrix::getAt(unsigned int & i, unsigned int & j) {
 	return usvMatrix.at((i * uiWidth) + j);
 };
 

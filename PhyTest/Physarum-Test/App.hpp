@@ -179,8 +179,8 @@ bool App::setGeneralFont(std::string fontName) {
 
 void App::setMemoryOnTexture() {
     memoryTexture.clear(sf::Color::Black);
-    for (size_t i = 0; i < scale; i++) {
-        for (size_t j = 0; j < scale; j++) {
+    for (unsigned int i = 0; i < scale; i++) {
+        for (unsigned int j = 0; j < scale; j++) {
             sf::VertexArray cell(sf::TrianglesStrip, 4);
             cell[0].position = sf::Vector2f(j * X / scale, i * Y / scale);
             cell[1].position = sf::Vector2f(j * X / scale + X / scale, i * Y / scale);
@@ -231,8 +231,8 @@ void App::setMemoryOnTexture() {
 
 void App::setPhysarumOnTexture() {
     int vertexCounter{ 0 };
-    for (size_t i = 0; i < scale; i++) {
-        for (size_t j = 0; j < scale; j++) {
+    for (unsigned int i = 0; i < scale; i++) {
+        for (unsigned int j = 0; j < scale; j++) {
             switch (physarum.mtxPhysarum.getAt(i, j)) {
             case 0:
                 for (int k = 0; k < 4; k++)

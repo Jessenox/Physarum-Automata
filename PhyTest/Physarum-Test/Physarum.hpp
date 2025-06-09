@@ -5,6 +5,7 @@
 #include "RandomRange.hpp"
 #include "Matrix.hpp"
 #include <algorithm>
+#include <future>
 
 class Physarum {
 	public:
@@ -14,19 +15,18 @@ class Physarum {
 		void evaluatePhysarum();
 		bool getRoute();
 	private:
-		int setCurrentDirection();
-		bool isOnCurrentDirection(int, int, std::vector<int>&);
-		bool findState(int, std::vector<int>&);
-		bool isOnMoore(int, int, std::vector<int> &);
-		bool isOnMooreOffset(std::vector<int> & , int);
-		std::vector<int> isOnCorner(std::vector<int> &);
-		void cleanRouteData();
-		//void initializeDensityValues();
-		std::vector<int> getAllNeighbours(int, int, Matrix&);
 		void physarumThreadFunction(int, int);
-		void physarumTransitionConditions(int, int, int, std::vector<int>);
+		int setCurrentDirection();
+		bool isOnCurrentDirection(int, int);
+		void findState();
+		bool isOnMoore(int, int);
+		bool isOnMooreOffset(int);
+		std::vector<int> isOnCorner();
+		void cleanRouteData();
+		void getAllNeighbours(std::vector<int> &, int, int, Matrix&);
+		void physarumTransitionConditions(unsigned int, unsigned int, int);
 	private:
-		// int size{ 100 };
+		RandomRange rnd;
 		unsigned int width{ 0 };
 		unsigned int height{ 0 };
 		int nutrientNotFounded{ 0 };
@@ -39,6 +39,15 @@ class Physarum {
 			{-1, 0}, {-1, 1}, {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, -1}
 		};
 		Matrix mtxAux;
+		const unsigned int threadNumber{ 1 };
+		std::vector<std::thread> currentThreads;
+		
+		unsigned int rowsPerThread{ 0 };
+
+		std::array<bool, 9> statesFounded = {};
+
+		std::vector<int> neighboursData;
+		std::vector<int> neighboursDirections;
 	public:
 		bool allNutrientsFounded{ false };
 
@@ -72,6 +81,9 @@ Physarum::Physarum(unsigned int size) : width(size), height(size) {
 		}
 	}
 	statesDensity.fill(0);
+	neighboursData.reserve(8);
+	neighboursDirections.reserve(8);
+
 }
 
 Physarum::Physarum(unsigned int x, unsigned int y) : width(x), height(y) {
@@ -96,6 +108,8 @@ Physarum::Physarum(unsigned int x, unsigned int y) : width(x), height(y) {
 		}
 	}
 	statesDensity.fill(0);
+	neighboursData.reserve(8);
+	neighboursDirections.reserve(8);
 }
 
 
@@ -104,10 +118,10 @@ void Physarum::setCellState(int m, int n, int value) {
 }
 
 void Physarum::physarumThreadFunction(int startRow, int endRow) {
-	for (size_t i = startRow; i < endRow; i++) {
-		for (size_t j = 0; j < width; j++) {
-			std::vector<int> neighboursData = getAllNeighbours(i, j, mtxPhysarum);
-			physarumTransitionConditions(i, j, mtxPhysarum.getAt(i, j), neighboursData);
+	for (unsigned int i = startRow; i < endRow; i++) {
+		for (unsigned int j = 0; j < width; j++) {
+			getAllNeighbours(neighboursData, i, j, mtxPhysarum);
+			physarumTransitionConditions(i, j, mtxPhysarum.getAt(i, j));
 
 			neighboursData.clear();
 		}
@@ -115,57 +129,56 @@ void Physarum::physarumThreadFunction(int startRow, int endRow) {
 }
 
 void Physarum::evaluatePhysarum() {
-	// Count each value per state
+	// Cleans states density
 	statesDensity.fill(0);
 
 	mtxAux = std::move(mtxPhysarum);
 
-	// Creating threads vector
-	std::vector<std::thread> currentThreads;
-	// Counter for actual machine threads
-	const unsigned int nThreads = std::thread::hardware_concurrency() - 1;
-	//const unsigned int nThreads = 1;
 	// Rows per thread
-	const unsigned int rowsPerThread = nThreads / height;
+	/*
+	rowsPerThread = height / threadNumber;
 
 	int startRow{ 0 };
 	int endRow{ 0 };
-
-	for (size_t i = 0; i < nThreads; i++) {
+	for (size_t i = 0; i < threadNumber; i++) {
 		startRow = i * rowsPerThread;
-		endRow = (nThreads - 1 == i) ? height : startRow + rowsPerThread;
+		endRow = (threadNumber - 1 == i) ? height : startRow + rowsPerThread;
 		currentThreads.emplace_back(&Physarum::physarumThreadFunction, this, startRow, endRow);
 	}
+	
+	for (auto& t : currentThreads) if (t.joinable()) t.join();
+	*/
+	
+	for (unsigned int i = 0; i < height; i++) {
+		for (unsigned int j = 0; j < width; j++) {
+			getAllNeighbours(neighboursData, i, j, mtxPhysarum);
+			physarumTransitionConditions(i, j, mtxPhysarum.getAt(i, j));
 
-	for (auto& t : currentThreads) {
-		if (t.joinable()) t.join();
+			neighboursData.clear();
+			neighboursDirections.clear();
+		}
 	}
-
+	
 	mtxPhysarum = std::move(mtxAux);
 
 	// Validate to get route
 	if (nutrientNotFounded == 0 && nutrientFounded > 0) {
 		allNutrientsFounded = true;
-		if (physarumActualCells < physarumLastCells) {
+
+		if (physarumActualCells < physarumLastCells) 
 			minimumPhysarumCells = physarumActualCells;
-		}
-		if (minimumPhysarumCells == physarumLastCells) {
-			minimumCheck++;
-		}
-		else {
-			minimumCheck = 0;
-		}
-		if (minimumCheck > 10) {
-			routed = true;
-		}
+		
+		(minimumPhysarumCells == physarumLastCells) ? minimumCheck++ : minimumCheck = 0;
+		
+		if (minimumCheck > 10) routed = true;
 	}
 	
 	physarumLastCells = physarumActualCells;
 	cleanRouteData();
 }
 
-void Physarum::physarumTransitionConditions(int i, int j, int cell, std::vector<int> neighboursData) {
-	std::vector<int> cornerCells = isOnCorner(neighboursData);
+void Physarum::physarumTransitionConditions(unsigned int i, unsigned int j, int cell) {
+	const auto & cornerCells = isOnCorner();
 	// For corners cell (No escape)
 	if (!cornerCells.empty()) {
 		for (size_t i = 0; i < cornerCells.size(); i++) {
@@ -173,32 +186,25 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, std::vector<
 		}
 	}
 	
-	int sizeArray = neighboursData.size();
-	int currentCellDirection = setCurrentDirection();
+	const int & currentCellDirection = setCurrentDirection();
 
-	std::vector<int> neighboursDirections = getAllNeighbours(i, j, mtxMemory);
-
-	const bool onState0 = findState(0, neighboursData);
-	const bool onState1 = findState(1, neighboursData);
-	const bool onState3 = findState(3, neighboursData);
-	const bool onState4 = findState(4, neighboursData);
-	const bool onState5 = findState(5, neighboursData);
-	const bool onState6 = findState(6, neighboursData);
-	const bool onState7 = findState(7, neighboursData);
 	
+	getAllNeighbours(neighboursDirections, i, j, mtxMemory);
+	
+	findState();
 	// Evaluate current state of cell
 	switch (cell) {
 		case 0:
-			if ((isOnCurrentDirection(currentCellDirection, 3, neighboursData) ||
-				isOnCurrentDirection(currentCellDirection, 4, neighboursData) ||
-				isOnCurrentDirection(currentCellDirection, 6, neighboursData))
+			if ((isOnCurrentDirection(currentCellDirection, 3) ||
+				isOnCurrentDirection(currentCellDirection, 4) ||
+				isOnCurrentDirection(currentCellDirection, 6))
 				&& mtxMemory.getAt(i, j) == 0) {
 				mtxAux.setAt(i, j, 7);
 			}
 			statesDensity[0]++;
 			break;
 		case 1:
-			if (onState5 || onState6) {
+			if (statesFounded[5] || statesFounded[6]) {
 				mtxAux.setAt(i, j, 6);
 			}
 			nutrientNotFounded++;
@@ -211,10 +217,10 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, std::vector<
 			statesDensity[3]++;
 			break;
 		case 4:
-			if ((((isOnCurrentDirection(currentCellDirection, 3, neighboursData) ||
-				isOnCurrentDirection(currentCellDirection, 5, neighboursData) ||
-				isOnCurrentDirection(currentCellDirection, 6, neighboursData)) &&
-				mtxMemory.getAt(i, j) == 0 && !onState0 && !onState7))) {
+			if ((((isOnCurrentDirection(currentCellDirection, 3) ||
+				isOnCurrentDirection(currentCellDirection, 5) ||
+				isOnCurrentDirection(currentCellDirection, 6)) &&
+				mtxMemory.getAt(i, j) == 0 && !statesFounded[0] && !statesFounded[7]))) {
 
 				mtxAux.setAt(i, j, 5);
 				mtxMemory.setAt(i, j, currentCellDirection + 1);
@@ -222,9 +228,9 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, std::vector<
 			statesDensity[4]++;
 			break;
 		case 5:
-			if (!isOnMooreOffset(neighboursDirections, 5) &&
-				!isOnMooreOffset(neighboursDirections, 8) &&
-				!onState1 && !onState3 && !onState4 && !onState6) {
+			if (!isOnMooreOffset(5) &&
+				!isOnMooreOffset(8) &&
+				!statesFounded[1] && !statesFounded[3] && !statesFounded[4] && !statesFounded[6]) {
 
 				mtxAux.setAt(i, j, 0);
 				mtxMemory.setAt(i, j, 0);
@@ -240,7 +246,7 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, std::vector<
 			statesDensity[6]++;
 			break;
 		case 7:
-			if (onState3 || onState4 || onState6) {
+			if (statesFounded[3] || statesFounded[4] || statesFounded[6]) {
 				mtxAux.setAt(i, j, 4);
 			}
 			statesDensity[7]++;
@@ -252,8 +258,7 @@ void Physarum::physarumTransitionConditions(int i, int j, int cell, std::vector<
 			break;
 		default:
 			break;
-		}
-	neighboursDirections.clear();
+	}
 }
 
 // Clean data that is necesary to finish physarum
@@ -264,11 +269,10 @@ void Physarum::cleanRouteData() {
 }
 
 int Physarum::setCurrentDirection() {
-	RandomRange rnd;
 	return rnd.getRandom(0, 7);
 }
 
-bool Physarum::isOnCurrentDirection(int direction,int state, std::vector<int> & neighboursData) {
+bool Physarum::isOnCurrentDirection(int direction,int state) {
 	if (neighboursData[direction] == state) {
 		return true;
 	}
@@ -278,14 +282,15 @@ bool Physarum::isOnCurrentDirection(int direction,int state, std::vector<int> & 
 }
 
 
-bool Physarum::findState(int state, std::vector<int> & neighboursData) {
-	for (size_t i = 0; i < neighboursData.size(); i++) 
-		if (neighboursData[i] == state)
-			return true;
-	return false;
+void Physarum::findState() {
+	statesFounded.fill(false);
+
+	for (const auto & n : neighboursData) {
+		statesFounded[n] = true;
+	}
 }
 
-bool Physarum::isOnMoore(int state, int currentDirection, std::vector<int> & neighboursData) {
+bool Physarum::isOnMoore(int state, int currentDirection) {
 	for (size_t i = 0; i < neighboursData.size(); i++) {
 		if (i == currentDirection && state == neighboursData[i]) {
 			return true;
@@ -294,7 +299,7 @@ bool Physarum::isOnMoore(int state, int currentDirection, std::vector<int> & nei
 	return false;
 }
 
-bool Physarum::isOnMooreOffset(std::vector<int> & neighboursDirections, int state) {
+bool Physarum::isOnMooreOffset(int state) {
 	bool finished = false;
 
 	for (size_t i = 4, j = 0; j < neighboursDirections.size(); i++, j++) {
@@ -308,7 +313,7 @@ bool Physarum::isOnMooreOffset(std::vector<int> & neighboursDirections, int stat
 	return false;
 }
 
-std::vector<int> Physarum::isOnCorner(std::vector<int> & neighboursData) {
+std::vector<int> Physarum::isOnCorner() {
 	std::vector<int> corners;
 	if (neighboursData[0] == 2 && neighboursData[2] == 2) {
 		corners.push_back(1);
@@ -337,14 +342,10 @@ bool Physarum::getRoute() {
 
 
 
-std::vector<int> Physarum::getAllNeighbours(int i, int j, Matrix & mtx) {
-	std::vector<int> data;
-		
+void Physarum::getAllNeighbours(std::vector<int> & data, int i, int j, Matrix & mtx) {	
 	for (const auto & [dy, dx] : mooreOffsets) {
-		int x = (i + dx + width) % width;
-		int y = (j + dy + height) % height;
+		unsigned int x = std::clamp(i + dx, 0, (int)width - 1);
+		unsigned int y = std::clamp(j + dy, 0, (int)height - 1);
 		data.push_back(mtx.getAt(x, y));
 	}
-
-	return data;
 }
