@@ -1,31 +1,35 @@
 #include "App.h"
 
-App::App() : myWindow(sf::VideoMode(500, 700), "Physarum Test") {
+App::App() : myWindow(sf::VideoMode(500, 700), "Physarum Simulator") {
     // Initialize color for physarum states
-
     physarumStateColors.reserve(9);
     memoryStateColors.reserve(9);
-    initializeColors();
-    //baseTexture.create(500, 500);
-    //memoryTexture.create(500, 500);
 
+    // Initialize colors which belong to each state of physarum cells and memory
+    initializeColors();
+
+    // Initialize text settings that are displaying in the window
     textSettings();
+
+    // Set the state indicator color at corresponding position and color
     stateIndicator.setSize(sf::Vector2f(30, 30));
     stateIndicator.setPosition(10.f, 570.f);
     stateIndicator.setFillColor(physarumStateColors[state]);
-    /*
-    loadmap.convertImageToMap("C:\\Users\\Angel\\Pictures\\CircuitoIPN.png");
-    loadmap.setDataToArray(physarum.cells, scale, scale);
-    */
+    
+    // Initialize a canvas where the cells and evaluation takes place
     cellsMtx.setPrimitiveType(sf::Quads);
     cellsMtx.resize(scale * scale * 4);
-    int cs{ 0 };
+
+    // Its a 1D array, so we need a counter to separate each cell evaluation when its draws into the window
+    int cs { 0 };
+
+    // Filling the canvas with corresponding primitive
     for (size_t i = 0; i < scale; i++) {
         for (size_t j = 0; j < scale; j++) {
-            cellsMtx[cs].position = sf::Vector2f(j * X / scale, i * Y / scale);
-            cellsMtx[cs + 1].position = sf::Vector2f(j * X / scale + X / scale, i * Y / scale);
-            cellsMtx[cs + 2].position = sf::Vector2f(j * X / scale + X / scale, i * Y / scale + Y / scale);
-            cellsMtx[cs + 3].position = sf::Vector2f(j * X / scale, i * Y / scale + Y / scale);
+            cellsMtx[cs]    .position = sf::Vector2f(j * X / scale              , i * Y / scale);
+            cellsMtx[cs + 1].position = sf::Vector2f(j * X / scale + X / scale  , i * Y / scale);
+            cellsMtx[cs + 2].position = sf::Vector2f(j * X / scale + X / scale  , i * Y / scale + Y / scale);
+            cellsMtx[cs + 3].position = sf::Vector2f(j * X / scale              , i * Y / scale + Y / scale);
             cs += 4;
         }
     }
@@ -39,7 +43,6 @@ void App::run() {
         update(deltaTime);
         render();
     }
-    //physarum.cleanCells();
 }
 
 void App::processEvents() {
@@ -129,7 +132,9 @@ void App::setCell(sf::Vector2i pos) {
 }
 
 void App::textSettings() {
-    if (setGeneralFont("arial.ttf")) {
+    // Verifyng that font exists in current path
+    if ( generalFont.loadFromFile( selected_font ) ) {
+        // Setting texts
         generationText.setFont(generalFont);
         generationText.setCharacterSize(24);
         generationText.setFillColor(sf::Color::White);
@@ -139,6 +144,9 @@ void App::textSettings() {
         currentStateText.setCharacterSize(24);
         currentStateText.setFillColor(sf::Color::White);
         currentStateText.setPosition(50, 570);
+    }
+    else {
+        std::cout << "No se pudo cargar correctamente la fuente: " << selected_font << "/n";
     }
 }
 
@@ -153,20 +161,12 @@ void App::updateText() {
 void App::initializeColors() {
     // Actual colors for Physarum
     for (const auto & color: physarumColors) {
-        physarumStateColors.push_back(color);
+        physarumStateColors.emplace_back(color);
     }
 
     for (const auto & color: memoryColors) {
-        memoryStateColors.push_back(color);
+        memoryStateColors.emplace_back(color);
     }
-}
-
-bool App::setGeneralFont(std::string fontName) {
-    if (!generalFont.loadFromFile(fontName)) {
-        std::cout << "Error when read font" << "\n";
-        return false;
-    }
-    return true;
 }
 
 void App::setMemoryOnTexture() {
@@ -298,117 +298,17 @@ void App::update(sf::Time deltaTime) {
     stateIndicator.setFillColor(physarumStateColors[state]);
 
     if (play && physarumClock.getElapsedTime().asMilliseconds() > interval) {
-        /*
-        std::thread evThread(&Physarum::evaluatePhysarum, &physarum);
-        evThread.detach();
-        //if (evThread.joinable()) evThread.join();
-        DensityData data(generation, physarum.statesDensity[0], physarum.statesDensity[1], physarum.statesDensity[2],
-            physarum.statesDensity[3], physarum.statesDensity[4], physarum.statesDensity[5],
-            physarum.statesDensity[6], physarum.statesDensity[7], physarum.statesDensity[8]);
-        densityValues.push_back(data);
-        */
-
-        //std::jthread t1(&Physarum::evaluatePhysarum, &physarum);
-
 
         physarum.evaluatePhysarum();
         physarumClock.restart();
 
         if (physarum.routed) {
-            // std::cout << "Ruta obtenida\n";
             play = false;
-            //saveDensityData("hola.txt", densityValues);
-            //Reforce(physarum.cells, scale);
-            // std::cout << std::thread::hardware_concurrency() << std::endl;
         }
         if (generation == 0) {
-            //saveInitialState(physarum.cells, scale);
+            
         }
         generation++;
 
     }
-}
-
-void App::physarumRoute() {
-    // physarum.getRoute();
-}
-
-
-bool App::OpenFile() {
-    std::cout << "Hola\n";
-    return false;
-}
-
-
-void App::Reforce(int **tab, int n) {
-    float **dirs = new float* [n];
-    
-
-    for (size_t i = 0; i < n; i++) {
-        dirs[i] = new float[n];
-        for (size_t j = 0; j < n; j++) {
-            dirs[i][j] = 0;
-        }
-    }
-
-    for (size_t i = 0; i < n; i++) {
-        for (size_t j = 0; j < n; j++) {
-            if (tab[i][j] == 5 || tab[i][j] == 8) {
-                std::vector<int> dirsNeigh;
-                std::vector<int> data;
-                float val = 0, aux = 0;
-                if (i != 0 && j != 0 && i != n - 1 && j != n - 1) {
-
-                    data.push_back(tab[i - 1][j]);
-
-                    data.push_back(tab[i - 1][j + 1]);
-                    data.push_back(tab[i][j + 1]);
-                    data.push_back(tab[i + 1][j + 1]);
-
-                    data.push_back(tab[i + 1][j]);
-
-                    data.push_back(tab[i + 1][j - 1]);
-                    data.push_back(tab[i][j - 1]);
-                    data.push_back(tab[i - 1][j - 1]);
-                }
-
-                for (size_t k = 0; k < data.size(); k++) {
-
-                    if (data[k] == 5 || data[k] == 8) {
-                        dirsNeigh.push_back(k + 1);
-                    }
-                }
-                for (size_t k = 0; k < dirsNeigh.size(); k++) {
-                    aux += dirsNeigh[k];
-                }
-
-                if (dirsNeigh.empty()) {
-                    val = 0;
-                }
-                else {
-                    val = aux / dirsNeigh.size();
-                }
-                dirs[i][j] = val;
-
-                data.clear();
-            }
-        }
-    }
-
-    //physarum.showPhysarum();
-    // Show dirs
-    for (size_t i = 0; i < n; i++) {
-        for (size_t j = 0; j < n; j++) {
-            //printf("%.1f ", dirs[i][j]);
-            printf("%d ", (int)dirs[i][j]);
-        }
-        std::cout << "\n";
-    }
-
-
-    for (int i = 0; i < n; i++) {
-        delete[] dirs[i];
-            
-    }
-    delete[] dirs;   
 }

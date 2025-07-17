@@ -3,7 +3,6 @@
 #include <iostream>
 #include <ctime>
 #include <thread>
-// #include "files_management.hpp"
 #include "LoadMap.hpp"
 #include "DensityData.hpp"
 #include "Matrix.hpp"
@@ -15,7 +14,6 @@ class App {
 public:
     App();
     void run();
-    bool OpenFile();
 private:
     void processEvents();
     void update(sf::Time);
@@ -26,13 +24,8 @@ private:
     void setPhysarumOnTexture();
     void textSettings();
     void updateText();
-    bool setGeneralFont(std::string);
-    void physarumRoute();
     void initializeColors();
     void setMemoryOnTexture();
-
-
-    void Reforce(int** tab, int n);
 
 private:
     sf::RenderWindow myWindow;
@@ -51,18 +44,20 @@ private:
     sf::Text generationText;
     sf::Text currentStateText;
 
+    // Fonts
     sf::Font generalFont;
+    std::string selected_font{ "arial.ttf" };
 
     std::vector<sf::Color> physarumStateColors;
     std::vector<sf::Color> memoryStateColors;
 
-    Physarum physarum{ 100 };
+    Physarum physarum{ 200 };
     bool mNumOne = false, mNumTwo = false, mNumThree = false,
         mNumFour = false, mNumFive = false, mNumSix = false,
         mNumSeven = false, mNumEight = false, mNumNine = false,
         onLeftClick = false, mEnterKey = false, mSKey = false;
     bool play = false;
-    float scale = 100;
+    float scale = 200;
     short state = 0;
     int generation = 0;
     float interval = 1.f;
@@ -76,7 +71,7 @@ private:
     // Optimizing field
     sf::VertexArray cellsMtx;
 
-    std::array<sf::Color, 9> physarumColors{
+    const std::array<sf::Color, 9> physarumColors{
         sf::Color(26, 26, 112),     // State 0
         sf::Color(122, 105, 237),   // State 1
         sf::Color(255, 0, 0),       // State 2
@@ -88,7 +83,7 @@ private:
         sf::Color(133, 186, 102)    // State 8
     };
 
-    std::array<sf::Color, 9> memoryColors{
+    const std::array<sf::Color, 9> memoryColors{
         sf::Color(250, 21, 5),
         sf::Color(237, 31, 17),
         sf::Color(207, 32, 21),
