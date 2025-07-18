@@ -59,32 +59,8 @@ class Physarum {
 		Matrix mtxMemory;
 };
 
-Physarum::Physarum(unsigned int size) : width(size), height(size) {
-	mtxAux.createMatrix(width, height);
-	mtxPhysarum.createMatrix(width, height);
-	mtxMemory.createMatrix(width, height);
-	
-	for (size_t i = 0; i < height; i++) {
-		for (size_t j = 0; j < width; j++) {
-			if (j == 0) {
-				mtxPhysarum.setAt(i, j, 2);
-			}
-			if (i == 0) {
-				mtxPhysarum.setAt(i, j, 2);
-			}
-			if (j == width - 1) {
-				mtxPhysarum.setAt(i, j, 2);
-			}
-			if (i == width - 1) {
-				mtxPhysarum.setAt(i, j, 2);
-			}
-		}
-	}
-	statesDensity.fill(0);
-	neighboursData.reserve(8);
-	neighboursDirections.reserve(8);
 
-}
+Physarum::Physarum(unsigned int size) : Physarum(size, size) { }
 
 Physarum::Physarum(unsigned int x, unsigned int y) : width(x), height(y) {
 	mtxAux.createMatrix(width, height);
@@ -132,25 +108,12 @@ void Physarum::evaluatePhysarum() {
 	// Cleans states density
 	statesDensity.fill(0);
 
-	mtxAux = std::move(mtxPhysarum);
-
-	// Rows per thread
-	/*
-	rowsPerThread = height / threadNumber;
-
-	int startRow{ 0 };
-	int endRow{ 0 };
-	for (size_t i = 0; i < threadNumber; i++) {
-		startRow = i * rowsPerThread;
-		endRow = (threadNumber - 1 == i) ? height : startRow + rowsPerThread;
-		currentThreads.emplace_back(&Physarum::physarumThreadFunction, this, startRow, endRow);
-	}
+	mtxAux = mtxPhysarum;
 	
-	for (auto& t : currentThreads) if (t.joinable()) t.join();
-	*/
-	
+
 	for (unsigned int i = 0; i < height; i++) {
 		for (unsigned int j = 0; j < width; j++) {
+
 			getAllNeighbours(neighboursData, i, j, mtxPhysarum);
 			physarumTransitionConditions(i, j, mtxPhysarum.getAt(i, j));
 
@@ -159,7 +122,7 @@ void Physarum::evaluatePhysarum() {
 		}
 	}
 	
-	mtxPhysarum = std::move(mtxAux);
+	std::swap(mtxPhysarum, mtxAux);
 
 	// Validate to get route
 	if (nutrientNotFounded == 0 && nutrientFounded > 0) {
@@ -299,8 +262,6 @@ bool Physarum::isOnMoore(int state, int currentDirection) {
 }
 
 bool Physarum::isOnMooreOffset(int state) {
-	bool finished = false;
-
 	for (size_t i = 4, j = 0; j < neighboursDirections.size(); i++, j++) {
 		if (i > 7) {
 			i = 0;
@@ -334,6 +295,7 @@ bool Physarum::getRoute() {
 	int i = 0;
 	while (!routed) {
 		evaluatePhysarum();
+		mtxPhysarum.showConsoleMatrix();
 		i++;
 	}
 	return true;
@@ -343,8 +305,8 @@ bool Physarum::getRoute() {
 
 void Physarum::getAllNeighbours(std::vector<int> & data, int i, int j, Matrix & mtx) {	
 	for (const auto & [dy, dx] : mooreOffsets) {
-		unsigned int x = std::clamp(i + dx, 0, (int)width - 1);
-		unsigned int y = std::clamp(j + dy, 0, (int)height - 1);
-		data.push_back(mtx.getAt(x, y));
+		unsigned int x = std::clamp( i + dx, 0, (int) width - 1);
+		unsigned int y = std::clamp( j + dy, 0, (int) height - 1);
+		data.emplace_back(mtx.getAt(x, y));
 	}
 }

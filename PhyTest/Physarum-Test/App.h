@@ -72,25 +72,25 @@ private:
     sf::VertexArray cellsMtx;
 
     const std::array<sf::Color, 9> physarumColors{
-        sf::Color(26, 26, 112),     // State 0
-        sf::Color(122, 105, 237),   // State 1
-        sf::Color(255, 0, 0),       // State 2
-        sf::Color(0, 0, 0),         // State 3
-        sf::Color(255, 224, 54),    // State 4
-        sf::Color(0, 128, 0),       // State 5
-        sf::Color(250, 232, 181),   // State 6
-        sf::Color(46, 79, 79),      // State 7
-        sf::Color(133, 186, 102)    // State 8
+        sf::Color(26,   26,     112),       // State 0
+        sf::Color(122,  105,    237),       // State 1
+        sf::Color(255,  0,      0),         // State 2
+        sf::Color(0,    0,      0),         // State 3
+        sf::Color(255,  224,    54),        // State 4
+        sf::Color(0,    128,    0),         // State 5
+        sf::Color(250,  232,    181),       // State 6
+        sf::Color(46,   79,     79),        // State 7
+        sf::Color(133,  186,    102)        // State 8
     };
 
     const std::array<sf::Color, 9> memoryColors{
-        sf::Color(250, 21, 5),
-        sf::Color(237, 31, 17),
-        sf::Color(207, 32, 21),
-        sf::Color(184, 33, 24),
-        sf::Color(163, 34, 26),
-        sf::Color(135, 32, 26),
-        sf::Color(112, 30, 25),
-        sf::Color(92, 27, 23)
+        sf::Color(250,  21,     5),
+        sf::Color(237,  31,     17),
+        sf::Color(207,  32,     21),
+        sf::Color(184,  33,     24),
+        sf::Color(163,  34,     26),
+        sf::Color(135,  32,     26),
+        sf::Color(112,  30,     25),
+        sf::Color(92,   27,     23)
     };
 };

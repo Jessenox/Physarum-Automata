@@ -225,11 +225,14 @@ void App::setPhysarumOnTexture() {
     int vertexCounter{ 0 };
     for (unsigned int i = 0; i < scale; i++) {
         for (unsigned int j = 0; j < scale; j++) {
-
+            // Get the actual value from cell matrix
             const unsigned int value = physarum.mtxPhysarum.getAt(i, j);
-            
+
+            // We only update colors at the matrix
             for (int k = 0; k < 4; k++)
                 cellsMtx[vertexCounter + k].color = physarumStateColors[value];
+
+            // Add 4 for increasing index
             vertexCounter += 4;
         }
     }
@@ -245,15 +248,8 @@ void App::render() {
     myWindow.draw(currentStateText);
 
     myWindow.draw(stateIndicator);
-    //baseTexture.display();
-    //memoryTexture.display();
-
-    //baseSprite.setTexture(baseTexture.getTexture());
-    //memorySprite.setTexture(memoryTexture.getTexture());
-    //memorySprite.setPosition(sf::Vector2f(500.f, 0.f));
 
     myWindow.draw(cellsMtx);
-    //myWindow.draw(memorySprite);
 
     myWindow.display();
 }
@@ -288,11 +284,6 @@ void App::update(sf::Time deltaTime) {
     }
     if (generation == 0 || play && generation > 0)
         setPhysarumOnTexture();
-    /*
-    if (!physarum.allNutrientsFounded) {
-        setMemoryOnTexture();
-    }
-    */
 
     updateText();
     stateIndicator.setFillColor(physarumStateColors[state]);
