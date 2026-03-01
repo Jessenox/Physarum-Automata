@@ -1,0 +1,396 @@
+#pragma once
+
+#include "AttractorCompute.h"
+#include "AttractorGenerator.h"
+#include "PhysarumSim.h"
+#include "VulkanHelpers.h"
+
+#include <array>
+#include <chrono>
+#include <cstdint>
+#include <filesystem>
+#include <mutex>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
+
+struct SolidDrawRange {
+    uint32_t firstVertex = 0;
+    uint32_t vertexCount = 0;
+};
+
+class VulkanApp {
+public:
+    explicit VulkanApp(GridSize initialGridSize);
+
+    void run();
+
+private:
+    static constexpr uint32_t kWindowWidth = 900;
+    static constexpr uint32_t kWindowHeight = 700;
+    static constexpr uint32_t kSimulationViewportSize = 500;
+    static constexpr std::size_t kMaxFramesInFlight = 2;
+    static constexpr double kPartialUploadThreshold = 0.30;
+    static constexpr auto kTargetFrameTime = std::chrono::milliseconds(16);
+    static constexpr float kPanBlendFactor = 0.35f;
+    static constexpr float kPanInertiaDamping = 0.82f;
+    static constexpr float kPanVelocityEpsilon = 0.00002f;
+
+#ifdef NDEBUG
+    static constexpr bool kEnableValidationLayers = false;
+#else
+    static constexpr bool kEnableValidationLayers = true;
+#endif
+
+    struct BufferAllocation {
+        VkBuffer buffer = VK_NULL_HANDLE;
+        VkDeviceMemory memory = VK_NULL_HANDLE;
+        void* mapped = nullptr;
+        VkDeviceSize size = 0;
+    };
+
+    struct ImageAllocation {
+        VkImage image = VK_NULL_HANDLE;
+        VkDeviceMemory memory = VK_NULL_HANDLE;
+        VkImageView view = VK_NULL_HANDLE;
+    };
+
+    enum class UploadMode {
+        None,
+        Full,
+        Partial,
+    };
+
+    struct UploadRequest {
+        UploadMode mode = UploadMode::None;
+        DirtyRegion region{};
+    };
+
+    struct QuadPushConstants {
+        float uvMin[2];
+        float uvMax[2];
+    };
+
+    struct ScreenRect {
+        double x = 0.0;
+        double y = 0.0;
+        double width = 0.0;
+        double height = 0.0;
+    };
+
+    struct UiElement {
+        ScreenRect rect{};
+        SolidDrawRange draw{};
+    };
+
+    struct ColorAdjustButtons {
+        UiElement decrement{};
+        UiElement increment{};
+    };
+
+    struct GraphDrawRanges {
+        SolidDrawRange edges{};
+        SolidDrawRange nodes{};
+        SolidDrawRange cycles{};
+        SolidDrawRange legendPanel{};
+        SolidDrawRange legendEdgeSwatch{};
+        SolidDrawRange legendNodeSwatch{};
+        SolidDrawRange legendCycleSwatch{};
+        SolidDrawRange legendText{};
+    };
+
+    struct AttractorWindowResources {
+        GLFWwindow* window = nullptr;
+        VkSurfaceKHR surface = VK_NULL_HANDLE;
+        uint32_t presentFamilyIndex = 0;
+        VkQueue presentQueue = VK_NULL_HANDLE;
+        VkSwapchainKHR swapChain = VK_NULL_HANDLE;
+        VkFormat swapChainImageFormat = VK_FORMAT_UNDEFINED;
+        VkExtent2D swapChainExtent{};
+        std::vector<VkImage> swapChainImages;
+        std::vector<VkImageView> swapChainImageViews;
+        VkRenderPass renderPass = VK_NULL_HANDLE;
+        VkPipeline solidPipeline = VK_NULL_HANDLE;
+        std::vector<VkFramebuffer> framebuffers;
+        VkCommandPool commandPool = VK_NULL_HANDLE;
+        VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+        VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE;
+        VkSemaphore renderFinishedSemaphore = VK_NULL_HANDLE;
+        VkFence inFlightFence = VK_NULL_HANDLE;
+        bool framebufferResized = false;
+    };
+
+    enum class MenuStatus {
+        Ready,
+        MapLoaded,
+        MapError,
+        DialogUnavailable,
+        OpenCvUnavailable,
+        AttractorsPending,
+        AttractorsRunning,
+        AttractorsReady,
+        AttractorsError,
+        SvgExported,
+        SvgExportError,
+        PngExported,
+        PngExportError,
+    };
+
+    void initWindow();
+    void initVulkan();
+    void mainLoop();
+    void cleanup();
+
+    void processInput();
+    void updateSimulation();
+    void updateAttractorState();
+    [[nodiscard]] std::chrono::milliseconds targetSimulationInterval() const;
+    [[nodiscard]] ScreenRect simulationViewportRect() const;
+    [[nodiscard]] bool isInsideSimulationArea(double mouseX, double mouseY) const;
+    void resetView();
+    void clampView();
+    void applyPendingZoom();
+    void zoomAtCursor(double mouseX, double mouseY, float zoomMultiplier);
+    [[nodiscard]] bool updatePan();
+    void updateViewMotion();
+    void updateCursorFeedback(double mouseX, double mouseY);
+    [[nodiscard]] QuadPushConstants currentQuadPushConstants() const;
+    [[nodiscard]] std::pair<float, float> screenToLogical(double mouseX, double mouseY) const;
+    [[nodiscard]] std::pair<uint32_t, uint32_t> screenToCell(double mouseX, double mouseY) const;
+    [[nodiscard]] bool isInsideSidebarScrollableArea(float logicalX, float logicalY) const;
+    [[nodiscard]] float maxSidebarScrollOffset() const;
+    void nudgeSidebarScroll(float delta);
+    void handleSidebarClick(float logicalX, float logicalY);
+    void nudgeSelectedStateColor(std::size_t channel, int delta);
+    void nudgeAttractorDimension(bool adjustWidth, int delta);
+    void requestGridResize(GridSize newSize);
+    void refreshWindowTitle() const;
+    void logGridConfiguration() const;
+    void validateGridSize(GridSize size) const;
+    void resetAttractorPreviewBounds();
+    void openAttractorPreviewWindow();
+    void closeAttractorPreviewWindow();
+    void updateAttractorPreviewWindow();
+    void renderAttractorPreview(const AttractorGraph& graph);
+    void renderAttractorStatusPreview(const std::string& statusText);
+    void exportAttractorSvg();
+    void exportAttractorPng();
+    void writeAttractorSvg(const std::filesystem::path& outputPath, const AttractorGraph& graph) const;
+    void writeAttractorPng(const std::filesystem::path& outputPath, const AttractorGraph& graph) const;
+
+    void createInstance();
+    void setupDebugMessenger();
+    void createSurface();
+    void pickPhysicalDevice();
+    void createLogicalDevice();
+    void createCommandPool();
+    void createSwapChain();
+    void createImageViews();
+    void createRenderPass();
+    void createDescriptorSetLayout();
+    void createPipelineLayouts();
+    void createGraphicsPipelines();
+    void createFramebuffers();
+    void createVertexBuffers();
+    void createOverlayTextBuffer();
+    void createAttractorGraphBuffer();
+    void createTextureResources();
+    void createDescriptorPool();
+    void createDescriptorSet();
+    void updateDescriptorSet();
+    void createStagingBuffers();
+    void createCommandBuffers();
+    void createSyncObjects();
+    void createAttractorPreviewSurface();
+    void createAttractorPreviewSwapChain();
+    void createAttractorPreviewImageViews();
+    void createAttractorPreviewRenderPass();
+    void createAttractorPreviewPipeline();
+    void createAttractorPreviewFramebuffers();
+    void createAttractorPreviewCommandResources();
+    void createAttractorPreviewSyncObjects();
+
+    void recreateSwapChain();
+    void cleanupSwapChain();
+    void recreateAttractorPreviewSwapChain();
+    void cleanupAttractorPreviewSwapChain();
+    void destroyTextureResources();
+    void destroyBuffer(BufferAllocation& allocation);
+    void rebuildSolidUiBuffer();
+    void updateOverlayTextBuffer();
+    void rebuildAttractorGraphBuffer(const AttractorGraph& graph);
+
+    [[nodiscard]] UploadRequest prepareTextureUpload(uint32_t frameIndex);
+    void packFullTextureToStaging(void* destination) const;
+    void packDirtyRegionToStaging(const DirtyRegion& region, void* destination) const;
+    void recordCommandBuffer(
+        VkCommandBuffer commandBuffer,
+        uint32_t imageIndex,
+        uint32_t frameIndex,
+        const UploadRequest& uploadRequest);
+    void drawFrame();
+    void recordAttractorPreviewCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+    void drawAttractorPreviewFrame();
+
+    [[nodiscard]] SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice deviceHandle) const;
+    [[nodiscard]] SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice deviceHandle, VkSurfaceKHR surface) const;
+    [[nodiscard]] QueueFamilyIndices findQueueFamilies(VkPhysicalDevice deviceHandle) const;
+    [[nodiscard]] bool checkDeviceExtensionSupport(VkPhysicalDevice deviceHandle) const;
+    [[nodiscard]] bool checkValidationLayerSupport() const;
+    [[nodiscard]] std::vector<const char*> getRequiredExtensions() const;
+    [[nodiscard]] VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
+    [[nodiscard]] VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const;
+    [[nodiscard]] VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) const;
+    [[nodiscard]] VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, GLFWwindow* window) const;
+    [[nodiscard]] uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
+    [[nodiscard]] VkShaderModule createShaderModule(const std::vector<char>& code) const;
+    [[nodiscard]] VkImageView createImageView(VkImage image, VkFormat format) const;
+    [[nodiscard]] std::filesystem::path shaderPath(const std::string& name) const;
+
+    void createBuffer(
+        VkDeviceSize size,
+        VkBufferUsageFlags usage,
+        VkMemoryPropertyFlags properties,
+        BufferAllocation& allocation);
+    void createImage(
+        uint32_t width,
+        uint32_t height,
+        VkFormat format,
+        VkImageUsageFlags usage,
+        VkMemoryPropertyFlags properties,
+        ImageAllocation& allocation);
+    void copyBuffer(const BufferAllocation& source, const BufferAllocation& destination, VkDeviceSize size);
+    VkCommandBuffer beginSingleTimeCommands();
+    void endSingleTimeCommands(VkCommandBuffer commandBuffer);
+    void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) const;
+
+    static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
+    static void attractorFramebufferResizeCallback(GLFWwindow* window, int width, int height);
+    static void scrollCallback(GLFWwindow* window, double xOffset, double yOffset);
+    static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+        VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+        VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+        const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
+        void* userData);
+
+private:
+    GLFWwindow* window_ = nullptr;
+    GLFWcursor* panCursor_ = nullptr;
+    PhysarumSim simulation_;
+    GridSize requestedGridSize_{};
+
+    VkInstance instance_ = VK_NULL_HANDLE;
+    VkDebugUtilsMessengerEXT debugMessenger_ = VK_NULL_HANDLE;
+    VkSurfaceKHR surface_ = VK_NULL_HANDLE;
+    VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;
+    VkPhysicalDeviceProperties physicalDeviceProperties_{};
+    QueueFamilyIndices queueFamilyIndices_{};
+
+    VkDevice device_ = VK_NULL_HANDLE;
+    VkQueue graphicsQueue_ = VK_NULL_HANDLE;
+    VkQueue computeQueue_ = VK_NULL_HANDLE;
+    VkQueue presentQueue_ = VK_NULL_HANDLE;
+
+    VkSwapchainKHR swapChain_ = VK_NULL_HANDLE;
+    std::vector<VkImage> swapChainImages_;
+    VkFormat swapChainImageFormat_ = VK_FORMAT_UNDEFINED;
+    VkExtent2D swapChainExtent_{};
+    std::vector<VkImageView> swapChainImageViews_;
+    std::vector<VkFramebuffer> swapChainFramebuffers_;
+
+    VkRenderPass renderPass_ = VK_NULL_HANDLE;
+    VkDescriptorSetLayout descriptorSetLayout_ = VK_NULL_HANDLE;
+    VkPipelineLayout texturedPipelineLayout_ = VK_NULL_HANDLE;
+    VkPipelineLayout solidPipelineLayout_ = VK_NULL_HANDLE;
+    VkPipeline texturedPipeline_ = VK_NULL_HANDLE;
+    VkPipeline solidPipeline_ = VK_NULL_HANDLE;
+
+    VkCommandPool commandPool_ = VK_NULL_HANDLE;
+    std::array<VkCommandBuffer, kMaxFramesInFlight> commandBuffers_{};
+
+    BufferAllocation texturedVertexBuffer_{};
+    BufferAllocation solidVertexBuffer_{};
+    BufferAllocation overlayTextVertexBuffer_{};
+    BufferAllocation attractorGraphVertexBuffer_{};
+    std::array<BufferAllocation, kMaxFramesInFlight> stagingBuffers_{};
+    SolidDrawRange panelDraw_{};
+    SolidDrawRange sidebarDraw_{};
+    SolidDrawRange indicatorDraw_{};
+    SolidDrawRange scrollbarTrackDraw_{};
+    SolidDrawRange scrollbarThumbDraw_{};
+    uint32_t overlayTextVertexCount_ = 0;
+    uint32_t attractorGraphVertexCount_ = 0;
+    GraphDrawRanges attractorGraphDraws_{};
+    UiElement loadMapButton_{};
+    UiElement attractorsButton_{};
+    UiElement selectedColorPreview_{};
+    std::array<UiElement, 9> stateButtons_{};
+    std::array<UiElement, 9> stateSwatches_{};
+    std::array<ColorAdjustButtons, 3> colorAdjustButtons_{};
+    ColorAdjustButtons attractorWidthButtons_{};
+    ColorAdjustButtons attractorHeightButtons_{};
+    UiElement attractorRefineButton_{};
+    UiElement attractorExportButton_{};
+    UiElement attractorExportPngButton_{};
+
+    ImageAllocation simulationTexture_{};
+    VkSampler simulationSampler_ = VK_NULL_HANDLE;
+    bool simulationTextureInitialized_ = false;
+
+    VkDescriptorPool descriptorPool_ = VK_NULL_HANDLE;
+    VkDescriptorSet descriptorSet_ = VK_NULL_HANDLE;
+
+    std::array<VkSemaphore, kMaxFramesInFlight> imageAvailableSemaphores_{};
+    std::array<VkSemaphore, kMaxFramesInFlight> renderFinishedSemaphores_{};
+    std::array<VkFence, kMaxFramesInFlight> inFlightFences_{};
+    std::vector<VkFence> imagesInFlight_;
+
+    std::vector<const char*> validationLayers_ = {"VK_LAYER_KHRONOS_validation"};
+    std::vector<const char*> requiredDeviceExtensions_ = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    bool validationLayersEnabled_ = false;
+    bool framebufferResized_ = false;
+
+    std::string selectedGpuName_ = "Unknown";
+    std::string selectedGpuType_ = "OTHER";
+    std::string attractorComputeStatus_ = "ATR CPU";
+    bool shaderInt64Supported_ = false;
+    std::mutex queueSubmitMutex_{};
+
+    std::array<bool, GLFW_KEY_LAST + 1> keyPressed_{};
+
+    bool play_ = false;
+    uint8_t selectedState_ = 0;
+    uint64_t generation_ = 0;
+    std::chrono::steady_clock::time_point lastSimulationStep_{};
+    float zoom_ = 1.0f;
+    float viewCenterX_ = 0.5f;
+    float viewCenterY_ = 0.5f;
+    double pendingZoomDelta_ = 0.0;
+    bool panActive_ = false;
+    double lastPanMouseX_ = 0.0;
+    double lastPanMouseY_ = 0.0;
+    float panVelocityX_ = 0.0f;
+    float panVelocityY_ = 0.0f;
+    float mouseLogicalX_ = -1.0f;
+    float mouseLogicalY_ = -1.0f;
+    float sidebarScrollOffset_ = 0.0f;
+    bool leftMousePressed_ = false;
+    bool uiMouseCapture_ = false;
+    MenuStatus menuStatus_ = MenuStatus::Ready;
+    bool showingAttractorGraph_ = false;
+    AttractorSettings attractorSettings_{};
+    AttractorCompute attractorCompute_{};
+    AttractorGenerator attractorGenerator_{};
+    AttractorProgress attractorProgress_{};
+    std::optional<AttractorGraph> latestAttractorGraph_{};
+    AttractorWindowResources attractorWindow_{};
+    bool attractorPreviewBoundsInitialized_ = false;
+    bool attractorPreviewRenderCapped_ = false;
+    float attractorPreviewWorldMinX_ = 0.0f;
+    float attractorPreviewWorldMinY_ = 0.0f;
+    float attractorPreviewWorldMaxX_ = 0.0f;
+    float attractorPreviewWorldMaxY_ = 0.0f;
+
+    std::size_t currentFrame_ = 0;
+};
