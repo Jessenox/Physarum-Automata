@@ -191,6 +191,25 @@ void PhysarumSim::setCellState(const uint32_t x, const uint32_t y, uint16_t valu
     }
 
     physarumMatrix_.set(x, y, value);
+    memoryMatrix_.set(x, y, 0U);
+    updatePixel(x, y, value);
+
+    DirtyRegion dirty{};
+    markDirtyCell(dirty, x, y);
+    mergeDirtyRegion(dirty);
+
+    routed_ = false;
+    allNutrientsFounded_ = false;
+}
+
+void PhysarumSim::overwriteCellState(const uint32_t x, const uint32_t y, uint16_t value) {
+    if (x >= gridSize_.w || y >= gridSize_.h) {
+        return;
+    }
+
+    value = std::min<uint16_t>(value, 8U);
+    physarumMatrix_.set(x, y, value);
+    memoryMatrix_.set(x, y, 0U);
     updatePixel(x, y, value);
 
     DirtyRegion dirty{};
@@ -209,7 +228,6 @@ void PhysarumSim::setPaletteColor(const uint8_t state, const Rgba color) {
 
     palette_[stateIndex] = color;
     rebuildWholeTexture();
-    markWholeGridDirty();
 }
 
 void PhysarumSim::loadMapFromImage(const std::filesystem::path& imagePath) {
@@ -428,6 +446,36 @@ void PhysarumSim::markWholeGridDirty() {
     dirtyRegion_.maxX = gridSize_.w - 1U;
     dirtyRegion_.maxY = gridSize_.h - 1U;
     forceFullUpload_ = true;
+}
+
+uint32_t PhysarumSim::combinedState(const uint32_t x, const uint32_t y) const {
+    return static_cast<uint32_t>(physarumMatrix_.get(x, y)) +
+           static_cast<uint32_t>(memoryMatrix_.get(x, y)) * 9U;
+}
+
+void PhysarumSim::packCombinedStates(void* destination) const {
+    auto* packedStates = static_cast<uint32_t*>(destination);
+    for (uint32_t y = 0; y < gridSize_.h; ++y) {
+        for (uint32_t x = 0; x < gridSize_.w; ++x) {
+            packedStates[static_cast<std::size_t>(y) * static_cast<std::size_t>(gridSize_.w) + x] =
+                combinedState(x, y);
+        }
+    }
+}
+
+void PhysarumSim::packCombinedStatesRegion(const DirtyRegion& region, void* destination) const {
+    if (!region.valid) {
+        return;
+    }
+
+    auto* packedStates = static_cast<uint32_t*>(destination);
+    for (uint32_t y = region.minY; y <= region.maxY; ++y) {
+        const std::size_t destinationRow =
+            static_cast<std::size_t>(y - region.minY) * static_cast<std::size_t>(region.width());
+        for (uint32_t x = region.minX; x <= region.maxX; ++x) {
+            packedStates[destinationRow + static_cast<std::size_t>(x - region.minX)] = combinedState(x, y);
+        }
+    }
 }
 
 void PhysarumSim::gatherNeighbours(

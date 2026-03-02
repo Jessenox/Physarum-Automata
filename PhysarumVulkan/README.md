@@ -15,6 +15,18 @@ Migración del simulador de `PhyTest` a Vulkan sin usar SFML. El render principa
 - Grid size dinámico funcionando en runtime
 - Upload parcial/full de textura funcionando
 
+## Arquitectura
+
+La app ahora usa una separación por capas que calza mejor con Clean Architecture / Hexagonal, pero sin forzar una sobreingeniería completa sobre Vulkan:
+
+- `src/AppModel.*`: estado de dominio de la simulación, reproducción, `generation`, `grid size` y acceso a `PhysarumSim`
+- `src/AppViewModel.*`: estado de presentación/UI, selección de estado, textos del overlay, título de ventana y estado visible de atractores/exportación
+- `src/application/AppController.*`: capa de aplicación; concentra casos de uso como reproducir, pintar, redimensionar, cargar mapa y coordinar la generación de atractores
+- `src/infrastructure/AttractorGraphExporter.*`: adaptador de infraestructura para exportar grafos de atractores a SVG/PNG
+- `src/VulkanApp.*`: adaptador de presentación/runtime Vulkan/GLFW; conserva render, swapchain, input de bajo nivel y ventanas
+
+`PhysarumSim` sigue siendo el núcleo del dominio. `VulkanApp` ya no coordina directamente la lógica principal de aplicación ni la exportación; delega esas responsabilidades a `AppController` y a los adaptadores de infraestructura.
+
 Validación visual rápida:
 
 - el panel oscuro de control debe verse abajo

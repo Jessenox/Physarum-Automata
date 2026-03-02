@@ -28,6 +28,7 @@ endif()
 set(SHADER_OUTPUT_DIR "${CMAKE_BINARY_DIR}/shaders")
 set(SHADER_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/shaders/attractor.comp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/physarum.comp"
     "${CMAKE_CURRENT_SOURCE_DIR}/shaders/quad.vert"
     "${CMAKE_CURRENT_SOURCE_DIR}/shaders/quad.frag"
     "${CMAKE_CURRENT_SOURCE_DIR}/shaders/rect.vert"
@@ -55,12 +56,20 @@ endforeach()
 add_custom_target(PhysarumVulkanShaders ALL DEPENDS ${SPIRV_OUTPUTS})
 
 add_executable(PhysarumVulkan
+    src/application/AppController.h
+    src/application/AppController.cpp
+    src/AppModel.h
+    src/AppModel.cpp
+    src/AppViewModel.h
+    src/AppViewModel.cpp
     src/AttractorCompute.h
     src/AttractorCompute.cpp
     src/AttractorGenerator.h
     src/AttractorGenerator.cpp
     src/FileDialog.h
     src/FileDialog.cpp
+    src/infrastructure/AttractorGraphExporter.h
+    src/infrastructure/AttractorGraphExporter.cpp
     src/main.cpp
     src/PhysarumSim.h
     src/PhysarumSim.cpp

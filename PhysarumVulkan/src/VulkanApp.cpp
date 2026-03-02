@@ -1,10 +1,6 @@
 #include "FileDialog.h"
 #include "VulkanApp.h"
 
-#ifndef PHYSARUM_VULKAN_HAS_OPENCV
-#define PHYSARUM_VULKAN_HAS_OPENCV 0
-#endif
-
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -20,11 +16,6 @@
 #include <stdexcept>
 #include <thread>
 #include <string_view>
-
-#if PHYSARUM_VULKAN_HAS_OPENCV
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/imgproc.hpp>
-#endif
 
 namespace {
 
@@ -244,6 +235,13 @@ constexpr float kStateTextPixelSize = 4.0f;
 constexpr float kGenerationTextPixelSize = 3.0f;
 constexpr uint32_t kOverlayTextVertexCapacity = 32768;
 
+constexpr uint32_t packRgba8(const PhysarumSim::Rgba& color) {
+    return static_cast<uint32_t>(color[0]) |
+           (static_cast<uint32_t>(color[1]) << 8U) |
+           (static_cast<uint32_t>(color[2]) << 16U) |
+           (static_cast<uint32_t>(color[3]) << 24U);
+}
+
 constexpr std::array<std::string_view, 9> kStateLabels{{
     "LIBRE",
     "NUTR NO",
@@ -273,10 +271,6 @@ SolidDrawRange appendRect(
         firstVertex,
         static_cast<uint32_t>(vertices.size()) - firstVertex
     };
-}
-
-bool usesApproximateAttractorMode(const AttractorSettings& settings) {
-    return settings.width * settings.height > 9U;
 }
 
 float maxSidebarScrollOffset() {
@@ -681,8 +675,19 @@ void destroyDebugUtilsMessengerEXT(
 }  // namespace
 
 VulkanApp::VulkanApp(const GridSize initialGridSize)
-    : simulation_(initialGridSize),
-      requestedGridSize_(initialGridSize) {
+    : model_(initialGridSize),
+      viewModel_(),
+      controller_(model_, viewModel_),
+      simulation_(model_.simulation()),
+      requestedGridSize_(model_.requestedGridSize()),
+      selectedState_(viewModel_.selectedState()),
+      sidebarScrollOffset_(viewModel_.sidebarScrollOffset()),
+      menuStatus_(viewModel_.menuStatus()),
+      showingAttractorGraph_(viewModel_.showingAttractorGraph()),
+      attractorSettings_(viewModel_.attractorSettings()),
+      attractorProgress_(viewModel_.attractorProgress()),
+      latestAttractorGraph_(viewModel_.latestAttractorGraph()),
+      attractorComputeStatus_(viewModel_.attractorComputeStatus()) {
 }
 
 void VulkanApp::run() {
@@ -735,18 +740,22 @@ void VulkanApp::initVulkan() {
     createImageViews();
     createRenderPass();
     createDescriptorSetLayout();
+    createComputeDescriptorSetLayout();
     createPipelineLayouts();
     createGraphicsPipelines();
+    createComputePipeline();
     createFramebuffers();
     createVertexBuffers();
     createOverlayTextBuffer();
     createAttractorGraphBuffer();
-    createTextureResources();
+    createSimulationBuffers();
     createDescriptorPool();
-    createDescriptorSet();
+    createDescriptorSets();
     createStagingBuffers();
     createCommandBuffers();
     createSyncObjects();
+
+    simulationGpuEnabled_ = simulationGraphicsQueueComputeCapable_ && computePipeline_ != VK_NULL_HANDLE;
 
     attractorCompute_.initialize(AttractorCompute::CreateInfo{
         physicalDevice_,
@@ -756,14 +765,15 @@ void VulkanApp::initVulkan() {
         shaderPath("attractor.comp.spv"),
         &queueSubmitMutex_
     });
-    attractorComputeStatus_ = attractorCompute_.status();
+    controller_.setAttractorBackendStatus(attractorCompute_.status());
     std::cout << "Attractor backend: " << attractorComputeStatus_ << '\n';
+    std::cout << "Simulation backend: " << (simulationGpuEnabled_ ? "SIM GPU" : "SIM CPU") << '\n';
 
     logGridConfiguration();
 }
 
 void VulkanApp::mainLoop() {
-    lastSimulationStep_ = std::chrono::steady_clock::now();
+    controller_.initializeSimulationClock(std::chrono::steady_clock::now());
     auto nextFrameDeadline = std::chrono::steady_clock::now();
 
     while (window_ != nullptr && glfwWindowShouldClose(window_) == GLFW_FALSE) {
@@ -775,12 +785,16 @@ void VulkanApp::mainLoop() {
         drawFrame();
         updateAttractorPreviewWindow();
 
-        nextFrameDeadline += kTargetFrameTime;
-        std::this_thread::sleep_until(nextFrameDeadline);
+        if (!model_.play()) {
+            nextFrameDeadline += kTargetFrameTime;
+            std::this_thread::sleep_until(nextFrameDeadline);
 
-        const auto now = std::chrono::steady_clock::now();
-        if (now > nextFrameDeadline + kTargetFrameTime) {
-            nextFrameDeadline = now;
+            const auto now = std::chrono::steady_clock::now();
+            if (now > nextFrameDeadline + kTargetFrameTime) {
+                nextFrameDeadline = now;
+            }
+        } else {
+            nextFrameDeadline = std::chrono::steady_clock::now();
         }
     }
 
@@ -790,7 +804,7 @@ void VulkanApp::mainLoop() {
 }
 
 void VulkanApp::cleanup() {
-    attractorGenerator_.shutdown();
+    controller_.shutdown();
     closeAttractorPreviewWindow();
 
     if (device_ != VK_NULL_HANDLE) {
@@ -809,17 +823,13 @@ void VulkanApp::cleanup() {
     destroyBuffer(solidVertexBuffer_);
     destroyBuffer(overlayTextVertexBuffer_);
     destroyBuffer(attractorGraphVertexBuffer_);
-    destroyTextureResources();
-
-    if (simulationSampler_ != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
-        vkDestroySampler(device_, simulationSampler_, nullptr);
-        simulationSampler_ = VK_NULL_HANDLE;
-    }
+    destroySimulationBuffers();
 
     if (descriptorPool_ != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
         vkDestroyDescriptorPool(device_, descriptorPool_, nullptr);
         descriptorPool_ = VK_NULL_HANDLE;
-        descriptorSet_ = VK_NULL_HANDLE;
+        descriptorSets_ = {};
+        computeDescriptorSets_ = {};
     }
 
     if (solidPipelineLayout_ != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
@@ -827,14 +837,29 @@ void VulkanApp::cleanup() {
         solidPipelineLayout_ = VK_NULL_HANDLE;
     }
 
+    if (computePipelineLayout_ != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
+        vkDestroyPipelineLayout(device_, computePipelineLayout_, nullptr);
+        computePipelineLayout_ = VK_NULL_HANDLE;
+    }
+
     if (texturedPipelineLayout_ != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
         vkDestroyPipelineLayout(device_, texturedPipelineLayout_, nullptr);
         texturedPipelineLayout_ = VK_NULL_HANDLE;
     }
 
+    if (computePipeline_ != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
+        vkDestroyPipeline(device_, computePipeline_, nullptr);
+        computePipeline_ = VK_NULL_HANDLE;
+    }
+
     if (descriptorSetLayout_ != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
         vkDestroyDescriptorSetLayout(device_, descriptorSetLayout_, nullptr);
         descriptorSetLayout_ = VK_NULL_HANDLE;
+    }
+
+    if (computeDescriptorSetLayout_ != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
+        vkDestroyDescriptorSetLayout(device_, computeDescriptorSetLayout_, nullptr);
+        computeDescriptorSetLayout_ = VK_NULL_HANDLE;
     }
 
     for (std::size_t index = 0; index < kMaxFramesInFlight; ++index) {
@@ -903,31 +928,31 @@ void VulkanApp::processInput() {
     });
 
     handleEdge(GLFW_KEY_ENTER, [this]() {
-        play_ = !play_;
+        controller_.togglePlayback();
     });
     handleEdge(GLFW_KEY_KP_ENTER, [this]() {
-        play_ = !play_;
+        controller_.togglePlayback();
     });
 
-    handleEdge(GLFW_KEY_1, [this]() { selectedState_ = 0; });
-    handleEdge(GLFW_KEY_2, [this]() { selectedState_ = 1; });
-    handleEdge(GLFW_KEY_3, [this]() { selectedState_ = 2; });
-    handleEdge(GLFW_KEY_4, [this]() { selectedState_ = 3; });
-    handleEdge(GLFW_KEY_5, [this]() { selectedState_ = 4; });
-    handleEdge(GLFW_KEY_6, [this]() { selectedState_ = 5; });
-    handleEdge(GLFW_KEY_7, [this]() { selectedState_ = 6; });
-    handleEdge(GLFW_KEY_8, [this]() { selectedState_ = 7; });
-    handleEdge(GLFW_KEY_9, [this]() { selectedState_ = 8; });
+    handleEdge(GLFW_KEY_1, [this]() { controller_.selectState(0); });
+    handleEdge(GLFW_KEY_2, [this]() { controller_.selectState(1); });
+    handleEdge(GLFW_KEY_3, [this]() { controller_.selectState(2); });
+    handleEdge(GLFW_KEY_4, [this]() { controller_.selectState(3); });
+    handleEdge(GLFW_KEY_5, [this]() { controller_.selectState(4); });
+    handleEdge(GLFW_KEY_6, [this]() { controller_.selectState(5); });
+    handleEdge(GLFW_KEY_7, [this]() { controller_.selectState(6); });
+    handleEdge(GLFW_KEY_8, [this]() { controller_.selectState(7); });
+    handleEdge(GLFW_KEY_9, [this]() { controller_.selectState(8); });
 
-    handleEdge(GLFW_KEY_KP_1, [this]() { selectedState_ = 0; });
-    handleEdge(GLFW_KEY_KP_2, [this]() { selectedState_ = 1; });
-    handleEdge(GLFW_KEY_KP_3, [this]() { selectedState_ = 2; });
-    handleEdge(GLFW_KEY_KP_4, [this]() { selectedState_ = 3; });
-    handleEdge(GLFW_KEY_KP_5, [this]() { selectedState_ = 4; });
-    handleEdge(GLFW_KEY_KP_6, [this]() { selectedState_ = 5; });
-    handleEdge(GLFW_KEY_KP_7, [this]() { selectedState_ = 6; });
-    handleEdge(GLFW_KEY_KP_8, [this]() { selectedState_ = 7; });
-    handleEdge(GLFW_KEY_KP_9, [this]() { selectedState_ = 8; });
+    handleEdge(GLFW_KEY_KP_1, [this]() { controller_.selectState(0); });
+    handleEdge(GLFW_KEY_KP_2, [this]() { controller_.selectState(1); });
+    handleEdge(GLFW_KEY_KP_3, [this]() { controller_.selectState(2); });
+    handleEdge(GLFW_KEY_KP_4, [this]() { controller_.selectState(3); });
+    handleEdge(GLFW_KEY_KP_5, [this]() { controller_.selectState(4); });
+    handleEdge(GLFW_KEY_KP_6, [this]() { controller_.selectState(5); });
+    handleEdge(GLFW_KEY_KP_7, [this]() { controller_.selectState(6); });
+    handleEdge(GLFW_KEY_KP_8, [this]() { controller_.selectState(7); });
+    handleEdge(GLFW_KEY_KP_9, [this]() { controller_.selectState(8); });
 
     handleEdge(GLFW_KEY_F1, [this]() { requestGridResize({200, 200}); });
     handleEdge(GLFW_KEY_F2, [this]() { requestGridResize({512, 512}); });
@@ -989,308 +1014,123 @@ void VulkanApp::processInput() {
     }
 
     const auto [cellX, cellY] = screenToCell(mouseX, mouseY);
-    simulation_.setCellState(cellX, cellY, selectedState_);
+    if (simulationGpuEnabled_) {
+        simulation_.overwriteCellState(cellX, cellY, selectedState_);
+        gpuStepSubmitted_ = false;
+        gpuPhysarumLastCells_ = 0;
+        gpuMinimumPhysarumCells_ = 0;
+        gpuMinimumCheck_ = 0;
+    } else {
+        controller_.paintSelectedState(cellX, cellY);
+    }
     leftMousePressed_ = leftPressed;
 }
 
 void VulkanApp::updateSimulation() {
-    if (!play_) {
-        return;
-    }
-
     const auto now = std::chrono::steady_clock::now();
-    if (now - lastSimulationStep_ < targetSimulationInterval()) {
+    if (!simulationGpuEnabled_) {
+        controller_.advanceSimulation(now, targetSimulationInterval());
         return;
     }
 
-    lastSimulationStep_ = now;
-    simulation_.evaluatePhysarum();
-    ++generation_;
-
-    if (simulation_.routed()) {
-        play_ = false;
+    consumeGpuSimulationResults();
+    pendingGpuSimulationStep_ = false;
+    if (!model_.shouldAdvanceSimulation(now, targetSimulationInterval())) {
+        return;
     }
+
+    pendingGpuSimulationStep_ = true;
+    model_.commitSimulationAdvance(now, false);
 }
 
 void VulkanApp::updateAttractorState() {
-    attractorProgress_ = attractorGenerator_.progress();
-
-    std::optional<AttractorGraph> graph = attractorGenerator_.takeLatestGraph();
-    if (graph.has_value()) {
+    const AttractorUpdate update = controller_.pollAttractorUpdates();
+    if (update.graph != nullptr) {
         try {
-            latestAttractorGraph_ = graph.value();
             if (showingAttractorGraph_) {
-                renderAttractorPreview(graph.value());
+                renderAttractorPreview(*update.graph);
             }
         } catch (const std::exception&) {
             attractorGraphVertexCount_ = 0;
             attractorGraphDraws_ = {};
             closeAttractorPreviewWindow();
-            menuStatus_ = MenuStatus::AttractorsError;
+            controller_.setAttractorError();
             return;
         }
-    }
-
-    if (attractorProgress_.running) {
-        menuStatus_ = MenuStatus::AttractorsRunning;
-        return;
-    }
-
-    if (attractorProgress_.completed && attractorProgress_.hasError) {
-        menuStatus_ = MenuStatus::AttractorsError;
-        return;
-    }
-
-    if (attractorProgress_.completed &&
-        !attractorProgress_.hasError &&
-        menuStatus_ != MenuStatus::SvgExported &&
-        menuStatus_ != MenuStatus::SvgExportError &&
-        menuStatus_ != MenuStatus::PngExported &&
-        menuStatus_ != MenuStatus::PngExportError) {
-        menuStatus_ = MenuStatus::AttractorsReady;
     }
 }
 
 void VulkanApp::exportAttractorSvg() {
-    if (!latestAttractorGraph_.has_value() || latestAttractorGraph_->nodes.empty()) {
-        menuStatus_ = MenuStatus::SvgExportError;
+    if (!controller_.hasExportableAttractorGraph()) {
+        controller_.setMenuStatus(MenuStatus::SvgExportError);
         return;
     }
 
     const SaveFileDialogResult dialogResult = pickSaveSvgFile();
     if (!dialogResult.available) {
-        menuStatus_ = MenuStatus::DialogUnavailable;
+        controller_.setMenuStatus(MenuStatus::DialogUnavailable);
         return;
     }
     if (!dialogResult.path.has_value()) {
-        menuStatus_ = MenuStatus::Ready;
+        controller_.setMenuStatus(MenuStatus::Ready);
         return;
     }
 
     try {
-        writeAttractorSvg(dialogResult.path.value(), latestAttractorGraph_.value());
-        menuStatus_ = MenuStatus::SvgExported;
+        attractorExporter_.writeSvg(dialogResult.path.value(), controller_.latestAttractorGraph().value());
+        controller_.setMenuStatus(MenuStatus::SvgExported);
     } catch (const std::exception&) {
-        menuStatus_ = MenuStatus::SvgExportError;
+        controller_.setMenuStatus(MenuStatus::SvgExportError);
     }
 }
 
 void VulkanApp::exportAttractorPng() {
-    if (!latestAttractorGraph_.has_value() || latestAttractorGraph_->nodes.empty()) {
-        menuStatus_ = MenuStatus::PngExportError;
+    if (!controller_.hasExportableAttractorGraph()) {
+        controller_.setMenuStatus(MenuStatus::PngExportError);
         return;
     }
 
-#if !PHYSARUM_VULKAN_HAS_OPENCV
-    menuStatus_ = MenuStatus::OpenCvUnavailable;
-    return;
-#else
+    if (!AttractorGraphExporter::pngSupported()) {
+        controller_.setMenuStatus(MenuStatus::OpenCvUnavailable);
+        return;
+    }
+
     const SaveFileDialogResult dialogResult = pickSavePngFile();
     if (!dialogResult.available) {
-        menuStatus_ = MenuStatus::DialogUnavailable;
+        controller_.setMenuStatus(MenuStatus::DialogUnavailable);
         return;
     }
     if (!dialogResult.path.has_value()) {
-        menuStatus_ = MenuStatus::Ready;
+        controller_.setMenuStatus(MenuStatus::Ready);
         return;
     }
 
     try {
-        writeAttractorPng(dialogResult.path.value(), latestAttractorGraph_.value());
-        menuStatus_ = MenuStatus::PngExported;
+        attractorExporter_.writePng(dialogResult.path.value(), controller_.latestAttractorGraph().value());
+        controller_.setMenuStatus(MenuStatus::PngExported);
     } catch (const std::exception&) {
-        menuStatus_ = MenuStatus::PngExportError;
+        controller_.setMenuStatus(MenuStatus::PngExportError);
     }
-#endif
 }
 
-void VulkanApp::writeAttractorSvg(const std::filesystem::path& outputPath, const AttractorGraph& graph) const {
-    if (graph.nodes.empty()) {
-        throw std::runtime_error("No attractor graph available for export.");
+BatchSuccessorEvaluator VulkanApp::currentSuccessorEvaluator() {
+    if (!attractorCompute_.available()) {
+        return {};
     }
 
-    constexpr float kPadding = 34.0f;
-    float minX = graph.nodes.front().x;
-    float minY = graph.nodes.front().y;
-    float maxX = graph.nodes.front().x;
-    float maxY = graph.nodes.front().y;
-    for (const AttractorGraphNode& node : graph.nodes) {
-        minX = std::min(minX, node.x);
-        minY = std::min(minY, node.y);
-        maxX = std::max(maxX, node.x);
-        maxY = std::max(maxY, node.y);
-    }
-
-    minX -= kPadding;
-    minY -= kPadding;
-    maxX += kPadding;
-    maxY += kPadding;
-    const float width = std::max(120.0f, maxX - minX);
-    const float height = std::max(120.0f, maxY - minY);
-
-    if (!outputPath.parent_path().empty()) {
-        std::filesystem::create_directories(outputPath.parent_path());
-    }
-
-    std::ofstream output(outputPath);
-    if (!output.is_open()) {
-        throw std::runtime_error("Unable to open SVG output file.");
-    }
-
-    output << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-    output << "<svg xmlns=\"http://www.w3.org/2000/svg\" "
-           << "width=\"" << static_cast<int>(std::lround(width * 2.0f)) << "\" "
-           << "height=\"" << static_cast<int>(std::lround(height * 2.0f + 96.0f)) << "\" "
-           << "viewBox=\"" << minX << ' ' << (minY - 68.0f) << ' ' << width << ' ' << (height + 96.0f) << "\">\n";
-    output << "  <rect x=\"" << minX << "\" y=\"" << (minY - 68.0f) << "\" width=\"" << width
-           << "\" height=\"" << (height + 96.0f) << "\" fill=\"#f1f4f7\"/>\n";
-    output << "  <rect x=\"" << minX + 8.0f << "\" y=\"" << (minY - 58.0f) << "\" width=\"" << (width - 16.0f)
-           << "\" height=\"" << (height + 76.0f) << "\" rx=\"8\" fill=\"#ffffff\" stroke=\"#e2e7ec\" stroke-width=\"1.5\"/>\n";
-    output << "  <text x=\"" << (minX + 22.0f) << "\" y=\"" << (minY - 24.0f)
-           << "\" font-family=\"monospace\" font-size=\"18\" font-weight=\"700\" fill=\"#1d2329\">ATRACTORES</text>\n";
-    output << "  <text x=\"" << (minX + 22.0f) << "\" y=\"" << (minY + 2.0f)
-           << "\" font-family=\"monospace\" font-size=\"10\" fill=\"#586068\">";
-    output << graph.settings.width << 'x' << graph.settings.height
-           << " | " << (graph.approximate ? "MODO APROX" : "MODO EXACTO")
-           << " | PROC " << graph.processedSeeds
-           << " | NOD " << graph.nodes.size()
-           << " | EDGE " << graph.edges.size()
-           << "</text>\n";
-
-    for (const auto& [origin, destination] : graph.edges) {
-        if (origin >= graph.nodes.size() || destination >= graph.nodes.size()) {
-            continue;
-        }
-        const AttractorGraphNode& from = graph.nodes[origin];
-        const AttractorGraphNode& to = graph.nodes[destination];
-        output << "  <line x1=\"" << from.x << "\" y1=\"" << from.y
-               << "\" x2=\"" << to.x << "\" y2=\"" << to.y
-               << "\" stroke=\"#b08444\" stroke-width=\"1.8\" stroke-linecap=\"round\" opacity=\"0.92\"/>\n";
-    }
-
-    for (const AttractorGraphNode& node : graph.nodes) {
-        const float radius = node.cycle ? 4.8f : 3.2f;
-        const char* fill = node.cycle ? "#2eaaff" : "#2870cd";
-        output << "  <circle cx=\"" << node.x << "\" cy=\"" << node.y
-               << "\" r=\"" << (radius + 1.6f) << "\" fill=\"#ffffff\" opacity=\"0.96\"/>\n";
-        output << "  <circle cx=\"" << node.x << "\" cy=\"" << node.y
-               << "\" r=\"" << radius << "\" fill=\"" << fill
-               << "\" stroke=\"#172131\" stroke-width=\"0.8\"/>\n";
-    }
-
-    output << "</svg>\n";
-}
-
-void VulkanApp::writeAttractorPng(const std::filesystem::path& outputPath, const AttractorGraph& graph) const {
-#if !PHYSARUM_VULKAN_HAS_OPENCV
-    (void)outputPath;
-    (void)graph;
-    throw std::runtime_error("PNG export requires OpenCV support.");
-#else
-    if (graph.nodes.empty()) {
-        throw std::runtime_error("No attractor graph available for PNG export.");
-    }
-
-    constexpr int kImageWidth = 1600;
-    constexpr int kImageHeight = 1080;
-    constexpr float kPadding = 32.0f;
-    constexpr float kMarginLeft = 72.0f;
-    constexpr float kMarginTop = 88.0f;
-    constexpr float kMarginRight = 72.0f;
-    constexpr float kMarginBottom = 72.0f;
-
-    float minX = graph.nodes.front().x;
-    float minY = graph.nodes.front().y;
-    float maxX = graph.nodes.front().x;
-    float maxY = graph.nodes.front().y;
-    for (const AttractorGraphNode& node : graph.nodes) {
-        minX = std::min(minX, node.x);
-        minY = std::min(minY, node.y);
-        maxX = std::max(maxX, node.x);
-        maxY = std::max(maxY, node.y);
-    }
-
-    minX -= kPadding;
-    minY -= kPadding;
-    maxX += kPadding;
-    maxY += kPadding;
-
-    const float worldWidth = std::max(180.0f, maxX - minX);
-    const float worldHeight = std::max(180.0f, maxY - minY);
-    const float contentWidth = static_cast<float>(kImageWidth) - kMarginLeft - kMarginRight;
-    const float contentHeight = static_cast<float>(kImageHeight) - kMarginTop - kMarginBottom;
-    const float scale = std::min(contentWidth / worldWidth, contentHeight / worldHeight);
-    const float offsetX = kMarginLeft + (contentWidth - worldWidth * scale) * 0.5f;
-    const float offsetY = kMarginTop + (contentHeight - worldHeight * scale) * 0.5f;
-
-    const auto toImagePoint = [&](const float x, const float y) {
-        return cv::Point(
-            static_cast<int>(std::lround(offsetX + (x - minX) * scale)),
-            static_cast<int>(std::lround(offsetY + (y - minY) * scale)));
+    return [this](
+               const AttractorSettings& settings,
+               const std::vector<AttractorStateBlock>& inputStates,
+               std::vector<AttractorStateBlock>& outputStates) {
+        attractorCompute_.evaluateSuccessors(settings, inputStates, outputStates);
     };
-
-    cv::Mat image(kImageHeight, kImageWidth, CV_8UC3, cv::Scalar(241, 244, 247));
-    cv::rectangle(
-        image,
-        cv::Rect(32, 32, kImageWidth - 64, kImageHeight - 64),
-        cv::Scalar(255, 255, 255),
-        cv::FILLED,
-        cv::LINE_AA);
-
-    cv::putText(
-        image,
-        "ATRACTORES",
-        cv::Point(68, 78),
-        cv::FONT_HERSHEY_DUPLEX,
-        1.55,
-        cv::Scalar(26, 31, 36),
-        2,
-        cv::LINE_AA);
-
-    std::ostringstream details;
-    details << graph.settings.width << 'x' << graph.settings.height
-            << " | " << (graph.approximate ? "MODO APROX" : "MODO EXACTO")
-            << " | PROC " << graph.processedSeeds
-            << " | NOD " << graph.nodes.size()
-            << " | EDGE " << graph.edges.size();
-    cv::putText(
-        image,
-        details.str(),
-        cv::Point(68, 112),
-        cv::FONT_HERSHEY_SIMPLEX,
-        0.72,
-        cv::Scalar(82, 89, 96),
-        2,
-        cv::LINE_AA);
-
-    for (const auto& [origin, destination] : graph.edges) {
-        if (origin >= graph.nodes.size() || destination >= graph.nodes.size()) {
-            continue;
-        }
-        const cv::Point from = toImagePoint(graph.nodes[origin].x, graph.nodes[origin].y);
-        const cv::Point to = toImagePoint(graph.nodes[destination].x, graph.nodes[destination].y);
-        cv::line(image, from, to, cv::Scalar(176, 132, 68), 2, cv::LINE_AA);
-    }
-
-    for (const AttractorGraphNode& node : graph.nodes) {
-        const cv::Point center = toImagePoint(node.x, node.y);
-        const int radius = node.cycle ? 8 : 5;
-        const cv::Scalar fillColor = node.cycle ? cv::Scalar(46, 170, 255) : cv::Scalar(40, 112, 205);
-        cv::circle(image, center, radius + 2, cv::Scalar(255, 255, 255), cv::FILLED, cv::LINE_AA);
-        cv::circle(image, center, radius, fillColor, cv::FILLED, cv::LINE_AA);
-        cv::circle(image, center, radius, cv::Scalar(23, 33, 49), 1, cv::LINE_AA);
-    }
-
-    if (!outputPath.parent_path().empty()) {
-        std::filesystem::create_directories(outputPath.parent_path());
-    }
-    if (!cv::imwrite(outputPath.string(), image)) {
-        throw std::runtime_error("Unable to write PNG output file.");
-    }
-#endif
 }
 
 std::chrono::milliseconds VulkanApp::targetSimulationInterval() const {
+    if (simulationGpuEnabled_) {
+        return std::chrono::milliseconds(0);
+    }
+
     const GridSize size = requestedGridSize_;
     const uint64_t area = static_cast<uint64_t>(size.w) * static_cast<uint64_t>(size.h);
 
@@ -1495,12 +1335,15 @@ void VulkanApp::updateViewMotion() {
 VulkanApp::QuadPushConstants VulkanApp::currentQuadPushConstants() const {
     const float visibleSpan = 1.0f / zoom_;
     const float halfSpan = visibleSpan * 0.5f;
+    const GridSize size = simulation_.gridSize();
 
     QuadPushConstants push{};
     push.uvMin[0] = viewCenterX_ - halfSpan;
     push.uvMin[1] = viewCenterY_ - halfSpan;
     push.uvMax[0] = viewCenterX_ + halfSpan;
     push.uvMax[1] = viewCenterY_ + halfSpan;
+    push.gridWidth = size.w;
+    push.gridHeight = size.h;
     return push;
 }
 
@@ -1581,65 +1424,37 @@ void VulkanApp::handleSidebarClick(const float logicalX, const float logicalY) {
     if (insideRect(loadMapButton_.rect)) {
         const ImageFileDialogResult dialogResult = pickImageFile();
         if (!dialogResult.available) {
-            menuStatus_ = MenuStatus::DialogUnavailable;
+            controller_.setMenuStatus(MenuStatus::DialogUnavailable);
             return;
         }
         if (!dialogResult.path.has_value()) {
-            menuStatus_ = MenuStatus::Ready;
+            controller_.setMenuStatus(MenuStatus::Ready);
             return;
         }
 
-        play_ = false;
-        generation_ = 0;
-        lastSimulationStep_ = std::chrono::steady_clock::now();
-        latestAttractorGraph_.reset();
         closeAttractorPreviewWindow();
-
-        try {
-            simulation_.loadMapFromImage(dialogResult.path.value());
-            menuStatus_ = MenuStatus::MapLoaded;
-        } catch (const std::exception& exception) {
-            const std::string_view what = exception.what();
-            if (what.find("OpenCV support") != std::string_view::npos) {
-                menuStatus_ = MenuStatus::OpenCvUnavailable;
-            } else {
-                menuStatus_ = MenuStatus::MapError;
-            }
-        }
+        controller_.loadMapFromImage(dialogResult.path.value(), std::chrono::steady_clock::now());
+        gpuStepSubmitted_ = false;
+        gpuPhysarumLastCells_ = 0;
+        gpuMinimumPhysarumCells_ = 0;
+        gpuMinimumCheck_ = 0;
         return;
     }
 
     if (insideRect(attractorsButton_.rect)) {
-        if (attractorProgress_.running) {
-            return;
-        }
-        if (showingAttractorGraph_ && attractorProgress_.completed && !attractorProgress_.hasError) {
+        const AttractorPreviewRequest request = controller_.toggleAttractorGraph(currentSuccessorEvaluator());
+        if (request.closePreview) {
             closeAttractorPreviewWindow();
-            menuStatus_ = MenuStatus::Ready;
-            return;
         }
-        play_ = false;
-        attractorGraphVertexCount_ = 0;
-        attractorGraphDraws_ = {};
-        resetAttractorPreviewBounds();
-        showingAttractorGraph_ = true;
-        renderAttractorStatusPreview("Generando vista del atractor...");
-        BatchSuccessorEvaluator successorEvaluator{};
-        if (attractorCompute_.available()) {
-            successorEvaluator = [this](
-                                    const AttractorSettings& settings,
-                                    const std::vector<AttractorStateBlock>& inputStates,
-                                    std::vector<AttractorStateBlock>& outputStates) {
-                attractorCompute_.evaluateSuccessors(settings, inputStates, outputStates);
-            };
+        if (request.clearRenderedGraph) {
+            attractorGraphVertexCount_ = 0;
+            attractorGraphDraws_ = {};
         }
-        if (attractorGenerator_.start(attractorSettings_, std::move(successorEvaluator), false)) {
-            latestAttractorGraph_.reset();
-            attractorProgress_ = attractorGenerator_.progress();
-            menuStatus_ = MenuStatus::AttractorsRunning;
-        } else {
-            closeAttractorPreviewWindow();
-            menuStatus_ = MenuStatus::AttractorsError;
+        if (request.resetPreviewBounds) {
+            resetAttractorPreviewBounds();
+        }
+        if (request.openPreview) {
+            renderAttractorStatusPreview(request.statusText);
         }
         return;
     }
@@ -1655,37 +1470,27 @@ void VulkanApp::handleSidebarClick(const float logicalX, const float logicalY) {
     }
 
     if (insideRect(attractorRefineButton_.rect)) {
-        if (attractorProgress_.running ||
-            !attractorProgress_.completed ||
-            attractorProgress_.hasError ||
-            !attractorProgress_.canRefine) {
-            return;
+        const AttractorPreviewRequest request = controller_.refineAttractorGraph(currentSuccessorEvaluator());
+        if (request.closePreview) {
+            closeAttractorPreviewWindow();
         }
-
-        BatchSuccessorEvaluator successorEvaluator{};
-        if (attractorCompute_.available()) {
-            successorEvaluator = [this](
-                                    const AttractorSettings& settings,
-                                    const std::vector<AttractorStateBlock>& inputStates,
-                                    std::vector<AttractorStateBlock>& outputStates) {
-                attractorCompute_.evaluateSuccessors(settings, inputStates, outputStates);
-            };
+        if (request.clearRenderedGraph) {
+            attractorGraphVertexCount_ = 0;
+            attractorGraphDraws_ = {};
         }
-        if (attractorGenerator_.start(attractorSettings_, std::move(successorEvaluator), true)) {
-            showingAttractorGraph_ = true;
-            renderAttractorStatusPreview("Refinando vista del atractor...");
-            attractorProgress_ = attractorGenerator_.progress();
-            menuStatus_ = MenuStatus::AttractorsRunning;
-        } else {
-            menuStatus_ = MenuStatus::AttractorsError;
+        if (request.resetPreviewBounds) {
+            resetAttractorPreviewBounds();
+        }
+        if (request.openPreview) {
+            renderAttractorStatusPreview(request.statusText);
         }
         return;
     }
 
     for (std::size_t index = 0; index < stateButtons_.size(); ++index) {
         if (insideRect(stateButtons_[index].rect)) {
-            selectedState_ = static_cast<uint8_t>(index);
-            menuStatus_ = MenuStatus::Ready;
+            controller_.selectState(static_cast<uint8_t>(index));
+            controller_.setMenuStatus(MenuStatus::Ready);
             return;
         }
     }
@@ -1720,68 +1525,46 @@ void VulkanApp::handleSidebarClick(const float logicalX, const float logicalY) {
 }
 
 void VulkanApp::nudgeSelectedStateColor(const std::size_t channel, const int delta) {
-    PhysarumSim::Rgba color = simulation_.colorForState(selectedState_);
-    if (channel >= 3) {
-        return;
-    }
-
-    const int nextValue = std::clamp(
-        static_cast<int>(color[channel]) + delta,
-        0,
-        255);
-    color[channel] = static_cast<uint8_t>(nextValue);
-    simulation_.setPaletteColor(selectedState_, color);
-    menuStatus_ = MenuStatus::Ready;
+    controller_.nudgeSelectedStateColor(channel, delta);
+    simulationPaletteDirty_ = true;
 }
 
 void VulkanApp::nudgeAttractorDimension(const bool adjustWidth, const int delta) {
-    if (attractorProgress_.running) {
+    if (!controller_.nudgeAttractorDimension(adjustWidth, delta)) {
         return;
     }
 
-    AttractorSettings candidate = attractorSettings_;
-    uint32_t& dimension = adjustWidth ? candidate.width : candidate.height;
-    const int nextValue = std::clamp(static_cast<int>(dimension) + delta, 1, 5);
-    dimension = static_cast<uint32_t>(nextValue);
-
-    attractorSettings_ = candidate;
-    attractorProgress_ = {};
-    latestAttractorGraph_.reset();
     attractorGraphVertexCount_ = 0;
     attractorGraphDraws_ = {};
     closeAttractorPreviewWindow();
-    menuStatus_ = MenuStatus::AttractorsPending;
 }
 
 void VulkanApp::requestGridResize(const GridSize newSize) {
     validateGridSize(newSize);
 
-    const GridSize currentSize = simulation_.gridSize();
-    const bool dimensionsChanged = currentSize.w != newSize.w || currentSize.h != newSize.h;
-
-    play_ = false;
-    generation_ = 0;
-    lastSimulationStep_ = std::chrono::steady_clock::now();
-    menuStatus_ = MenuStatus::Ready;
-    latestAttractorGraph_.reset();
+    const GridResizeResult resizeResult = controller_.resizeGrid(newSize, std::chrono::steady_clock::now());
     closeAttractorPreviewWindow();
 
     if (device_ != VK_NULL_HANDLE) {
         vkDeviceWaitIdle(device_);
     }
 
-    simulation_.resizeGrid(newSize);
-    requestedGridSize_ = newSize;
     resetView();
 
-    if (dimensionsChanged) {
+    if (resizeResult.dimensionsChanged) {
         for (BufferAllocation& stagingBuffer : stagingBuffers_) {
             destroyBuffer(stagingBuffer);
         }
-        destroyTextureResources();
-        createTextureResources();
+        destroySimulationBuffers();
+        createSimulationBuffers();
         createStagingBuffers();
-        updateDescriptorSet();
+        updateDescriptorSets();
+        currentSimulationBufferIndex_ = 0;
+        pendingGpuSimulationStep_ = false;
+        gpuStepSubmitted_ = false;
+        gpuPhysarumLastCells_ = 0;
+        gpuMinimumPhysarumCells_ = 0;
+        gpuMinimumCheck_ = 0;
     }
 
     logGridConfiguration();
@@ -1793,43 +1576,25 @@ void VulkanApp::refreshWindowTitle() const {
         return;
     }
 
-    const GridSize size = requestedGridSize_;
-    std::ostringstream title;
-    title << "PhysarumVulkan | Generation: " << generation_
-          << " | State: " << static_cast<int>(selectedState_)
-          << " | Grid: " << size.w << 'x' << size.h
-          << " | Zoom: " << std::fixed << std::setprecision(1) << zoom_ << "x"
-          << " | " << (play_ ? "Playing" : "Paused");
-
-    if (attractorProgress_.running) {
-        title << " | Attractor "
-              << (attractorProgress_.approximate ? "APROX " : "EXACT ")
-              << attractorProgress_.processedSeeds << '/' << attractorProgress_.totalSeeds
-              << " nodes " << attractorProgress_.discoveredNodes
-              << ' ' << attractorComputeStatus_;
-    } else if (showingAttractorGraph_) {
-        title << " | Attractor View "
-              << attractorSettings_.width << 'x' << attractorSettings_.height
-              << ' ' << (usesApproximateAttractorMode(attractorSettings_) ? "APROX" : "EXACT")
-              << ' ' << attractorComputeStatus_;
-    }
-
-    glfwSetWindowTitle(window_, title.str().c_str());
+    const std::string title = viewModel_.windowTitle(model_, zoom_);
+    glfwSetWindowTitle(window_, title.c_str());
 }
 
 void VulkanApp::logGridConfiguration() const {
     const GridSize size = requestedGridSize_;
-    const double textureMiB =
+    const double stateBufferMiB =
         static_cast<double>(size.w) * static_cast<double>(size.h) * 4.0 / (1024.0 * 1024.0);
-    const double stagingTotalMiB = textureMiB * static_cast<double>(kMaxFramesInFlight);
+    const double gpuStateTotalMiB = stateBufferMiB * 2.0;
+    const double stagingTotalMiB = stateBufferMiB * static_cast<double>(kMaxFramesInFlight);
     const double simulationCpuMiB =
         static_cast<double>(size.w) * static_cast<double>(size.h) * (2.0 * 3.0 + 4.0) / (1024.0 * 1024.0);
 
     std::cout << std::fixed << std::setprecision(2)
               << "Grid size: " << size.w << 'x' << size.h << '\n'
-              << "Estimated texture memory (RGBA8): " << textureMiB << " MiB\n"
-              << "Estimated persistent staging total: " << stagingTotalMiB << " MiB\n"
+              << "Estimated GPU state buffers total: " << gpuStateTotalMiB << " MiB\n"
+              << "Estimated persistent upload staging total: " << stagingTotalMiB << " MiB\n"
               << "Estimated CPU sim memory (3 matrices + RGBA cache): " << simulationCpuMiB << " MiB\n"
+              << "Simulation backend: " << (simulationGpuEnabled_ ? "SIM GPU" : "SIM CPU") << '\n'
               << "Upload policy: partial upload when dirty <= "
               << (kPartialUploadThreshold * 100.0)
               << "% of the grid, otherwise full upload.\n";
@@ -1844,11 +1609,13 @@ void VulkanApp::validateGridSize(const GridSize size) const {
         return;
     }
 
-    const uint32_t maxDimension = physicalDeviceProperties_.limits.maxImageDimension2D;
-    if (size.w > maxDimension || size.h > maxDimension) {
+    const VkDeviceSize requiredStorageRange =
+        static_cast<VkDeviceSize>(size.w) * static_cast<VkDeviceSize>(size.h) * sizeof(uint32_t);
+    if (requiredStorageRange > physicalDeviceProperties_.limits.maxStorageBufferRange) {
         throw std::runtime_error(
             "Requested grid " + std::to_string(size.w) + "x" + std::to_string(size.h) +
-            " exceeds device maxImageDimension2D=" + std::to_string(maxDimension));
+            " exceeds device maxStorageBufferRange=" +
+            std::to_string(physicalDeviceProperties_.limits.maxStorageBufferRange));
     }
 }
 
@@ -1934,7 +1701,7 @@ void VulkanApp::closeAttractorPreviewWindow() {
     attractorWindow_.presentFamilyIndex = 0;
     attractorWindow_.presentQueue = VK_NULL_HANDLE;
     attractorWindow_.framebufferResized = false;
-    showingAttractorGraph_ = false;
+    controller_.notifyAttractorPreviewClosed();
     resetAttractorPreviewBounds();
 }
 
@@ -1954,7 +1721,7 @@ void VulkanApp::updateAttractorPreviewWindow() {
         attractorGraphVertexCount_ = 0;
         attractorGraphDraws_ = {};
         closeAttractorPreviewWindow();
-        menuStatus_ = MenuStatus::AttractorsError;
+        controller_.setAttractorError();
     }
 }
 
@@ -2192,6 +1959,15 @@ void VulkanApp::createLogicalDevice() {
     if (computeQueue_ == VK_NULL_HANDLE) {
         computeQueue_ = graphicsQueue_;
     }
+
+    uint32_t queueFamilyCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice_, &queueFamilyCount, nullptr);
+    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice_, &queueFamilyCount, queueFamilies.data());
+    simulationGraphicsQueueComputeCapable_ =
+        queueFamilyIndices_.graphicsFamily.has_value() &&
+        queueFamilyIndices_.graphicsFamily.value() < queueFamilies.size() &&
+        (queueFamilies[queueFamilyIndices_.graphicsFamily.value()].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0U;
 }
 
 void VulkanApp::createCommandPool() {
@@ -2304,20 +2080,58 @@ void VulkanApp::createRenderPass() {
 }
 
 void VulkanApp::createDescriptorSetLayout() {
-    VkDescriptorSetLayoutBinding samplerBinding{};
-    samplerBinding.binding = 0;
-    samplerBinding.descriptorCount = 1;
-    samplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    samplerBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    VkDescriptorSetLayoutBinding statesBinding{};
+    statesBinding.binding = 0;
+    statesBinding.descriptorCount = 1;
+    statesBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    statesBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    VkDescriptorSetLayoutBinding paletteBinding{};
+    paletteBinding.binding = 1;
+    paletteBinding.descriptorCount = 1;
+    paletteBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    paletteBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    const std::array<VkDescriptorSetLayoutBinding, 2> bindings{{statesBinding, paletteBinding}};
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 1;
-    layoutInfo.pBindings = &samplerBinding;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings.data();
 
     throwIfFailed(
         vkCreateDescriptorSetLayout(device_, &layoutInfo, nullptr, &descriptorSetLayout_),
         "Failed to create descriptor set layout");
+}
+
+void VulkanApp::createComputeDescriptorSetLayout() {
+    VkDescriptorSetLayoutBinding inputBinding{};
+    inputBinding.binding = 0;
+    inputBinding.descriptorCount = 1;
+    inputBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    inputBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    VkDescriptorSetLayoutBinding outputBinding{};
+    outputBinding.binding = 1;
+    outputBinding.descriptorCount = 1;
+    outputBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    outputBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    VkDescriptorSetLayoutBinding statsBinding{};
+    statsBinding.binding = 2;
+    statsBinding.descriptorCount = 1;
+    statsBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    statsBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    const std::array<VkDescriptorSetLayoutBinding, 3> bindings{{inputBinding, outputBinding, statsBinding}};
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings.data();
+
+    throwIfFailed(
+        vkCreateDescriptorSetLayout(device_, &layoutInfo, nullptr, &computeDescriptorSetLayout_),
+        "Failed to create simulation compute descriptor set layout");
 }
 
 void VulkanApp::createPipelineLayouts() {
@@ -2488,6 +2302,48 @@ void VulkanApp::createGraphicsPipelines() {
     vkDestroyShaderModule(device_, rectVertexModule, nullptr);
     vkDestroyShaderModule(device_, quadFragmentModule, nullptr);
     vkDestroyShaderModule(device_, quadVertexModule, nullptr);
+}
+
+void VulkanApp::createComputePipeline() {
+    if (!simulationGraphicsQueueComputeCapable_) {
+        return;
+    }
+
+    const auto shaderCode = readBinaryFile(shaderPath("physarum.comp.spv"));
+    const VkShaderModule shaderModule = createShaderModule(shaderCode);
+
+    VkPushConstantRange pushConstantRange{};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(uint32_t) * 4U;
+
+    VkPipelineLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    layoutInfo.setLayoutCount = 1;
+    layoutInfo.pSetLayouts = &computeDescriptorSetLayout_;
+    layoutInfo.pushConstantRangeCount = 1;
+    layoutInfo.pPushConstantRanges = &pushConstantRange;
+
+    throwIfFailed(
+        vkCreatePipelineLayout(device_, &layoutInfo, nullptr, &computePipelineLayout_),
+        "Failed to create simulation compute pipeline layout");
+
+    VkPipelineShaderStageCreateInfo stageInfo{};
+    stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    stageInfo.module = shaderModule;
+    stageInfo.pName = "main";
+
+    VkComputePipelineCreateInfo pipelineInfo{};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    pipelineInfo.stage = stageInfo;
+    pipelineInfo.layout = computePipelineLayout_;
+
+    throwIfFailed(
+        vkCreateComputePipelines(device_, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &computePipeline_),
+        "Failed to create simulation compute pipeline");
+
+    vkDestroyShaderModule(device_, shaderModule, nullptr);
 }
 
 void VulkanApp::createFramebuffers() {
@@ -2961,91 +2817,187 @@ void VulkanApp::rebuildAttractorGraphBuffer(const AttractorGraph& graph) {
     attractorGraphVertexCount_ = static_cast<uint32_t>(vertices.size());
 }
 
-void VulkanApp::createTextureResources() {
+void VulkanApp::createSimulationBuffers() {
     const GridSize size = simulation_.gridSize();
     validateGridSize(size);
 
-    createImage(
-        size.w,
-        size.h,
-        VK_FORMAT_R8G8B8A8_UNORM,
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        simulationTexture_);
-
-    simulationTexture_.view = createImageView(simulationTexture_.image, VK_FORMAT_R8G8B8A8_UNORM);
-
-    if (simulationSampler_ == VK_NULL_HANDLE) {
-        VkSamplerCreateInfo samplerInfo{};
-        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        samplerInfo.magFilter = VK_FILTER_NEAREST;
-        samplerInfo.minFilter = VK_FILTER_NEAREST;
-        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.anisotropyEnable = VK_FALSE;
-        samplerInfo.unnormalizedCoordinates = VK_FALSE;
-        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        samplerInfo.minLod = 0.0f;
-        samplerInfo.maxLod = 0.0f;
-
-        throwIfFailed(vkCreateSampler(device_, &samplerInfo, nullptr, &simulationSampler_), "Failed to create sampler");
+    const VkDeviceSize stateBufferSize =
+        static_cast<VkDeviceSize>(size.w) * static_cast<VkDeviceSize>(size.h) * sizeof(uint32_t);
+    for (BufferAllocation& stateBuffer : simulationStateBuffers_) {
+        destroyBuffer(stateBuffer);
+        createBuffer(
+            stateBufferSize,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            stateBuffer);
     }
 
-    simulationTextureInitialized_ = false;
+    destroyBuffer(simulationPaletteBuffer_);
+    createBuffer(
+        sizeof(uint32_t) * simulation_.palette().size(),
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        simulationPaletteBuffer_);
+    throwIfFailed(
+        vkMapMemory(device_, simulationPaletteBuffer_.memory, 0, simulationPaletteBuffer_.size, 0, &simulationPaletteBuffer_.mapped),
+        "Failed to map simulation palette buffer");
+
+    destroyBuffer(simulationStatsBuffer_);
+    createBuffer(
+        sizeof(uint32_t) * 3U,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        simulationStatsBuffer_);
+    throwIfFailed(
+        vkMapMemory(device_, simulationStatsBuffer_.memory, 0, simulationStatsBuffer_.size, 0, &simulationStatsBuffer_.mapped),
+        "Failed to map simulation stats buffer");
+
+    auto* paletteWords = static_cast<uint32_t*>(simulationPaletteBuffer_.mapped);
+    for (std::size_t index = 0; index < simulation_.palette().size(); ++index) {
+        paletteWords[index] = packRgba8(simulation_.palette()[index]);
+    }
+    simulationPaletteDirty_ = false;
 }
 
 void VulkanApp::createDescriptorPool() {
     VkDescriptorPoolSize poolSize{};
-    poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSize.descriptorCount = 1;
+    poolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    poolSize.descriptorCount = 10;
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = 1;
     poolInfo.pPoolSizes = &poolSize;
-    poolInfo.maxSets = 1;
+    poolInfo.maxSets = 4;
 
     throwIfFailed(vkCreateDescriptorPool(device_, &poolInfo, nullptr, &descriptorPool_), "Failed to create descriptor pool");
 }
 
-void VulkanApp::createDescriptorSet() {
-    VkDescriptorSetAllocateInfo allocateInfo{};
-    allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocateInfo.descriptorPool = descriptorPool_;
-    allocateInfo.descriptorSetCount = 1;
-    allocateInfo.pSetLayouts = &descriptorSetLayout_;
+void VulkanApp::createDescriptorSets() {
+    std::array<VkDescriptorSetLayout, 2> renderLayouts{descriptorSetLayout_, descriptorSetLayout_};
+    VkDescriptorSetAllocateInfo renderAllocateInfo{};
+    renderAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    renderAllocateInfo.descriptorPool = descriptorPool_;
+    renderAllocateInfo.descriptorSetCount = static_cast<uint32_t>(renderLayouts.size());
+    renderAllocateInfo.pSetLayouts = renderLayouts.data();
 
-    throwIfFailed(vkAllocateDescriptorSets(device_, &allocateInfo, &descriptorSet_), "Failed to allocate descriptor set");
-    updateDescriptorSet();
+    throwIfFailed(
+        vkAllocateDescriptorSets(device_, &renderAllocateInfo, descriptorSets_.data()),
+        "Failed to allocate simulation render descriptor sets");
+
+    if (computePipeline_ != VK_NULL_HANDLE) {
+        std::array<VkDescriptorSetLayout, 2> computeLayouts{computeDescriptorSetLayout_, computeDescriptorSetLayout_};
+        VkDescriptorSetAllocateInfo computeAllocateInfo{};
+        computeAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        computeAllocateInfo.descriptorPool = descriptorPool_;
+        computeAllocateInfo.descriptorSetCount = static_cast<uint32_t>(computeLayouts.size());
+        computeAllocateInfo.pSetLayouts = computeLayouts.data();
+
+        throwIfFailed(
+            vkAllocateDescriptorSets(device_, &computeAllocateInfo, computeDescriptorSets_.data()),
+            "Failed to allocate simulation compute descriptor sets");
+    }
+
+    updateDescriptorSets();
 }
 
-void VulkanApp::updateDescriptorSet() {
-    if (descriptorSet_ == VK_NULL_HANDLE || simulationTexture_.view == VK_NULL_HANDLE || simulationSampler_ == VK_NULL_HANDLE) {
+void VulkanApp::updateDescriptorSets() {
+    if (simulationPaletteBuffer_.buffer == VK_NULL_HANDLE) {
         return;
     }
 
-    VkDescriptorImageInfo imageInfo{};
-    imageInfo.sampler = simulationSampler_;
-    imageInfo.imageView = simulationTexture_.view;
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    auto* paletteWords = static_cast<uint32_t*>(simulationPaletteBuffer_.mapped);
+    for (std::size_t index = 0; index < simulation_.palette().size(); ++index) {
+        paletteWords[index] = packRgba8(simulation_.palette()[index]);
+    }
 
-    VkWriteDescriptorSet descriptorWrite{};
-    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite.dstSet = descriptorSet_;
-    descriptorWrite.dstBinding = 0;
-    descriptorWrite.dstArrayElement = 0;
-    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptorWrite.descriptorCount = 1;
-    descriptorWrite.pImageInfo = &imageInfo;
+    for (std::size_t index = 0; index < descriptorSets_.size(); ++index) {
+        if (descriptorSets_[index] == VK_NULL_HANDLE) {
+            continue;
+        }
 
-    vkUpdateDescriptorSets(device_, 1, &descriptorWrite, 0, nullptr);
+        VkDescriptorBufferInfo statesInfo{};
+        statesInfo.buffer = simulationStateBuffers_[index].buffer;
+        statesInfo.offset = 0;
+        statesInfo.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo paletteInfo{};
+        paletteInfo.buffer = simulationPaletteBuffer_.buffer;
+        paletteInfo.offset = 0;
+        paletteInfo.range = VK_WHOLE_SIZE;
+
+        std::array<VkWriteDescriptorSet, 2> writes{};
+        writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[0].dstSet = descriptorSets_[index];
+        writes[0].dstBinding = 0;
+        writes[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        writes[0].descriptorCount = 1;
+        writes[0].pBufferInfo = &statesInfo;
+
+        writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[1].dstSet = descriptorSets_[index];
+        writes[1].dstBinding = 1;
+        writes[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        writes[1].descriptorCount = 1;
+        writes[1].pBufferInfo = &paletteInfo;
+
+        vkUpdateDescriptorSets(device_, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+    }
+
+    if (computePipeline_ == VK_NULL_HANDLE) {
+        return;
+    }
+
+    for (std::size_t index = 0; index < computeDescriptorSets_.size(); ++index) {
+        if (computeDescriptorSets_[index] == VK_NULL_HANDLE) {
+            continue;
+        }
+
+        VkDescriptorBufferInfo inputInfo{};
+        inputInfo.buffer = simulationStateBuffers_[index].buffer;
+        inputInfo.offset = 0;
+        inputInfo.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo outputInfo{};
+        outputInfo.buffer = simulationStateBuffers_[1U - index].buffer;
+        outputInfo.offset = 0;
+        outputInfo.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo statsInfo{};
+        statsInfo.buffer = simulationStatsBuffer_.buffer;
+        statsInfo.offset = 0;
+        statsInfo.range = VK_WHOLE_SIZE;
+
+        std::array<VkWriteDescriptorSet, 3> writes{};
+        writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[0].dstSet = computeDescriptorSets_[index];
+        writes[0].dstBinding = 0;
+        writes[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        writes[0].descriptorCount = 1;
+        writes[0].pBufferInfo = &inputInfo;
+
+        writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[1].dstSet = computeDescriptorSets_[index];
+        writes[1].dstBinding = 1;
+        writes[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        writes[1].descriptorCount = 1;
+        writes[1].pBufferInfo = &outputInfo;
+
+        writes[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[2].dstSet = computeDescriptorSets_[index];
+        writes[2].dstBinding = 2;
+        writes[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        writes[2].descriptorCount = 1;
+        writes[2].pBufferInfo = &statsInfo;
+
+        vkUpdateDescriptorSets(device_, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+    }
 }
 
 void VulkanApp::createStagingBuffers() {
     const GridSize size = simulation_.gridSize();
     const VkDeviceSize stagingSize =
-        static_cast<VkDeviceSize>(size.w) * static_cast<VkDeviceSize>(size.h) * 4U;
+        static_cast<VkDeviceSize>(size.w) * static_cast<VkDeviceSize>(size.h) * sizeof(uint32_t);
 
     for (BufferAllocation& stagingBuffer : stagingBuffers_) {
         destroyBuffer(stagingBuffer);
@@ -3660,21 +3612,12 @@ void VulkanApp::cleanupSwapChain() {
     imagesInFlight_.clear();
 }
 
-void VulkanApp::destroyTextureResources() {
-    if (simulationTexture_.view != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
-        vkDestroyImageView(device_, simulationTexture_.view, nullptr);
-        simulationTexture_.view = VK_NULL_HANDLE;
+void VulkanApp::destroySimulationBuffers() {
+    for (BufferAllocation& stateBuffer : simulationStateBuffers_) {
+        destroyBuffer(stateBuffer);
     }
-    if (simulationTexture_.image != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
-        vkDestroyImage(device_, simulationTexture_.image, nullptr);
-        simulationTexture_.image = VK_NULL_HANDLE;
-    }
-    if (simulationTexture_.memory != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
-        vkFreeMemory(device_, simulationTexture_.memory, nullptr);
-        simulationTexture_.memory = VK_NULL_HANDLE;
-    }
-
-    simulationTextureInitialized_ = false;
+    destroyBuffer(simulationPaletteBuffer_);
+    destroyBuffer(simulationStatsBuffer_);
 }
 
 void VulkanApp::destroyBuffer(BufferAllocation& allocation) {
@@ -3751,59 +3694,7 @@ void VulkanApp::updateOverlayTextBuffer() {
         return;
     }
 
-    std::string_view statusText = "LISTO";
-    switch (menuStatus_) {
-        case MenuStatus::Ready:
-            statusText = "LISTO";
-            break;
-        case MenuStatus::MapLoaded:
-            statusText = "MAPA LISTO";
-            break;
-        case MenuStatus::MapError:
-            statusText = "MAPA ERROR";
-            break;
-        case MenuStatus::DialogUnavailable:
-            statusText = "DIALOGO NO";
-            break;
-        case MenuStatus::OpenCvUnavailable:
-            statusText = "OPENCV OFF";
-            break;
-        case MenuStatus::AttractorsPending:
-            statusText = "ATR CONFIG";
-            break;
-        case MenuStatus::AttractorsRunning:
-            statusText = "ATR RUN";
-            break;
-        case MenuStatus::AttractorsReady:
-            statusText = "ATR LISTO";
-            break;
-        case MenuStatus::AttractorsError:
-            statusText = "ATR ERROR";
-            break;
-        case MenuStatus::SvgExported:
-            statusText = "SVG LISTO";
-            break;
-        case MenuStatus::SvgExportError:
-            statusText = "SVG ERROR";
-            break;
-        case MenuStatus::PngExported:
-            statusText = "PNG LISTO";
-            break;
-        case MenuStatus::PngExportError:
-            statusText = "PNG ERROR";
-            break;
-    }
-
-    const PhysarumSim::Rgba selectedColor = simulation_.colorForState(selectedState_);
-    const bool approximateAttractors = usesApproximateAttractorMode(attractorSettings_);
-    const std::string attractorSizeText =
-        "ATR " + std::to_string(attractorSettings_.width) + "X" + std::to_string(attractorSettings_.height);
-    const std::string attractorModeText = approximateAttractors ? "MODO APROX" : "MODO EXACTO";
-    const std::string attractorSeedText =
-        std::string(approximateAttractors ? "MUE " : "SEM ") +
-        std::to_string(attractorProgress_.processedSeeds) + " OF " + std::to_string(attractorProgress_.totalSeeds);
-    const std::string attractorNodeText =
-        "NOD " + std::to_string(attractorProgress_.discoveredNodes);
+    const OverlayTextState overlay = viewModel_.overlayText(model_);
     const ClipRect scrollClipRect{
         kSidebarMinX,
         kSidebarScrollAreaMinY,
@@ -3817,20 +3708,20 @@ void VulkanApp::updateOverlayTextBuffer() {
     vertices.reserve(8192);
     appendText(
         vertices,
-        "STATE " + std::to_string(selectedState_),
+        overlay.selectedStateText,
         kTextStartX,
         kStateTextStartY,
         kStateTextPixelSize);
     appendText(
         vertices,
-        "GEN " + std::to_string(generation_),
+        overlay.generationText,
         kTextStartX,
         kGenerationTextStartY,
         kGenerationTextPixelSize);
     appendText(vertices, "MENU", kSidebarInnerMinX, kSidebarTitleY, 4.0f);
     appendText(vertices, "CARGAR MAPA", 554.0f, 64.0f, 2.3f);
     appendText(vertices, "ATRACTORES", 734.0f, 64.0f, 2.3f);
-    appendTextClipped(vertices, std::string(statusText), kSidebarInnerMinX, scrollY(kStatusTextY), 2.4f, scrollClipRect);
+    appendTextClipped(vertices, overlay.statusText, kSidebarInnerMinX, scrollY(kStatusTextY), 2.4f, scrollClipRect);
     appendTextClipped(vertices, "ESTADOS", kSidebarInnerMinX, scrollY(kStatesTitleY), 3.0f, scrollClipRect);
 
     for (std::size_t index = 0; index < kStateLabels.size(); ++index) {
@@ -3848,40 +3739,35 @@ void VulkanApp::updateOverlayTextBuffer() {
     appendTextClipped(vertices, "COLOR RGB", kSidebarInnerMinX, scrollY(kColorEditorTitleY), 3.0f, scrollClipRect);
     appendTextClipped(
         vertices,
-        "SELEC " + std::to_string(selectedState_),
+        overlay.selectedStateIndexText,
         kSidebarInnerMinX,
         scrollY(kSelectedStateTextY),
         2.4f,
         scrollClipRect);
     appendTextClipped(
         vertices,
-        std::string(kStateLabels[selectedState_]),
+        overlay.selectedStateNameText,
         kSidebarInnerMinX,
         scrollY(kSelectedStateTextY + 22.0f),
         2.4f,
         scrollClipRect);
 
-    const std::array<std::string, 3> colorTexts{{
-        "R " + std::to_string(selectedColor[0]),
-        "G " + std::to_string(selectedColor[1]),
-        "B " + std::to_string(selectedColor[2]),
-    }};
     const std::array<char, 3> channelNames{{'R', 'G', 'B'}};
-    for (std::size_t channel = 0; channel < colorTexts.size(); ++channel) {
+    for (std::size_t channel = 0; channel < overlay.colorTexts.size(); ++channel) {
         const float rowTextY =
             scrollY(kColorRowStartY + static_cast<float>(channel) * (kColorRowHeight + kColorRowGap) + 8.0f);
-        appendTextClipped(vertices, colorTexts[channel], kSidebarInnerMinX, rowTextY, 2.4f, scrollClipRect);
+        appendTextClipped(vertices, overlay.colorTexts[channel], kSidebarInnerMinX, rowTextY, 2.4f, scrollClipRect);
         appendTextClipped(vertices, std::string(1, channelNames[channel]) + " -", 770.0f, rowTextY, 2.2f, scrollClipRect);
         appendTextClipped(vertices, std::string(1, channelNames[channel]) + " +", 850.0f, rowTextY, 2.2f, scrollClipRect);
     }
-    appendTextClipped(vertices, attractorSizeText, 674.0f, scrollY(kAttractorTextY), 2.2f, scrollClipRect);
+    appendTextClipped(vertices, overlay.attractorSizeText, 674.0f, scrollY(kAttractorTextY), 2.2f, scrollClipRect);
     appendTextClipped(vertices, "W -", 600.0f, scrollY(kAttractorButtonMinY + 7.0f), 2.0f, scrollClipRect);
     appendTextClipped(vertices, "W +", 640.0f, scrollY(kAttractorButtonMinY + 7.0f), 2.0f, scrollClipRect);
     appendTextClipped(vertices, "H -", 758.0f, scrollY(kAttractorButtonMinY + 7.0f), 2.0f, scrollClipRect);
     appendTextClipped(vertices, "H +", 798.0f, scrollY(kAttractorButtonMinY + 7.0f), 2.0f, scrollClipRect);
-    appendTextClipped(vertices, attractorSeedText, 546.0f, scrollY(694.0f), 1.8f, scrollClipRect);
-    appendTextClipped(vertices, attractorNodeText, 780.0f, scrollY(694.0f), 1.8f, scrollClipRect);
-    appendTextClipped(vertices, attractorModeText, kSidebarInnerMinX, scrollY(kAttractorModeTextY), 2.2f, scrollClipRect);
+    appendTextClipped(vertices, overlay.attractorSeedText, 546.0f, scrollY(694.0f), 1.8f, scrollClipRect);
+    appendTextClipped(vertices, overlay.attractorNodeText, 780.0f, scrollY(694.0f), 1.8f, scrollClipRect);
+    appendTextClipped(vertices, overlay.attractorModeText, kSidebarInnerMinX, scrollY(kAttractorModeTextY), 2.2f, scrollClipRect);
     appendTextClipped(vertices, "REFINAR", 656.0f, scrollY(kAttractorRefineButtonMinY + 7.0f), 2.2f, scrollClipRect);
     appendTextClipped(vertices, "EXPORT SVG", 620.0f, scrollY(kAttractorExportButtonMinY + 7.0f), 2.2f, scrollClipRect);
     appendTextClipped(vertices, "EXPORT PNG", 620.0f, scrollY(kAttractorExportPngButtonMinY + 7.0f), 2.2f, scrollClipRect);
@@ -3897,7 +3783,7 @@ void VulkanApp::updateOverlayTextBuffer() {
     overlayTextVertexCount_ = static_cast<uint32_t>(vertices.size());
 }
 
-VulkanApp::UploadRequest VulkanApp::prepareTextureUpload(const uint32_t frameIndex) {
+VulkanApp::UploadRequest VulkanApp::prepareSimulationUpload(const uint32_t frameIndex) {
     UploadRequest request{};
     if (!simulation_.hasDirtyRegion()) {
         return request;
@@ -3918,7 +3804,7 @@ VulkanApp::UploadRequest VulkanApp::prepareTextureUpload(const uint32_t frameInd
         request.region.minY = 0;
         request.region.maxX = size.w - 1U;
         request.region.maxY = size.h - 1U;
-        packFullTextureToStaging(stagingBuffers_[frameIndex].mapped);
+        packFullSimulationToStaging(stagingBuffers_[frameIndex].mapped);
     } else {
         request.mode = UploadMode::Partial;
         request.region = dirtyRegion;
@@ -3929,27 +3815,45 @@ VulkanApp::UploadRequest VulkanApp::prepareTextureUpload(const uint32_t frameInd
     return request;
 }
 
-void VulkanApp::packFullTextureToStaging(void* destination) const {
-    const std::vector<uint8_t>& pixels = simulation_.rgbaPixels();
-    std::memcpy(destination, pixels.data(), pixels.size());
+void VulkanApp::packFullSimulationToStaging(void* destination) const {
+    simulation_.packCombinedStates(destination);
 }
 
 void VulkanApp::packDirtyRegionToStaging(const DirtyRegion& region, void* destination) const {
-    if (!region.valid) {
+    simulation_.packCombinedStatesRegion(region, destination);
+}
+
+void VulkanApp::consumeGpuSimulationResults() {
+    if (!simulationGpuEnabled_ || !gpuStepSubmitted_) {
         return;
     }
 
-    const GridSize size = simulation_.gridSize();
-    const std::vector<uint8_t>& pixels = simulation_.rgbaPixels();
-    const std::size_t rowBytes = static_cast<std::size_t>(region.width()) * 4U;
+    throwIfFailed(
+        vkWaitForFences(device_, 1, &inFlightFences_[currentFrame_], VK_TRUE, UINT64_MAX),
+        "Failed to wait for simulation results fence");
 
-    auto* target = static_cast<std::byte*>(destination);
-    for (uint32_t row = 0; row < region.height(); ++row) {
-        const std::size_t sourceOffset =
-            ((static_cast<std::size_t>(region.minY) + static_cast<std::size_t>(row)) * static_cast<std::size_t>(size.w) +
-             static_cast<std::size_t>(region.minX)) * 4U;
-        std::memcpy(target + static_cast<std::ptrdiff_t>(row) * static_cast<std::ptrdiff_t>(rowBytes), pixels.data() + sourceOffset, rowBytes);
+    const auto* stepStats = static_cast<const uint32_t*>(simulationStatsBuffer_.mapped);
+    updateGpuRoutingState(stepStats[0], stepStats[1], stepStats[2]);
+    gpuStepSubmitted_ = false;
+}
+
+void VulkanApp::updateGpuRoutingState(
+    const uint32_t nutrientPending,
+    const uint32_t nutrientFound,
+    const uint32_t physarumCells) {
+    if (nutrientPending == 0U && nutrientFound > 0U) {
+        if (static_cast<int>(physarumCells) < gpuPhysarumLastCells_) {
+            gpuMinimumPhysarumCells_ = static_cast<int>(physarumCells);
+        }
+
+        gpuMinimumCheck_ =
+            (gpuMinimumPhysarumCells_ == gpuPhysarumLastCells_) ? (gpuMinimumCheck_ + 1) : 0;
+        if (gpuMinimumCheck_ > 10) {
+            model_.play() = false;
+        }
     }
+
+    gpuPhysarumLastCells_ = static_cast<int>(physarumCells);
 }
 
 void VulkanApp::recordCommandBuffer(
@@ -3963,87 +3867,202 @@ void VulkanApp::recordCommandBuffer(
 
     throwIfFailed(vkBeginCommandBuffer(commandBuffer, &beginInfo), "Failed to begin command buffer recording");
 
+    const GridSize size = simulation_.gridSize();
+    uint32_t renderBufferIndex = currentSimulationBufferIndex_;
+
     if (uploadRequest.mode != UploadMode::None) {
-        VkImageMemoryBarrier toTransferBarrier{};
-        toTransferBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        toTransferBarrier.oldLayout = simulationTextureInitialized_
-            ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-            : VK_IMAGE_LAYOUT_UNDEFINED;
-        toTransferBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        VkBufferMemoryBarrier toTransferBarrier{};
+        toTransferBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        toTransferBarrier.srcAccessMask =
+            VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
+        toTransferBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         toTransferBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         toTransferBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        toTransferBarrier.image = simulationTexture_.image;
-        toTransferBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        toTransferBarrier.subresourceRange.baseMipLevel = 0;
-        toTransferBarrier.subresourceRange.levelCount = 1;
-        toTransferBarrier.subresourceRange.baseArrayLayer = 0;
-        toTransferBarrier.subresourceRange.layerCount = 1;
-        toTransferBarrier.srcAccessMask = simulationTextureInitialized_ ? VK_ACCESS_SHADER_READ_BIT : 0;
-        toTransferBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        toTransferBarrier.buffer = simulationStateBuffers_[currentSimulationBufferIndex_].buffer;
+        toTransferBarrier.offset = 0;
+        toTransferBarrier.size = VK_WHOLE_SIZE;
 
         vkCmdPipelineBarrier(
             commandBuffer,
-            simulationTextureInitialized_ ? VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             0,
             0,
             nullptr,
-            0,
-            nullptr,
             1,
-            &toTransferBarrier);
+            &toTransferBarrier,
+            0,
+            nullptr);
 
-        VkBufferImageCopy copyRegion{};
-        copyRegion.bufferOffset = 0;
-        copyRegion.bufferRowLength = 0;
-        copyRegion.bufferImageHeight = 0;
-        copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        copyRegion.imageSubresource.mipLevel = 0;
-        copyRegion.imageSubresource.baseArrayLayer = 0;
-        copyRegion.imageSubresource.layerCount = 1;
-        copyRegion.imageOffset = {
-            static_cast<int32_t>(uploadRequest.region.minX),
-            static_cast<int32_t>(uploadRequest.region.minY),
-            0
-        };
-        copyRegion.imageExtent = {
-            uploadRequest.region.width(),
-            uploadRequest.region.height(),
-            1
-        };
+        std::vector<VkBufferCopy> copyRegions;
+        if (uploadRequest.mode == UploadMode::Full) {
+            copyRegions.push_back(VkBufferCopy{
+                0,
+                0,
+                static_cast<VkDeviceSize>(size.w) * static_cast<VkDeviceSize>(size.h) * sizeof(uint32_t)
+            });
+        } else {
+            copyRegions.reserve(uploadRequest.region.height());
+            const VkDeviceSize rowBytes = static_cast<VkDeviceSize>(uploadRequest.region.width()) * sizeof(uint32_t);
+            for (uint32_t row = 0; row < uploadRequest.region.height(); ++row) {
+                copyRegions.push_back(VkBufferCopy{
+                    static_cast<VkDeviceSize>(row) * rowBytes,
+                    (static_cast<VkDeviceSize>(uploadRequest.region.minY) + row) * static_cast<VkDeviceSize>(size.w) * sizeof(uint32_t) +
+                        static_cast<VkDeviceSize>(uploadRequest.region.minX) * sizeof(uint32_t),
+                    rowBytes
+                });
+            }
+        }
 
-        vkCmdCopyBufferToImage(
+        vkCmdCopyBuffer(
             commandBuffer,
             stagingBuffers_[frameIndex].buffer,
-            simulationTexture_.image,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            1,
-            &copyRegion);
+            simulationStateBuffers_[currentSimulationBufferIndex_].buffer,
+            static_cast<uint32_t>(copyRegions.size()),
+            copyRegions.data());
 
-        VkImageMemoryBarrier toShaderReadBarrier{};
-        toShaderReadBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        toShaderReadBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        toShaderReadBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        toShaderReadBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        toShaderReadBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        toShaderReadBarrier.image = simulationTexture_.image;
-        toShaderReadBarrier.subresourceRange = toTransferBarrier.subresourceRange;
-        toShaderReadBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        toShaderReadBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        VkBufferMemoryBarrier fromTransferBarrier{};
+        fromTransferBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        fromTransferBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        fromTransferBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        fromTransferBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        fromTransferBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        fromTransferBarrier.buffer = simulationStateBuffers_[currentSimulationBufferIndex_].buffer;
+        fromTransferBarrier.offset = 0;
+        fromTransferBarrier.size = VK_WHOLE_SIZE;
 
         vkCmdPipelineBarrier(
             commandBuffer,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            pendingGpuSimulationStep_ ? VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT : VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
             0,
-            0,
-            nullptr,
             0,
             nullptr,
             1,
-            &toShaderReadBarrier);
+            &fromTransferBarrier,
+            0,
+            nullptr);
+    }
 
-        simulationTextureInitialized_ = true;
+    if (pendingGpuSimulationStep_ && computePipeline_ != VK_NULL_HANDLE) {
+        const uint32_t outputBufferIndex = 1U - currentSimulationBufferIndex_;
+
+        VkBufferMemoryBarrier outputPrepareBarrier{};
+        outputPrepareBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        outputPrepareBarrier.srcAccessMask =
+            VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
+        outputPrepareBarrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        outputPrepareBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        outputPrepareBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        outputPrepareBarrier.buffer = simulationStateBuffers_[outputBufferIndex].buffer;
+        outputPrepareBarrier.offset = 0;
+        outputPrepareBarrier.size = VK_WHOLE_SIZE;
+
+        vkCmdPipelineBarrier(
+            commandBuffer,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            0,
+            0,
+            nullptr,
+            1,
+            &outputPrepareBarrier,
+            0,
+            nullptr);
+
+        vkCmdFillBuffer(commandBuffer, simulationStatsBuffer_.buffer, 0, sizeof(uint32_t) * 3U, 0U);
+
+        VkBufferMemoryBarrier statsPrepareBarrier{};
+        statsPrepareBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        statsPrepareBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        statsPrepareBarrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        statsPrepareBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        statsPrepareBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        statsPrepareBarrier.buffer = simulationStatsBuffer_.buffer;
+        statsPrepareBarrier.offset = 0;
+        statsPrepareBarrier.size = VK_WHOLE_SIZE;
+
+        vkCmdPipelineBarrier(
+            commandBuffer,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            0,
+            0,
+            nullptr,
+            1,
+            &statsPrepareBarrier,
+            0,
+            nullptr);
+
+        struct ComputePushConstants {
+            uint32_t width = 0;
+            uint32_t height = 0;
+            uint32_t stepSeed = 0;
+            uint32_t reserved = 0;
+        } computePush{
+            size.w,
+            size.h,
+            static_cast<uint32_t>(model_.generation()),
+            0U
+        };
+
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline_);
+        vkCmdBindDescriptorSets(
+            commandBuffer,
+            VK_PIPELINE_BIND_POINT_COMPUTE,
+            computePipelineLayout_,
+            0,
+            1,
+            &computeDescriptorSets_[currentSimulationBufferIndex_],
+            0,
+            nullptr);
+        vkCmdPushConstants(
+            commandBuffer,
+            computePipelineLayout_,
+            VK_SHADER_STAGE_COMPUTE_BIT,
+            0,
+            sizeof(ComputePushConstants),
+            &computePush);
+        vkCmdDispatch(
+            commandBuffer,
+            (size.w + 15U) / 16U,
+            (size.h + 15U) / 16U,
+            1U);
+
+        std::array<VkBufferMemoryBarrier, 2> postComputeBarriers{};
+        postComputeBarriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        postComputeBarriers[0].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        postComputeBarriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        postComputeBarriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        postComputeBarriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        postComputeBarriers[0].buffer = simulationStateBuffers_[outputBufferIndex].buffer;
+        postComputeBarriers[0].offset = 0;
+        postComputeBarriers[0].size = VK_WHOLE_SIZE;
+
+        postComputeBarriers[1].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        postComputeBarriers[1].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        postComputeBarriers[1].dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+        postComputeBarriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        postComputeBarriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        postComputeBarriers[1].buffer = simulationStatsBuffer_.buffer;
+        postComputeBarriers[1].offset = 0;
+        postComputeBarriers[1].size = VK_WHOLE_SIZE;
+
+        vkCmdPipelineBarrier(
+            commandBuffer,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_HOST_BIT,
+            0,
+            0,
+            nullptr,
+            static_cast<uint32_t>(postComputeBarriers.size()),
+            postComputeBarriers.data(),
+            0,
+            nullptr);
+
+        renderBufferIndex = outputBufferIndex;
+        currentSimulationBufferIndex_ = outputBufferIndex;
+        gpuStepSubmitted_ = true;
     }
 
     VkClearValue clearColor{};
@@ -4133,8 +4152,7 @@ void VulkanApp::recordCommandBuffer(
     drawUiElement(
         attractorHeightButtons_.increment,
         isHovered(attractorHeightButtons_.increment) ? kButtonHoverColor : kButtonOutlineSoft);
-    const bool canRefineAttractor =
-        attractorProgress_.completed && !attractorProgress_.hasError && !attractorProgress_.running && attractorProgress_.canRefine;
+    const bool canRefineAttractor = viewModel_.canRefineAttractors();
     drawUiElement(
         attractorRefineButton_,
         canRefineAttractor
@@ -4146,7 +4164,7 @@ void VulkanApp::recordCommandBuffer(
         canExportAttractor
             ? (isHovered(attractorExportButton_) ? kButtonHoverColor : kButtonSelectedColor)
             : kButtonOutlineSoft);
-    const bool canExportPngAttractor = canExportAttractor && PHYSARUM_VULKAN_HAS_OPENCV;
+    const bool canExportPngAttractor = canExportAttractor && AttractorGraphExporter::pngSupported();
     drawUiElement(
         attractorExportPngButton_,
         canExportPngAttractor
@@ -4161,7 +4179,7 @@ void VulkanApp::recordCommandBuffer(
         texturedPipelineLayout_,
         0,
         1,
-        &descriptorSet_,
+        &descriptorSets_[renderBufferIndex],
         0,
         nullptr);
     const QuadPushConstants quadPush = currentQuadPushConstants();
@@ -4203,6 +4221,14 @@ void VulkanApp::drawFrame() {
         vkWaitForFences(device_, 1, &inFlightFences_[currentFrame_], VK_TRUE, UINT64_MAX),
         "Failed to wait for in-flight fence");
 
+    if (simulationPaletteDirty_ && simulationPaletteBuffer_.mapped != nullptr) {
+        auto* paletteWords = static_cast<uint32_t*>(simulationPaletteBuffer_.mapped);
+        for (std::size_t index = 0; index < simulation_.palette().size(); ++index) {
+            paletteWords[index] = packRgba8(simulation_.palette()[index]);
+        }
+        simulationPaletteDirty_ = false;
+    }
+
     uint32_t imageIndex = 0;
     const VkResult acquireResult = vkAcquireNextImageKHR(
         device_,
@@ -4227,7 +4253,7 @@ void VulkanApp::drawFrame() {
     }
     imagesInFlight_[imageIndex] = inFlightFences_[currentFrame_];
 
-    const UploadRequest uploadRequest = prepareTextureUpload(static_cast<uint32_t>(currentFrame_));
+    const UploadRequest uploadRequest = prepareSimulationUpload(static_cast<uint32_t>(currentFrame_));
     updateOverlayTextBuffer();
 
     throwIfFailed(vkResetFences(device_, 1, &inFlightFences_[currentFrame_]), "Failed to reset fence");
@@ -4433,6 +4459,18 @@ VkSurfaceFormatKHR VulkanApp::chooseSwapSurfaceFormat(
 
 VkPresentModeKHR VulkanApp::chooseSwapPresentMode(
     const std::vector<VkPresentModeKHR>& availablePresentModes) const {
+    for (const VkPresentModeKHR availablePresentMode : availablePresentModes) {
+        if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+            return availablePresentMode;
+        }
+    }
+
+    for (const VkPresentModeKHR availablePresentMode : availablePresentModes) {
+        if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
+            return availablePresentMode;
+        }
+    }
+
     for (const VkPresentModeKHR availablePresentMode : availablePresentModes) {
         if (availablePresentMode == VK_PRESENT_MODE_FIFO_KHR) {
             return availablePresentMode;

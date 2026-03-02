@@ -40,10 +40,13 @@ public:
 
     void resizeGrid(GridSize newSize);
     void setCellState(uint32_t x, uint32_t y, uint16_t value);
+    void overwriteCellState(uint32_t x, uint32_t y, uint16_t value);
     void setPaletteColor(uint8_t state, Rgba color);
     void loadMapFromImage(const std::filesystem::path& imagePath);
     void evaluatePhysarum();
     void clearDirtyTracking();
+    void packCombinedStates(void* destination) const;
+    void packCombinedStatesRegion(const DirtyRegion& region, void* destination) const;
 
     [[nodiscard]] GridSize gridSize() const {
         return gridSize_;
@@ -108,6 +111,7 @@ private:
     void mergeDirtyRegion(const DirtyRegion& region);
     void markDirtyCell(DirtyRegion& region, uint32_t x, uint32_t y);
     void markWholeGridDirty();
+    [[nodiscard]] uint32_t combinedState(uint32_t x, uint32_t y) const;
     void gatherNeighbours(std::array<uint16_t, 8>& out, const Matrix& matrix, uint32_t x, uint32_t y) const;
     void physarumTransitionConditions(
         uint32_t x,

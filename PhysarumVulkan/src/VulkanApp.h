@@ -1,8 +1,10 @@
 #pragma once
 
+#include "application/AppController.h"
+#include "AppModel.h"
+#include "AppViewModel.h"
 #include "AttractorCompute.h"
-#include "AttractorGenerator.h"
-#include "PhysarumSim.h"
+#include "infrastructure/AttractorGraphExporter.h"
 #include "VulkanHelpers.h"
 
 #include <array>
@@ -30,7 +32,7 @@ private:
     static constexpr uint32_t kWindowWidth = 900;
     static constexpr uint32_t kWindowHeight = 700;
     static constexpr uint32_t kSimulationViewportSize = 500;
-    static constexpr std::size_t kMaxFramesInFlight = 2;
+    static constexpr std::size_t kMaxFramesInFlight = 1;
     static constexpr double kPartialUploadThreshold = 0.30;
     static constexpr auto kTargetFrameTime = std::chrono::milliseconds(16);
     static constexpr float kPanBlendFactor = 0.35f;
@@ -70,6 +72,8 @@ private:
     struct QuadPushConstants {
         float uvMin[2];
         float uvMax[2];
+        uint32_t gridWidth = 0;
+        uint32_t gridHeight = 0;
     };
 
     struct ScreenRect {
@@ -121,22 +125,6 @@ private:
         bool framebufferResized = false;
     };
 
-    enum class MenuStatus {
-        Ready,
-        MapLoaded,
-        MapError,
-        DialogUnavailable,
-        OpenCvUnavailable,
-        AttractorsPending,
-        AttractorsRunning,
-        AttractorsReady,
-        AttractorsError,
-        SvgExported,
-        SvgExportError,
-        PngExported,
-        PngExportError,
-    };
-
     void initWindow();
     void initVulkan();
     void mainLoop();
@@ -176,8 +164,7 @@ private:
     void renderAttractorStatusPreview(const std::string& statusText);
     void exportAttractorSvg();
     void exportAttractorPng();
-    void writeAttractorSvg(const std::filesystem::path& outputPath, const AttractorGraph& graph) const;
-    void writeAttractorPng(const std::filesystem::path& outputPath, const AttractorGraph& graph) const;
+    [[nodiscard]] BatchSuccessorEvaluator currentSuccessorEvaluator();
 
     void createInstance();
     void setupDebugMessenger();
@@ -195,11 +182,13 @@ private:
     void createVertexBuffers();
     void createOverlayTextBuffer();
     void createAttractorGraphBuffer();
-    void createTextureResources();
+    void createSimulationBuffers();
     void createDescriptorPool();
-    void createDescriptorSet();
-    void updateDescriptorSet();
+    void createDescriptorSets();
+    void updateDescriptorSets();
     void createStagingBuffers();
+    void createComputeDescriptorSetLayout();
+    void createComputePipeline();
     void createCommandBuffers();
     void createSyncObjects();
     void createAttractorPreviewSurface();
@@ -215,15 +204,17 @@ private:
     void cleanupSwapChain();
     void recreateAttractorPreviewSwapChain();
     void cleanupAttractorPreviewSwapChain();
-    void destroyTextureResources();
+    void destroySimulationBuffers();
     void destroyBuffer(BufferAllocation& allocation);
     void rebuildSolidUiBuffer();
     void updateOverlayTextBuffer();
     void rebuildAttractorGraphBuffer(const AttractorGraph& graph);
 
-    [[nodiscard]] UploadRequest prepareTextureUpload(uint32_t frameIndex);
-    void packFullTextureToStaging(void* destination) const;
+    [[nodiscard]] UploadRequest prepareSimulationUpload(uint32_t frameIndex);
+    void packFullSimulationToStaging(void* destination) const;
     void packDirtyRegionToStaging(const DirtyRegion& region, void* destination) const;
+    void consumeGpuSimulationResults();
+    void updateGpuRoutingState(uint32_t nutrientPending, uint32_t nutrientFound, uint32_t physarumCells);
     void recordCommandBuffer(
         VkCommandBuffer commandBuffer,
         uint32_t imageIndex,
@@ -277,8 +268,11 @@ private:
 private:
     GLFWwindow* window_ = nullptr;
     GLFWcursor* panCursor_ = nullptr;
-    PhysarumSim simulation_;
-    GridSize requestedGridSize_{};
+    AppModel model_;
+    AppViewModel viewModel_;
+    AppController controller_;
+    PhysarumSim& simulation_;
+    GridSize& requestedGridSize_;
 
     VkInstance instance_ = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT debugMessenger_ = VK_NULL_HANDLE;
@@ -334,12 +328,25 @@ private:
     UiElement attractorExportButton_{};
     UiElement attractorExportPngButton_{};
 
-    ImageAllocation simulationTexture_{};
-    VkSampler simulationSampler_ = VK_NULL_HANDLE;
-    bool simulationTextureInitialized_ = false;
+    std::array<BufferAllocation, 2> simulationStateBuffers_{};
+    BufferAllocation simulationPaletteBuffer_{};
+    BufferAllocation simulationStatsBuffer_{};
+    uint32_t currentSimulationBufferIndex_ = 0;
+    bool simulationPaletteDirty_ = true;
+    bool simulationGpuEnabled_ = false;
+    bool simulationGraphicsQueueComputeCapable_ = false;
+    bool pendingGpuSimulationStep_ = false;
+    bool gpuStepSubmitted_ = false;
+    int gpuPhysarumLastCells_ = 0;
+    int gpuMinimumPhysarumCells_ = 0;
+    int gpuMinimumCheck_ = 0;
 
     VkDescriptorPool descriptorPool_ = VK_NULL_HANDLE;
-    VkDescriptorSet descriptorSet_ = VK_NULL_HANDLE;
+    std::array<VkDescriptorSet, 2> descriptorSets_{};
+    VkDescriptorSetLayout computeDescriptorSetLayout_ = VK_NULL_HANDLE;
+    std::array<VkDescriptorSet, 2> computeDescriptorSets_{};
+    VkPipelineLayout computePipelineLayout_ = VK_NULL_HANDLE;
+    VkPipeline computePipeline_ = VK_NULL_HANDLE;
 
     std::array<VkSemaphore, kMaxFramesInFlight> imageAvailableSemaphores_{};
     std::array<VkSemaphore, kMaxFramesInFlight> renderFinishedSemaphores_{};
@@ -353,16 +360,12 @@ private:
 
     std::string selectedGpuName_ = "Unknown";
     std::string selectedGpuType_ = "OTHER";
-    std::string attractorComputeStatus_ = "ATR CPU";
     bool shaderInt64Supported_ = false;
     std::mutex queueSubmitMutex_{};
 
     std::array<bool, GLFW_KEY_LAST + 1> keyPressed_{};
 
-    bool play_ = false;
-    uint8_t selectedState_ = 0;
-    uint64_t generation_ = 0;
-    std::chrono::steady_clock::time_point lastSimulationStep_{};
+    uint8_t& selectedState_;
     float zoom_ = 1.0f;
     float viewCenterX_ = 0.5f;
     float viewCenterY_ = 0.5f;
@@ -374,16 +377,16 @@ private:
     float panVelocityY_ = 0.0f;
     float mouseLogicalX_ = -1.0f;
     float mouseLogicalY_ = -1.0f;
-    float sidebarScrollOffset_ = 0.0f;
+    float& sidebarScrollOffset_;
     bool leftMousePressed_ = false;
     bool uiMouseCapture_ = false;
-    MenuStatus menuStatus_ = MenuStatus::Ready;
-    bool showingAttractorGraph_ = false;
-    AttractorSettings attractorSettings_{};
+    MenuStatus& menuStatus_;
+    bool& showingAttractorGraph_;
+    AttractorSettings& attractorSettings_;
+    AttractorGraphExporter attractorExporter_{};
     AttractorCompute attractorCompute_{};
-    AttractorGenerator attractorGenerator_{};
-    AttractorProgress attractorProgress_{};
-    std::optional<AttractorGraph> latestAttractorGraph_{};
+    AttractorProgress& attractorProgress_;
+    std::optional<AttractorGraph>& latestAttractorGraph_;
     AttractorWindowResources attractorWindow_{};
     bool attractorPreviewBoundsInitialized_ = false;
     bool attractorPreviewRenderCapped_ = false;
@@ -391,6 +394,7 @@ private:
     float attractorPreviewWorldMinY_ = 0.0f;
     float attractorPreviewWorldMaxX_ = 0.0f;
     float attractorPreviewWorldMaxY_ = 0.0f;
+    std::string& attractorComputeStatus_;
 
     std::size_t currentFrame_ = 0;
 };
