@@ -55,5 +55,29 @@ En GitHub:
 2. abre **Settings**;
 3. busca **Features**;
 4. habilita **Wikis**;
-5. vuelve a ejecutar `./scripts/publish-wiki.sh`.
+5. abre la pestana **Wiki**;
+6. crea una primera pagina cualquiera, por ejemplo `Home`;
+7. vuelve a ejecutar `./scripts/publish-wiki.sh`.
 
+El error tipico es:
+
+```text
+ERROR: Repository not found.
+fatal: Could not read from remote repository.
+```
+
+Si el repositorio principal si responde pero `Physarum-Automata.wiki.git` no, el remoto esta bien calculado: falta habilitar/inicializar la Wiki o faltan permisos sobre esa Wiki.
+
+## Remotos explicitos
+
+El script usa `origin` por defecto. Tambien puedes pasar un remoto explicito:
+
+```bash
+./scripts/publish-wiki.sh --remote git@github.com:Jessenox/Physarum-Automata.git
+```
+
+O indicar directamente el repositorio de Wiki:
+
+```bash
+./scripts/publish-wiki.sh --wiki-url git@github.com:Jessenox/Physarum-Automata.wiki.git
+```
