@@ -1,5 +1,5 @@
-#include "PhysarumSim.h"
-#include "VulkanApp.h"
+#include "domain/simulation/PhysarumSim.h"
+#include "presentation/app/VulkanApp.h"
 
 #include <cstdlib>
 #include <exception>

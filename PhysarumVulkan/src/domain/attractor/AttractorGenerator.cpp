@@ -1,4 +1,4 @@
-#include "AttractorGenerator.h"
+#include "domain/attractor/AttractorGenerator.h"
 
 #include <algorithm>
 #include <array>

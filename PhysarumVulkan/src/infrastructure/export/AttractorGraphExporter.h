@@ -1,6 +1,6 @@
 #pragma once
 
-#include "AttractorGenerator.h"
+#include "domain/attractor/AttractorGenerator.h"
 
 #include <filesystem>
 

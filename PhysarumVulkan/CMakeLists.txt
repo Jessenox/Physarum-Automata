@@ -58,24 +58,29 @@ add_custom_target(PhysarumVulkanShaders ALL DEPENDS ${SPIRV_OUTPUTS})
 add_executable(PhysarumVulkan
     src/application/AppController.h
     src/application/AppController.cpp
-    src/AppModel.h
-    src/AppModel.cpp
-    src/AppViewModel.h
-    src/AppViewModel.cpp
-    src/AttractorCompute.h
-    src/AttractorCompute.cpp
-    src/AttractorGenerator.h
-    src/AttractorGenerator.cpp
-    src/FileDialog.h
-    src/FileDialog.cpp
-    src/infrastructure/AttractorGraphExporter.h
-    src/infrastructure/AttractorGraphExporter.cpp
+    src/domain/attractor/AttractorGenerator.h
+    src/domain/attractor/AttractorGenerator.cpp
+    src/domain/simulation/PhysarumSim.h
+    src/domain/simulation/PhysarumSim.cpp
+    src/infrastructure/export/AttractorGraphExporter.h
+    src/infrastructure/export/AttractorGraphExporter.cpp
+    src/infrastructure/platform/FileDialog.h
+    src/infrastructure/platform/FileDialog.cpp
+    src/infrastructure/vulkan/AttractorCompute.h
+    src/infrastructure/vulkan/AttractorCompute.cpp
+    src/infrastructure/vulkan/VulkanHelpers.h
     src/main.cpp
-    src/PhysarumSim.h
-    src/PhysarumSim.cpp
-    src/VulkanApp.h
-    src/VulkanApp.cpp
-    src/VulkanHelpers.h
+    src/presentation/app/VulkanApp.h
+    src/presentation/app/VulkanApp.cpp
+    src/presentation/mvvm/AppModel.h
+    src/presentation/mvvm/AppModel.cpp
+    src/presentation/mvvm/AppViewModel.h
+    src/presentation/mvvm/AppViewModel.cpp
+    src/presentation/ui/AttractorPreviewWindow.h
+    src/presentation/ui/AttractorPreviewWindow.cpp
+    src/presentation/ui/DrawGeometry.h
+    src/presentation/ui/ViewTransform.h
+    src/presentation/ui/ViewTransform.cpp
 )
 
 add_dependencies(PhysarumVulkan PhysarumVulkanShaders)

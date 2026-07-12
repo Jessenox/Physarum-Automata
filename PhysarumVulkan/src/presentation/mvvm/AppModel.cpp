@@ -1,4 +1,4 @@
-#include "AppModel.h"
+#include "presentation/mvvm/AppModel.h"
 
 AppModel::AppModel(const GridSize initialGridSize)
     : simulation_(initialGridSize),

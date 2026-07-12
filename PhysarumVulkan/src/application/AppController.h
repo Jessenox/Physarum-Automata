@@ -1,8 +1,8 @@
 #pragma once
 
-#include "AppModel.h"
-#include "AppViewModel.h"
-#include "AttractorGenerator.h"
+#include "presentation/mvvm/AppModel.h"
+#include "presentation/mvvm/AppViewModel.h"
+#include "domain/attractor/AttractorGenerator.h"
 
 #include <chrono>
 #include <cstddef>

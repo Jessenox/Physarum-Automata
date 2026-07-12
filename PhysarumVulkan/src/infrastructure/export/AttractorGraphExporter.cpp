@@ -1,4 +1,4 @@
-#include "infrastructure/AttractorGraphExporter.h"
+#include "infrastructure/export/AttractorGraphExporter.h"
 
 #ifndef PHYSARUM_VULKAN_HAS_OPENCV
 #define PHYSARUM_VULKAN_HAS_OPENCV 0

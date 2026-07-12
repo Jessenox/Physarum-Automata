@@ -1,4 +1,4 @@
-#include "PhysarumSim.h"
+#include "domain/simulation/PhysarumSim.h"
 
 #include <algorithm>
 #include <array>

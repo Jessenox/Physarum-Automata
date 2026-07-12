@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PhysarumSim.h"
+#include "domain/simulation/PhysarumSim.h"
 
 #include <chrono>
 #include <cstdint>

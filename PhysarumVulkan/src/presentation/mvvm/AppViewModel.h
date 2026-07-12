@@ -1,7 +1,7 @@
 #pragma once
 
-#include "AppModel.h"
-#include "AttractorGenerator.h"
+#include "presentation/mvvm/AppModel.h"
+#include "domain/attractor/AttractorGenerator.h"
 
 #include <array>
 #include <cstddef>

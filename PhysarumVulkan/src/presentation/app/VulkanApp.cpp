@@ -1,5 +1,5 @@
-#include "FileDialog.h"
-#include "VulkanApp.h"
+#include "infrastructure/platform/FileDialog.h"
+#include "presentation/app/VulkanApp.h"
 
 #include <algorithm>
 #include <array>
@@ -757,6 +757,23 @@ void VulkanApp::initVulkan() {
 
     simulationGpuEnabled_ = simulationGraphicsQueueComputeCapable_ && computePipeline_ != VK_NULL_HANDLE;
 
+    attractorPreviewWindow_.initialize(AttractorPreviewWindow::CreateInfo{
+        instance_,
+        physicalDevice_,
+        device_,
+        queueFamilyIndices_,
+        graphicsQueue_,
+        presentQueue_,
+        solidPipelineLayout_,
+        shaderPath("rect.vert.spv"),
+        shaderPath("rect.frag.spv"),
+        &queueSubmitMutex_,
+        kAttractorPreviewWidth,
+        kAttractorPreviewHeight,
+        kAttractorPreviewWindowName,
+        kAttractorPreviewClearColor
+    });
+
     attractorCompute_.initialize(AttractorCompute::CreateInfo{
         physicalDevice_,
         device_,
@@ -971,8 +988,7 @@ void VulkanApp::processInput() {
     const bool panRequested = updatePan();
     const bool viewMovingBeforeInput =
         panRequested ||
-        std::abs(panVelocityX_) > kPanVelocityEpsilon ||
-        std::abs(panVelocityY_) > kPanVelocityEpsilon;
+        viewTransform_.hasPanVelocity();
     if (viewMovingBeforeInput) {
         pendingZoomDelta_ = 0.0;
     } else {
@@ -982,8 +998,7 @@ void VulkanApp::processInput() {
 
     const bool viewInMotion =
         panRequested ||
-        std::abs(panVelocityX_) > kPanVelocityEpsilon ||
-        std::abs(panVelocityY_) > kPanVelocityEpsilon;
+        viewTransform_.hasPanVelocity();
     const bool leftPressed = glfwGetMouseButton(window_, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
     const bool leftClickStarted = leftPressed && !leftMousePressed_;
     if (!leftPressed) {
@@ -1146,7 +1161,7 @@ std::chrono::milliseconds VulkanApp::targetSimulationInterval() const {
     return std::chrono::milliseconds(4);
 }
 
-VulkanApp::ScreenRect VulkanApp::simulationViewportRect() const {
+ViewportRect VulkanApp::simulationViewportRect() const {
     if (window_ == nullptr) {
         return {};
     }
@@ -1160,14 +1175,14 @@ VulkanApp::ScreenRect VulkanApp::simulationViewportRect() const {
     const double logicalSimulationHeight =
         static_cast<double>(kSimulationViewportSize) / static_cast<double>(kWindowHeight);
 
-    ScreenRect rect{};
+    ViewportRect rect{};
     rect.width = static_cast<double>(windowWidth) * logicalSimulationWidth;
     rect.height = static_cast<double>(windowHeight) * logicalSimulationHeight;
     return rect;
 }
 
 bool VulkanApp::isInsideSimulationArea(const double mouseX, const double mouseY) const {
-    const ScreenRect viewport = simulationViewportRect();
+    const ViewportRect viewport = simulationViewportRect();
     return viewport.width > 0.0 &&
            viewport.height > 0.0 &&
            mouseX >= viewport.x &&
@@ -1177,21 +1192,11 @@ bool VulkanApp::isInsideSimulationArea(const double mouseX, const double mouseY)
 }
 
 void VulkanApp::resetView() {
-    zoom_ = 1.0f;
-    viewCenterX_ = 0.5f;
-    viewCenterY_ = 0.5f;
-    panVelocityX_ = 0.0f;
-    panVelocityY_ = 0.0f;
+    viewTransform_.reset();
 }
 
 void VulkanApp::clampView() {
-    const float visibleWidth = 1.0f / zoom_;
-    const float visibleHeight = 1.0f / zoom_;
-    const float halfWidth = visibleWidth * 0.5f;
-    const float halfHeight = visibleHeight * 0.5f;
-
-    viewCenterX_ = std::clamp(viewCenterX_, halfWidth, 1.0f - halfWidth);
-    viewCenterY_ = std::clamp(viewCenterY_, halfHeight, 1.0f - halfHeight);
+    viewTransform_.clamp();
 }
 
 void VulkanApp::applyPendingZoom() {
@@ -1207,7 +1212,7 @@ void VulkanApp::applyPendingZoom() {
         return;
     }
 
-    const float zoomMultiplier = std::pow(1.2f, static_cast<float>(pendingZoomDelta_));
+    const float zoomMultiplier = std::pow(kZoomStepMultiplier, static_cast<float>(pendingZoomDelta_));
     pendingZoomDelta_ = 0.0;
     zoomAtCursor(mouseX, mouseY, zoomMultiplier);
 }
@@ -1221,7 +1226,7 @@ void VulkanApp::updateCursorFeedback(const double mouseX, const double mouseY) {
         glfwGetKey(window_, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
         glfwGetKey(window_, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
     const bool showPanCursor =
-        panActive_ || (ctrlPressed && isInsideSimulationArea(mouseX, mouseY));
+        viewTransform_.panActive() || (ctrlPressed && isInsideSimulationArea(mouseX, mouseY));
 
     if (showPanCursor && panCursor_ != nullptr) {
         glfwSetCursor(window_, panCursor_);
@@ -1232,28 +1237,7 @@ void VulkanApp::updateCursorFeedback(const double mouseX, const double mouseY) {
 }
 
 void VulkanApp::zoomAtCursor(const double mouseX, const double mouseY, const float zoomMultiplier) {
-    const ScreenRect viewport = simulationViewportRect();
-    if (viewport.width <= 0.0 || viewport.height <= 0.0) {
-        return;
-    }
-
-    const float beforeSpan = 1.0f / zoom_;
-    const float cursorU = static_cast<float>(
-        std::clamp((mouseX - viewport.x) / viewport.width, 0.0, 1.0));
-    const float cursorV = static_cast<float>(
-        std::clamp((mouseY - viewport.y) / viewport.height, 0.0, 1.0));
-    const float beforeMinX = viewCenterX_ - beforeSpan * 0.5f;
-    const float beforeMinY = viewCenterY_ - beforeSpan * 0.5f;
-    const float focusU = beforeMinX + beforeSpan * cursorU;
-    const float focusV = beforeMinY + beforeSpan * cursorV;
-
-    zoom_ = std::clamp(zoom_ * zoomMultiplier, 1.0f, 64.0f);
-
-    const float afterSpan = 1.0f / zoom_;
-    viewCenterX_ = focusU + (0.5f - cursorU) * afterSpan;
-    viewCenterY_ = focusV + (0.5f - cursorV) * afterSpan;
-
-    clampView();
+    viewTransform_.zoomAtCursor(mouseX, mouseY, simulationViewportRect(), zoomMultiplier);
 }
 
 bool VulkanApp::updatePan() {
@@ -1267,81 +1251,26 @@ bool VulkanApp::updatePan() {
         glfwGetKey(window_, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
         glfwGetKey(window_, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
     const bool panRequested = middlePressed || (ctrlPressed && leftPressed);
-
-    if (!panRequested || !isInsideSimulationArea(mouseX, mouseY)) {
-        panActive_ = false;
-        return false;
-    }
-
-    if (!panActive_) {
-        panActive_ = true;
-        lastPanMouseX_ = mouseX;
-        lastPanMouseY_ = mouseY;
-        panVelocityX_ = 0.0f;
-        panVelocityY_ = 0.0f;
-        return true;
-    }
-
-    const double deltaX = mouseX - lastPanMouseX_;
-    const double deltaY = mouseY - lastPanMouseY_;
-    lastPanMouseX_ = mouseX;
-    lastPanMouseY_ = mouseY;
-
-    const ScreenRect viewport = simulationViewportRect();
-    if (viewport.width <= 0.0 || viewport.height <= 0.0) {
-        return false;
-    }
-
-    const float visibleSpan = 1.0f / zoom_;
-    const float desiredVelocityX = -static_cast<float>(deltaX / viewport.width) * visibleSpan;
-    const float desiredVelocityY = -static_cast<float>(deltaY / viewport.height) * visibleSpan;
-    panVelocityX_ =
-        panVelocityX_ * kPanBlendFactor + desiredVelocityX * (1.0f - kPanBlendFactor);
-    panVelocityY_ =
-        panVelocityY_ * kPanBlendFactor + desiredVelocityY * (1.0f - kPanBlendFactor);
-    return true;
+    return viewTransform_.updatePan(
+        mouseX,
+        mouseY,
+        simulationViewportRect(),
+        panRequested && isInsideSimulationArea(mouseX, mouseY));
 }
 
 void VulkanApp::updateViewMotion() {
-    if (std::abs(panVelocityX_) <= kPanVelocityEpsilon) {
-        panVelocityX_ = 0.0f;
-    }
-    if (std::abs(panVelocityY_) <= kPanVelocityEpsilon) {
-        panVelocityY_ = 0.0f;
-    }
-    if (panVelocityX_ == 0.0f && panVelocityY_ == 0.0f) {
-        return;
-    }
-
-    const float unclampedCenterX = viewCenterX_ + panVelocityX_;
-    const float unclampedCenterY = viewCenterY_ + panVelocityY_;
-    viewCenterX_ = unclampedCenterX;
-    viewCenterY_ = unclampedCenterY;
-    clampView();
-
-    if (viewCenterX_ != unclampedCenterX) {
-        panVelocityX_ = 0.0f;
-    }
-    if (viewCenterY_ != unclampedCenterY) {
-        panVelocityY_ = 0.0f;
-    }
-
-    if (!panActive_) {
-        panVelocityX_ *= kPanInertiaDamping;
-        panVelocityY_ *= kPanInertiaDamping;
-    }
+    viewTransform_.updateMotion();
 }
 
 VulkanApp::QuadPushConstants VulkanApp::currentQuadPushConstants() const {
-    const float visibleSpan = 1.0f / zoom_;
-    const float halfSpan = visibleSpan * 0.5f;
+    const ViewBounds view = viewTransform_.bounds();
     const GridSize size = simulation_.gridSize();
 
     QuadPushConstants push{};
-    push.uvMin[0] = viewCenterX_ - halfSpan;
-    push.uvMin[1] = viewCenterY_ - halfSpan;
-    push.uvMax[0] = viewCenterX_ + halfSpan;
-    push.uvMax[1] = viewCenterY_ + halfSpan;
+    push.uvMin[0] = view.minX;
+    push.uvMin[1] = view.minY;
+    push.uvMax[0] = view.maxX;
+    push.uvMax[1] = view.maxY;
     push.gridWidth = size.w;
     push.gridHeight = size.h;
     return push;
@@ -1367,27 +1296,12 @@ std::pair<float, float> VulkanApp::screenToLogical(const double mouseX, const do
 }
 
 std::pair<uint32_t, uint32_t> VulkanApp::screenToCell(const double mouseX, const double mouseY) const {
-    const QuadPushConstants view = currentQuadPushConstants();
-    const ScreenRect viewport = simulationViewportRect();
-    if (viewport.width <= 0.0 || viewport.height <= 0.0) {
-        return {0, 0};
-    }
-
-    const double normalizedX = std::clamp((mouseX - viewport.x) / viewport.width, 0.0, 1.0);
-    const double normalizedY = std::clamp((mouseY - viewport.y) / viewport.height, 0.0, 1.0);
-    const double u = std::clamp(
-        static_cast<double>(view.uvMin[0]) + normalizedX * static_cast<double>(view.uvMax[0] - view.uvMin[0]),
-        0.0,
-        0.999999);
-    const double v = std::clamp(
-        static_cast<double>(view.uvMin[1]) + normalizedY * static_cast<double>(view.uvMax[1] - view.uvMin[1]),
-        0.0,
-        0.999999);
-
     const GridSize gridSize = simulation_.gridSize();
-    const uint32_t cellX = std::min<uint32_t>(static_cast<uint32_t>(u * static_cast<double>(gridSize.w)), gridSize.w - 1U);
-    const uint32_t cellY = std::min<uint32_t>(static_cast<uint32_t>(v * static_cast<double>(gridSize.h)), gridSize.h - 1U);
-    return {cellX, cellY};
+    return viewTransform_.screenToCell(
+        mouseX,
+        mouseY,
+        simulationViewportRect(),
+        ViewGridExtent{gridSize.w, gridSize.h});
 }
 
 bool VulkanApp::isInsideSidebarScrollableArea(const float logicalX, const float logicalY) const {
@@ -1576,7 +1490,7 @@ void VulkanApp::refreshWindowTitle() const {
         return;
     }
 
-    const std::string title = viewModel_.windowTitle(model_, zoom_);
+    const std::string title = viewModel_.windowTitle(model_, viewTransform_.zoom());
     glfwSetWindowTitle(window_, title.c_str());
 }
 
@@ -1629,94 +1543,45 @@ void VulkanApp::resetAttractorPreviewBounds() {
 }
 
 void VulkanApp::openAttractorPreviewWindow() {
-    if (attractorWindow_.window != nullptr) {
-        return;
-    }
-
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-
-    attractorWindow_.window = glfwCreateWindow(
-        kAttractorPreviewWidth,
-        kAttractorPreviewHeight,
-        kAttractorPreviewWindowName,
-        nullptr,
-        nullptr);
-    if (attractorWindow_.window == nullptr) {
-        throw std::runtime_error("Failed to create attractor preview window.");
-    }
-
-    glfwSetWindowUserPointer(attractorWindow_.window, this);
-    glfwSetFramebufferSizeCallback(attractorWindow_.window, attractorFramebufferResizeCallback);
-
     try {
-        createAttractorPreviewSurface();
-        createAttractorPreviewSwapChain();
-        createAttractorPreviewImageViews();
-        createAttractorPreviewRenderPass();
-        createAttractorPreviewPipeline();
-        createAttractorPreviewFramebuffers();
-        createAttractorPreviewCommandResources();
-        createAttractorPreviewSyncObjects();
+        attractorPreviewWindow_.open();
     } catch (...) {
-        closeAttractorPreviewWindow();
+        controller_.notifyAttractorPreviewClosed();
+        resetAttractorPreviewBounds();
         throw;
     }
 }
 
 void VulkanApp::closeAttractorPreviewWindow() {
-    if (device_ != VK_NULL_HANDLE && attractorWindow_.window != nullptr) {
-        vkDeviceWaitIdle(device_);
-    }
-
-    cleanupAttractorPreviewSwapChain();
-
-    if (attractorWindow_.inFlightFence != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
-        vkDestroyFence(device_, attractorWindow_.inFlightFence, nullptr);
-        attractorWindow_.inFlightFence = VK_NULL_HANDLE;
-    }
-    if (attractorWindow_.imageAvailableSemaphore != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
-        vkDestroySemaphore(device_, attractorWindow_.imageAvailableSemaphore, nullptr);
-        attractorWindow_.imageAvailableSemaphore = VK_NULL_HANDLE;
-    }
-    if (attractorWindow_.renderFinishedSemaphore != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
-        vkDestroySemaphore(device_, attractorWindow_.renderFinishedSemaphore, nullptr);
-        attractorWindow_.renderFinishedSemaphore = VK_NULL_HANDLE;
-    }
-    if (attractorWindow_.commandPool != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
-        vkDestroyCommandPool(device_, attractorWindow_.commandPool, nullptr);
-        attractorWindow_.commandPool = VK_NULL_HANDLE;
-    }
-    attractorWindow_.commandBuffer = VK_NULL_HANDLE;
-
-    if (attractorWindow_.surface != VK_NULL_HANDLE && instance_ != VK_NULL_HANDLE) {
-        vkDestroySurfaceKHR(instance_, attractorWindow_.surface, nullptr);
-        attractorWindow_.surface = VK_NULL_HANDLE;
-    }
-    if (attractorWindow_.window != nullptr) {
-        glfwDestroyWindow(attractorWindow_.window);
-        attractorWindow_.window = nullptr;
-    }
-
-    attractorWindow_.presentFamilyIndex = 0;
-    attractorWindow_.presentQueue = VK_NULL_HANDLE;
-    attractorWindow_.framebufferResized = false;
+    attractorPreviewWindow_.close();
     controller_.notifyAttractorPreviewClosed();
     resetAttractorPreviewBounds();
 }
 
 void VulkanApp::updateAttractorPreviewWindow() {
-    if (attractorWindow_.window == nullptr) {
+    if (!attractorPreviewWindow_.isOpen()) {
         return;
     }
 
-    if (glfwWindowShouldClose(attractorWindow_.window) == GLFW_TRUE) {
+    if (attractorPreviewWindow_.shouldClose()) {
         closeAttractorPreviewWindow();
         return;
     }
 
     try {
-        drawAttractorPreviewFrame();
+        const bool previewSwapChainRecreated = attractorPreviewWindow_.drawFrame(AttractorPreviewWindow::DrawData{
+            attractorGraphVertexBuffer_.buffer,
+            attractorGraphVertexCount_,
+            attractorGraphDraws_,
+            kAttractorPreviewEdgeColor,
+            kAttractorPreviewNodeColor,
+            kAttractorPreviewCycleColor,
+            kAttractorPreviewPanelColor,
+            kAttractorPreviewTextColor
+        });
+        if (previewSwapChainRecreated && latestAttractorGraph_.has_value()) {
+            rebuildAttractorGraphBuffer(latestAttractorGraph_.value());
+        }
     } catch (const std::exception&) {
         attractorGraphVertexCount_ = 0;
         attractorGraphDraws_ = {};
@@ -1727,9 +1592,7 @@ void VulkanApp::updateAttractorPreviewWindow() {
 
 void VulkanApp::renderAttractorStatusPreview(const std::string& statusText) {
     openAttractorPreviewWindow();
-    glfwSetWindowTitle(
-        attractorWindow_.window,
-        (std::string(kAttractorPreviewWindowName) + " | " + statusText).c_str());
+    attractorPreviewWindow_.setTitle(std::string(kAttractorPreviewWindowName) + " | " + statusText);
 }
 
 void VulkanApp::renderAttractorPreview(const AttractorGraph& graph) {
@@ -1782,9 +1645,7 @@ void VulkanApp::renderAttractorPreview(const AttractorGraph& graph) {
         details << " | VISTA PARCIAL";
     }
 
-    glfwSetWindowTitle(
-        attractorWindow_.window,
-        (std::string(kAttractorPreviewWindowName) + " | " + details.str()).c_str());
+    attractorPreviewWindow_.setTitle(std::string(kAttractorPreviewWindowName) + " | " + details.str());
 }
 
 void VulkanApp::createInstance() {
@@ -2459,13 +2320,14 @@ void VulkanApp::rebuildAttractorGraphBuffer(const AttractorGraph& graph) {
         return;
     }
 
+    const VkExtent2D previewExtent = attractorPreviewWindow_.extent();
     const float previewWidth =
-        attractorWindow_.swapChainExtent.width > 0
-            ? static_cast<float>(attractorWindow_.swapChainExtent.width)
+        previewExtent.width > 0
+            ? static_cast<float>(previewExtent.width)
             : static_cast<float>(kAttractorPreviewWidth);
     const float previewHeight =
-        attractorWindow_.swapChainExtent.height > 0
-            ? static_cast<float>(attractorWindow_.swapChainExtent.height)
+        previewExtent.height > 0
+            ? static_cast<float>(previewExtent.height)
             : static_cast<float>(kAttractorPreviewHeight);
     constexpr float kMarginLeft = 56.0f;
     constexpr float kMarginTop = 56.0f;
@@ -3042,516 +2904,6 @@ void VulkanApp::createSyncObjects() {
         throwIfFailed(
             vkCreateFence(device_, &fenceInfo, nullptr, &inFlightFences_[index]),
             "Failed to create in-flight fence");
-    }
-}
-
-void VulkanApp::createAttractorPreviewSurface() {
-    throwIfFailed(
-        glfwCreateWindowSurface(instance_, attractorWindow_.window, nullptr, &attractorWindow_.surface),
-        "Failed to create attractor preview surface");
-
-    const std::array<uint32_t, 2> candidateFamilies{{
-        queueFamilyIndices_.presentFamily.value(),
-        queueFamilyIndices_.graphicsFamily.value()
-    }};
-    for (const uint32_t familyIndex : candidateFamilies) {
-        VkBool32 presentSupport = VK_FALSE;
-        throwIfFailed(
-            vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice_, familyIndex, attractorWindow_.surface, &presentSupport),
-            "Failed to query attractor preview present support");
-        if (presentSupport == VK_TRUE) {
-            attractorWindow_.presentFamilyIndex = familyIndex;
-            attractorWindow_.presentQueue =
-                familyIndex == queueFamilyIndices_.graphicsFamily.value() ? graphicsQueue_ : presentQueue_;
-            return;
-        }
-    }
-
-    throw std::runtime_error("Selected GPU queue families cannot present the attractor preview surface.");
-}
-
-void VulkanApp::createAttractorPreviewSwapChain() {
-    const SwapChainSupportDetails swapChainSupport =
-        querySwapChainSupport(physicalDevice_, attractorWindow_.surface);
-    if (swapChainSupport.formats.empty() || swapChainSupport.presentModes.empty()) {
-        throw std::runtime_error("Attractor preview surface does not support a Vulkan swapchain.");
-    }
-    const VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
-    const VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
-    const VkExtent2D extent =
-        chooseSwapExtent(swapChainSupport.capabilities, attractorWindow_.window);
-
-    uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-    if (swapChainSupport.capabilities.maxImageCount > 0 &&
-        imageCount > swapChainSupport.capabilities.maxImageCount) {
-        imageCount = swapChainSupport.capabilities.maxImageCount;
-    }
-
-    VkSwapchainCreateInfoKHR createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface = attractorWindow_.surface;
-    createInfo.minImageCount = imageCount;
-    createInfo.imageFormat = surfaceFormat.format;
-    createInfo.imageColorSpace = surfaceFormat.colorSpace;
-    createInfo.imageExtent = extent;
-    createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-    const uint32_t queueFamilyIndices[] = {
-        queueFamilyIndices_.graphicsFamily.value(),
-        attractorWindow_.presentFamilyIndex
-    };
-    if (queueFamilyIndices_.graphicsFamily.value() != attractorWindow_.presentFamilyIndex) {
-        createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        createInfo.queueFamilyIndexCount = 2;
-        createInfo.pQueueFamilyIndices = queueFamilyIndices;
-    } else {
-        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    }
-
-    createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
-    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    createInfo.presentMode = presentMode;
-    createInfo.clipped = VK_TRUE;
-
-    throwIfFailed(
-        vkCreateSwapchainKHR(device_, &createInfo, nullptr, &attractorWindow_.swapChain),
-        "Failed to create attractor preview swapchain");
-
-    throwIfFailed(
-        vkGetSwapchainImagesKHR(device_, attractorWindow_.swapChain, &imageCount, nullptr),
-        "Failed to query attractor preview swapchain images");
-    attractorWindow_.swapChainImages.resize(imageCount);
-    throwIfFailed(
-        vkGetSwapchainImagesKHR(
-            device_,
-            attractorWindow_.swapChain,
-            &imageCount,
-            attractorWindow_.swapChainImages.data()),
-        "Failed to get attractor preview swapchain images");
-
-    attractorWindow_.swapChainImageFormat = surfaceFormat.format;
-    attractorWindow_.swapChainExtent = extent;
-    attractorWindow_.framebufferResized = false;
-}
-
-void VulkanApp::createAttractorPreviewImageViews() {
-    attractorWindow_.swapChainImageViews.resize(attractorWindow_.swapChainImages.size());
-    for (std::size_t index = 0; index < attractorWindow_.swapChainImages.size(); ++index) {
-        attractorWindow_.swapChainImageViews[index] =
-            createImageView(attractorWindow_.swapChainImages[index], attractorWindow_.swapChainImageFormat);
-    }
-}
-
-void VulkanApp::createAttractorPreviewRenderPass() {
-    VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = attractorWindow_.swapChainImageFormat;
-    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    VkAttachmentReference colorAttachmentRef{};
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass{};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
-
-    VkSubpassDependency dependency{};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-    VkRenderPassCreateInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colorAttachment;
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies = &dependency;
-
-    throwIfFailed(
-        vkCreateRenderPass(device_, &renderPassInfo, nullptr, &attractorWindow_.renderPass),
-        "Failed to create attractor preview render pass");
-}
-
-void VulkanApp::createAttractorPreviewPipeline() {
-    const auto rectVertexCode = readBinaryFile(shaderPath("rect.vert.spv"));
-    const auto rectFragmentCode = readBinaryFile(shaderPath("rect.frag.spv"));
-    const VkShaderModule rectVertexModule = createShaderModule(rectVertexCode);
-    const VkShaderModule rectFragmentModule = createShaderModule(rectFragmentCode);
-
-    VkPipelineShaderStageCreateInfo vertexStage{};
-    vertexStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    vertexStage.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    vertexStage.module = rectVertexModule;
-    vertexStage.pName = "main";
-
-    VkPipelineShaderStageCreateInfo fragmentStage{};
-    fragmentStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    fragmentStage.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    fragmentStage.module = rectFragmentModule;
-    fragmentStage.pName = "main";
-
-    const VkPipelineShaderStageCreateInfo shaderStages[] = {vertexStage, fragmentStage};
-    const auto solidBinding = SolidVertex::bindingDescription();
-    const auto solidAttributes = SolidVertex::attributeDescriptions();
-
-    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = 1;
-    vertexInputInfo.pVertexBindingDescriptions = &solidBinding;
-    vertexInputInfo.vertexAttributeDescriptionCount =
-        static_cast<uint32_t>(solidAttributes.size());
-    vertexInputInfo.pVertexAttributeDescriptions = solidAttributes.data();
-
-    VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
-    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-
-    VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = static_cast<float>(attractorWindow_.swapChainExtent.width);
-    viewport.height = static_cast<float>(attractorWindow_.swapChainExtent.height);
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-
-    VkRect2D scissor{};
-    scissor.offset = {0, 0};
-    scissor.extent = attractorWindow_.swapChainExtent;
-
-    VkPipelineViewportStateCreateInfo viewportState{};
-    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    viewportState.viewportCount = 1;
-    viewportState.pViewports = &viewport;
-    viewportState.scissorCount = 1;
-    viewportState.pScissors = &scissor;
-
-    VkPipelineRasterizationStateCreateInfo rasterizer{};
-    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_NONE;
-    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-
-    VkPipelineMultisampleStateCreateInfo multisampling{};
-    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-    VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-    colorBlendAttachment.colorWriteMask =
-        VK_COLOR_COMPONENT_R_BIT |
-        VK_COLOR_COMPONENT_G_BIT |
-        VK_COLOR_COMPONENT_B_BIT |
-        VK_COLOR_COMPONENT_A_BIT;
-    colorBlendAttachment.blendEnable = VK_FALSE;
-
-    VkPipelineColorBlendStateCreateInfo colorBlending{};
-    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    colorBlending.attachmentCount = 1;
-    colorBlending.pAttachments = &colorBlendAttachment;
-
-    VkGraphicsPipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount = 2;
-    pipelineInfo.pStages = shaderStages;
-    pipelineInfo.pVertexInputState = &vertexInputInfo;
-    pipelineInfo.pInputAssemblyState = &inputAssembly;
-    pipelineInfo.pViewportState = &viewportState;
-    pipelineInfo.pRasterizationState = &rasterizer;
-    pipelineInfo.pMultisampleState = &multisampling;
-    pipelineInfo.pColorBlendState = &colorBlending;
-    pipelineInfo.layout = solidPipelineLayout_;
-    pipelineInfo.renderPass = attractorWindow_.renderPass;
-    pipelineInfo.subpass = 0;
-
-    const VkResult result = vkCreateGraphicsPipelines(
-        device_,
-        VK_NULL_HANDLE,
-        1,
-        &pipelineInfo,
-        nullptr,
-        &attractorWindow_.solidPipeline);
-    vkDestroyShaderModule(device_, rectFragmentModule, nullptr);
-    vkDestroyShaderModule(device_, rectVertexModule, nullptr);
-    throwIfFailed(result, "Failed to create attractor preview pipeline");
-}
-
-void VulkanApp::createAttractorPreviewFramebuffers() {
-    attractorWindow_.framebuffers.resize(attractorWindow_.swapChainImageViews.size());
-    for (std::size_t index = 0; index < attractorWindow_.swapChainImageViews.size(); ++index) {
-        VkImageView attachments[] = {attractorWindow_.swapChainImageViews[index]};
-
-        VkFramebufferCreateInfo framebufferInfo{};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = attractorWindow_.renderPass;
-        framebufferInfo.attachmentCount = 1;
-        framebufferInfo.pAttachments = attachments;
-        framebufferInfo.width = attractorWindow_.swapChainExtent.width;
-        framebufferInfo.height = attractorWindow_.swapChainExtent.height;
-        framebufferInfo.layers = 1;
-
-        throwIfFailed(
-            vkCreateFramebuffer(device_, &framebufferInfo, nullptr, &attractorWindow_.framebuffers[index]),
-            "Failed to create attractor preview framebuffer");
-    }
-}
-
-void VulkanApp::createAttractorPreviewCommandResources() {
-    VkCommandPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    poolInfo.queueFamilyIndex = queueFamilyIndices_.graphicsFamily.value();
-    throwIfFailed(
-        vkCreateCommandPool(device_, &poolInfo, nullptr, &attractorWindow_.commandPool),
-        "Failed to create attractor preview command pool");
-
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = attractorWindow_.commandPool;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
-    throwIfFailed(
-        vkAllocateCommandBuffers(device_, &allocInfo, &attractorWindow_.commandBuffer),
-        "Failed to allocate attractor preview command buffer");
-}
-
-void VulkanApp::createAttractorPreviewSyncObjects() {
-    VkSemaphoreCreateInfo semaphoreInfo{};
-    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    VkFenceCreateInfo fenceInfo{};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    throwIfFailed(
-        vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &attractorWindow_.imageAvailableSemaphore),
-        "Failed to create attractor preview image-available semaphore");
-    throwIfFailed(
-        vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &attractorWindow_.renderFinishedSemaphore),
-        "Failed to create attractor preview render-finished semaphore");
-    throwIfFailed(
-        vkCreateFence(device_, &fenceInfo, nullptr, &attractorWindow_.inFlightFence),
-        "Failed to create attractor preview in-flight fence");
-}
-
-void VulkanApp::recreateAttractorPreviewSwapChain() {
-    if (attractorWindow_.window == nullptr) {
-        return;
-    }
-
-    int width = 0;
-    int height = 0;
-    glfwGetFramebufferSize(attractorWindow_.window, &width, &height);
-    while (width == 0 || height == 0) {
-        glfwWaitEvents();
-        if (attractorWindow_.window == nullptr) {
-            return;
-        }
-        glfwGetFramebufferSize(attractorWindow_.window, &width, &height);
-    }
-
-    vkDeviceWaitIdle(device_);
-
-    cleanupAttractorPreviewSwapChain();
-    createAttractorPreviewSwapChain();
-    createAttractorPreviewImageViews();
-    createAttractorPreviewRenderPass();
-    createAttractorPreviewPipeline();
-    createAttractorPreviewFramebuffers();
-    if (latestAttractorGraph_.has_value()) {
-        rebuildAttractorGraphBuffer(latestAttractorGraph_.value());
-    }
-}
-
-void VulkanApp::cleanupAttractorPreviewSwapChain() {
-    for (VkFramebuffer framebuffer : attractorWindow_.framebuffers) {
-        if (framebuffer != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
-            vkDestroyFramebuffer(device_, framebuffer, nullptr);
-        }
-    }
-    attractorWindow_.framebuffers.clear();
-
-    if (attractorWindow_.solidPipeline != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
-        vkDestroyPipeline(device_, attractorWindow_.solidPipeline, nullptr);
-        attractorWindow_.solidPipeline = VK_NULL_HANDLE;
-    }
-    if (attractorWindow_.renderPass != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
-        vkDestroyRenderPass(device_, attractorWindow_.renderPass, nullptr);
-        attractorWindow_.renderPass = VK_NULL_HANDLE;
-    }
-
-    for (VkImageView imageView : attractorWindow_.swapChainImageViews) {
-        if (imageView != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
-            vkDestroyImageView(device_, imageView, nullptr);
-        }
-    }
-    attractorWindow_.swapChainImageViews.clear();
-
-    if (attractorWindow_.swapChain != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
-        vkDestroySwapchainKHR(device_, attractorWindow_.swapChain, nullptr);
-        attractorWindow_.swapChain = VK_NULL_HANDLE;
-    }
-
-    attractorWindow_.swapChainImages.clear();
-    attractorWindow_.swapChainImageFormat = VK_FORMAT_UNDEFINED;
-    attractorWindow_.swapChainExtent = {};
-}
-
-void VulkanApp::recordAttractorPreviewCommandBuffer(VkCommandBuffer commandBuffer, const uint32_t imageIndex) {
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    throwIfFailed(vkBeginCommandBuffer(commandBuffer, &beginInfo), "Failed to begin attractor preview command buffer");
-
-    VkClearValue clearColor{};
-    clearColor.color = {{
-        kAttractorPreviewClearColor[0],
-        kAttractorPreviewClearColor[1],
-        kAttractorPreviewClearColor[2],
-        kAttractorPreviewClearColor[3]
-    }};
-
-    VkRenderPassBeginInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = attractorWindow_.renderPass;
-    renderPassInfo.framebuffer = attractorWindow_.framebuffers[imageIndex];
-    renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = attractorWindow_.swapChainExtent;
-    renderPassInfo.clearValueCount = 1;
-    renderPassInfo.pClearValues = &clearColor;
-    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-    if (attractorGraphVertexCount_ > 0U) {
-        const VkDeviceSize zeroOffset = 0;
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, attractorWindow_.solidPipeline);
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &attractorGraphVertexBuffer_.buffer, &zeroOffset);
-
-        const auto drawRange = [&](const SolidDrawRange& range, const std::array<float, 4>& color) {
-            RectPushConstants push{};
-            std::memcpy(push.color, color.data(), sizeof(push.color));
-            vkCmdPushConstants(
-                commandBuffer,
-                solidPipelineLayout_,
-                VK_SHADER_STAGE_FRAGMENT_BIT,
-                0,
-                sizeof(RectPushConstants),
-                &push);
-            vkCmdDraw(commandBuffer, range.vertexCount, 1, range.firstVertex, 0);
-        };
-
-        if (attractorGraphDraws_.edges.vertexCount > 0U) {
-            drawRange(attractorGraphDraws_.edges, kAttractorPreviewEdgeColor);
-        }
-        if (attractorGraphDraws_.nodes.vertexCount > 0U) {
-            drawRange(attractorGraphDraws_.nodes, kAttractorPreviewNodeColor);
-        }
-        if (attractorGraphDraws_.cycles.vertexCount > 0U) {
-            drawRange(attractorGraphDraws_.cycles, kAttractorPreviewCycleColor);
-        }
-        if (attractorGraphDraws_.legendPanel.vertexCount > 0U) {
-            drawRange(attractorGraphDraws_.legendPanel, kAttractorPreviewPanelColor);
-        }
-        if (attractorGraphDraws_.legendEdgeSwatch.vertexCount > 0U) {
-            drawRange(attractorGraphDraws_.legendEdgeSwatch, kAttractorPreviewEdgeColor);
-        }
-        if (attractorGraphDraws_.legendNodeSwatch.vertexCount > 0U) {
-            drawRange(attractorGraphDraws_.legendNodeSwatch, kAttractorPreviewNodeColor);
-        }
-        if (attractorGraphDraws_.legendCycleSwatch.vertexCount > 0U) {
-            drawRange(attractorGraphDraws_.legendCycleSwatch, kAttractorPreviewCycleColor);
-        }
-        if (attractorGraphDraws_.legendText.vertexCount > 0U) {
-            drawRange(attractorGraphDraws_.legendText, kAttractorPreviewTextColor);
-        }
-    }
-
-    vkCmdEndRenderPass(commandBuffer);
-    throwIfFailed(vkEndCommandBuffer(commandBuffer), "Failed to record attractor preview command buffer");
-}
-
-void VulkanApp::drawAttractorPreviewFrame() {
-    if (attractorWindow_.window == nullptr || attractorWindow_.swapChain == VK_NULL_HANDLE) {
-        return;
-    }
-
-    throwIfFailed(
-        vkWaitForFences(device_, 1, &attractorWindow_.inFlightFence, VK_TRUE, UINT64_MAX),
-        "Failed to wait for attractor preview fence");
-
-    uint32_t imageIndex = 0;
-    const VkResult acquireResult = vkAcquireNextImageKHR(
-        device_,
-        attractorWindow_.swapChain,
-        UINT64_MAX,
-        attractorWindow_.imageAvailableSemaphore,
-        VK_NULL_HANDLE,
-        &imageIndex);
-    if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR) {
-        recreateAttractorPreviewSwapChain();
-        return;
-    }
-    if (acquireResult != VK_SUCCESS && acquireResult != VK_SUBOPTIMAL_KHR) {
-        throw std::runtime_error("Failed to acquire attractor preview swapchain image.");
-    }
-
-    throwIfFailed(vkResetFences(device_, 1, &attractorWindow_.inFlightFence), "Failed to reset attractor preview fence");
-    throwIfFailed(
-        vkResetCommandBuffer(attractorWindow_.commandBuffer, 0),
-        "Failed to reset attractor preview command buffer");
-    recordAttractorPreviewCommandBuffer(attractorWindow_.commandBuffer, imageIndex);
-
-    VkSemaphore waitSemaphores[] = {attractorWindow_.imageAvailableSemaphore};
-    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    VkSemaphore signalSemaphores[] = {attractorWindow_.renderFinishedSemaphore};
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = waitSemaphores;
-    submitInfo.pWaitDstStageMask = waitStages;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &attractorWindow_.commandBuffer;
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = signalSemaphores;
-
-    {
-        std::lock_guard<std::mutex> lock(queueSubmitMutex_);
-        throwIfFailed(
-            vkQueueSubmit(graphicsQueue_, 1, &submitInfo, attractorWindow_.inFlightFence),
-            "Failed to submit attractor preview command buffer");
-    }
-
-    VkPresentInfoKHR presentInfo{};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
-    presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = &attractorWindow_.swapChain;
-    presentInfo.pImageIndices = &imageIndex;
-
-    VkResult presentResult = VK_SUCCESS;
-    {
-        std::lock_guard<std::mutex> lock(queueSubmitMutex_);
-        presentResult = vkQueuePresentKHR(attractorWindow_.presentQueue, &presentInfo);
-    }
-    if (presentResult == VK_ERROR_OUT_OF_DATE_KHR ||
-        presentResult == VK_SUBOPTIMAL_KHR ||
-        attractorWindow_.framebufferResized) {
-        attractorWindow_.framebufferResized = false;
-        recreateAttractorPreviewSwapChain();
-    } else if (presentResult != VK_SUCCESS) {
-        throw std::runtime_error("Failed to present attractor preview swapchain image.");
     }
 }
 
@@ -4695,13 +4047,6 @@ void VulkanApp::framebufferResizeCallback(GLFWwindow* window, int, int) {
     auto* app = reinterpret_cast<VulkanApp*>(glfwGetWindowUserPointer(window));
     if (app != nullptr) {
         app->framebufferResized_ = true;
-    }
-}
-
-void VulkanApp::attractorFramebufferResizeCallback(GLFWwindow* window, int, int) {
-    auto* app = reinterpret_cast<VulkanApp*>(glfwGetWindowUserPointer(window));
-    if (app != nullptr && app->attractorWindow_.window == window) {
-        app->attractorWindow_.framebufferResized = true;
     }
 }
 

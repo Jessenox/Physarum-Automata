@@ -1,7 +1,7 @@
 #pragma once
 
-#include "AttractorGenerator.h"
-#include "VulkanHelpers.h"
+#include "domain/attractor/AttractorGenerator.h"
+#include "infrastructure/vulkan/VulkanHelpers.h"
 
 #include <cstdint>
 #include <filesystem>

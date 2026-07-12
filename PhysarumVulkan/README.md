@@ -17,15 +17,19 @@ Migración del simulador de `PhyTest` a Vulkan sin usar SFML. El render principa
 
 ## Arquitectura
 
-La app ahora usa una separación por capas que calza mejor con Clean Architecture / Hexagonal, pero sin forzar una sobreingeniería completa sobre Vulkan:
+La app usa paquetes por capa para que el código del simulador no se mezcle con documentos, shaders ni adaptadores:
 
-- `src/AppModel.*`: estado de dominio de la simulación, reproducción, `generation`, `grid size` y acceso a `PhysarumSim`
-- `src/AppViewModel.*`: estado de presentación/UI, selección de estado, textos del overlay, título de ventana y estado visible de atractores/exportación
-- `src/application/AppController.*`: capa de aplicación; concentra casos de uso como reproducir, pintar, redimensionar, cargar mapa y coordinar la generación de atractores
-- `src/infrastructure/AttractorGraphExporter.*`: adaptador de infraestructura para exportar grafos de atractores a SVG/PNG
-- `src/VulkanApp.*`: adaptador de presentación/runtime Vulkan/GLFW; conserva render, swapchain, input de bajo nivel y ventanas
+- `src/domain/simulation/`: núcleo del autómata (`PhysarumSim`, `GridSize`, `DirtyRegion`)
+- `src/domain/attractor/`: modelo y generación de grafos de atractores
+- `src/application/`: casos de uso coordinados por `AppController`
+- `src/presentation/mvvm/`: `AppModel` y `AppViewModel`
+- `src/presentation/app/`: adaptador principal Vulkan/GLFW (`VulkanApp`) con la simulación GPU principal
+- `src/presentation/ui/`: componentes de presentación reutilizables (`ViewTransform`, `AttractorPreviewWindow`, geometría de dibujo)
+- `src/infrastructure/vulkan/`: servicios Vulkan auxiliares como `AttractorCompute` y helpers
+- `src/infrastructure/platform/`: diálogos del sistema de archivos
+- `src/infrastructure/export/`: exportación de grafos a SVG/PNG
 
-`PhysarumSim` sigue siendo el núcleo del dominio. `VulkanApp` ya no coordina directamente la lógica principal de aplicación ni la exportación; delega esas responsabilidades a `AppController` y a los adaptadores de infraestructura.
+`PhysarumSim` sigue siendo el núcleo del dominio. `VulkanApp` conserva el render y compute principal de la simulación GPU, pero delega casos de uso a `AppController`, estado MVVM a `AppModel`/`AppViewModel` y adaptadores secundarios a infraestructura/presentación.
 
 Validación visual rápida:
 

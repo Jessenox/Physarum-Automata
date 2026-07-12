@@ -1,4 +1,4 @@
-#include "AttractorCompute.h"
+#include "infrastructure/vulkan/AttractorCompute.h"
 
 #include <algorithm>
 #include <array>

@@ -1,11 +1,14 @@
 #pragma once
 
 #include "application/AppController.h"
-#include "AppModel.h"
-#include "AppViewModel.h"
-#include "AttractorCompute.h"
-#include "infrastructure/AttractorGraphExporter.h"
-#include "VulkanHelpers.h"
+#include "presentation/mvvm/AppModel.h"
+#include "presentation/mvvm/AppViewModel.h"
+#include "presentation/ui/AttractorPreviewWindow.h"
+#include "infrastructure/vulkan/AttractorCompute.h"
+#include "presentation/ui/DrawGeometry.h"
+#include "infrastructure/export/AttractorGraphExporter.h"
+#include "presentation/ui/ViewTransform.h"
+#include "infrastructure/vulkan/VulkanHelpers.h"
 
 #include <array>
 #include <chrono>
@@ -16,11 +19,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-struct SolidDrawRange {
-    uint32_t firstVertex = 0;
-    uint32_t vertexCount = 0;
-};
 
 class VulkanApp {
 public:
@@ -35,6 +33,9 @@ private:
     static constexpr std::size_t kMaxFramesInFlight = 1;
     static constexpr double kPartialUploadThreshold = 0.30;
     static constexpr auto kTargetFrameTime = std::chrono::milliseconds(16);
+    static constexpr float kMinZoom = 1.0f;
+    static constexpr float kMaxZoom = 128.0f;
+    static constexpr float kZoomStepMultiplier = 1.35f;
     static constexpr float kPanBlendFactor = 0.35f;
     static constexpr float kPanInertiaDamping = 0.82f;
     static constexpr float kPanVelocityEpsilon = 0.00002f;
@@ -93,38 +94,6 @@ private:
         UiElement increment{};
     };
 
-    struct GraphDrawRanges {
-        SolidDrawRange edges{};
-        SolidDrawRange nodes{};
-        SolidDrawRange cycles{};
-        SolidDrawRange legendPanel{};
-        SolidDrawRange legendEdgeSwatch{};
-        SolidDrawRange legendNodeSwatch{};
-        SolidDrawRange legendCycleSwatch{};
-        SolidDrawRange legendText{};
-    };
-
-    struct AttractorWindowResources {
-        GLFWwindow* window = nullptr;
-        VkSurfaceKHR surface = VK_NULL_HANDLE;
-        uint32_t presentFamilyIndex = 0;
-        VkQueue presentQueue = VK_NULL_HANDLE;
-        VkSwapchainKHR swapChain = VK_NULL_HANDLE;
-        VkFormat swapChainImageFormat = VK_FORMAT_UNDEFINED;
-        VkExtent2D swapChainExtent{};
-        std::vector<VkImage> swapChainImages;
-        std::vector<VkImageView> swapChainImageViews;
-        VkRenderPass renderPass = VK_NULL_HANDLE;
-        VkPipeline solidPipeline = VK_NULL_HANDLE;
-        std::vector<VkFramebuffer> framebuffers;
-        VkCommandPool commandPool = VK_NULL_HANDLE;
-        VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
-        VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE;
-        VkSemaphore renderFinishedSemaphore = VK_NULL_HANDLE;
-        VkFence inFlightFence = VK_NULL_HANDLE;
-        bool framebufferResized = false;
-    };
-
     void initWindow();
     void initVulkan();
     void mainLoop();
@@ -134,7 +103,7 @@ private:
     void updateSimulation();
     void updateAttractorState();
     [[nodiscard]] std::chrono::milliseconds targetSimulationInterval() const;
-    [[nodiscard]] ScreenRect simulationViewportRect() const;
+    [[nodiscard]] ViewportRect simulationViewportRect() const;
     [[nodiscard]] bool isInsideSimulationArea(double mouseX, double mouseY) const;
     void resetView();
     void clampView();
@@ -191,19 +160,8 @@ private:
     void createComputePipeline();
     void createCommandBuffers();
     void createSyncObjects();
-    void createAttractorPreviewSurface();
-    void createAttractorPreviewSwapChain();
-    void createAttractorPreviewImageViews();
-    void createAttractorPreviewRenderPass();
-    void createAttractorPreviewPipeline();
-    void createAttractorPreviewFramebuffers();
-    void createAttractorPreviewCommandResources();
-    void createAttractorPreviewSyncObjects();
-
     void recreateSwapChain();
     void cleanupSwapChain();
-    void recreateAttractorPreviewSwapChain();
-    void cleanupAttractorPreviewSwapChain();
     void destroySimulationBuffers();
     void destroyBuffer(BufferAllocation& allocation);
     void rebuildSolidUiBuffer();
@@ -221,9 +179,6 @@ private:
         uint32_t frameIndex,
         const UploadRequest& uploadRequest);
     void drawFrame();
-    void recordAttractorPreviewCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
-    void drawAttractorPreviewFrame();
-
     [[nodiscard]] SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice deviceHandle) const;
     [[nodiscard]] SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice deviceHandle, VkSurfaceKHR surface) const;
     [[nodiscard]] QueueFamilyIndices findQueueFamilies(VkPhysicalDevice deviceHandle) const;
@@ -257,7 +212,6 @@ private:
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) const;
 
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
-    static void attractorFramebufferResizeCallback(GLFWwindow* window, int width, int height);
     static void scrollCallback(GLFWwindow* window, double xOffset, double yOffset);
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -366,15 +320,14 @@ private:
     std::array<bool, GLFW_KEY_LAST + 1> keyPressed_{};
 
     uint8_t& selectedState_;
-    float zoom_ = 1.0f;
-    float viewCenterX_ = 0.5f;
-    float viewCenterY_ = 0.5f;
+    ViewTransform viewTransform_{ViewTransform::Config{
+        kMinZoom,
+        kMaxZoom,
+        kPanBlendFactor,
+        kPanInertiaDamping,
+        kPanVelocityEpsilon
+    }};
     double pendingZoomDelta_ = 0.0;
-    bool panActive_ = false;
-    double lastPanMouseX_ = 0.0;
-    double lastPanMouseY_ = 0.0;
-    float panVelocityX_ = 0.0f;
-    float panVelocityY_ = 0.0f;
     float mouseLogicalX_ = -1.0f;
     float mouseLogicalY_ = -1.0f;
     float& sidebarScrollOffset_;
@@ -387,7 +340,7 @@ private:
     AttractorCompute attractorCompute_{};
     AttractorProgress& attractorProgress_;
     std::optional<AttractorGraph>& latestAttractorGraph_;
-    AttractorWindowResources attractorWindow_{};
+    AttractorPreviewWindow attractorPreviewWindow_{};
     bool attractorPreviewBoundsInitialized_ = false;
     bool attractorPreviewRenderCapped_ = false;
     float attractorPreviewWorldMinX_ = 0.0f;
