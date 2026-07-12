@@ -2,6 +2,8 @@
 
 Bienvenido a la wiki completa del proyecto **Physarum Automata**.
 
+Language: **Espanol** | [[English|Home-English]]
+
 Esta wiki esta escrita para dos tipos de lector:
 
 - alguien que no conoce el proyecto y necesita entender que problema resuelve;
@@ -76,6 +78,8 @@ La version Vulkan ya incluye:
 
 ## Mapa completo de la wiki
 
+### Espanol
+
 - [[Conceptos-basicos]]
 - [[Vision-del-proyecto]]
 - [[Requerimientos-y-casos-de-uso]]
@@ -90,3 +94,20 @@ La version Vulkan ya incluye:
 - [[Pruebas-y-validacion]]
 - [[Roadmap-y-mantenimiento]]
 - [[Publicar-en-GitHub-Wiki]]
+
+### English
+
+- [[Basic-Concepts]]
+- [[Project-Vision]]
+- [[Requirements-and-Use-Cases]]
+- [[Installation-and-Build]]
+- [[User-Guide]]
+- [[Architecture-English]]
+- [[System-Diagrams]]
+- [[Automaton-Model]]
+- [[Attractors]]
+- [[Map-Loading-and-Export]]
+- [[Hardware-and-Communication]]
+- [[Testing-and-Validation]]
+- [[Roadmap-and-Maintenance]]
+- [[Publishing-to-GitHub-Wiki]]
