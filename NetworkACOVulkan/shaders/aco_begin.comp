@@ -1,0 +1,24 @@
+#version 450
+layout(local_size_x = 64) in;
+
+layout(std430, binding = 9) buffer InteractionCurrent { float interactionCurrent[]; };
+layout(std430, binding = 17) buffer AntStates { uvec4 antStates[]; };
+layout(std430, binding = 12) readonly buffer Control {
+    uint iteration; uint width; uint height; uint obstacleCount;
+    uint antCount; uint maxPath; uint maxIterations; uint startNode;
+    uint goalCount; uint tileWidth; uint tileHeight; uint seed;
+    float alpha; float beta; float rho; float depositQ;
+    float initialPheromone; uint guidedMode; uint visitedCapacity; uint t1SearchTicks;
+    float odorRadius; float odorStrength;
+    uint odorEnabled; uint generationSearchTicks;
+};
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    if (index < antCount * antCount) interactionCurrent[index] = 0.0;
+    // Keep the completed colony at the food for presentation. Reset it only
+    // when the first search block of the following T actually begins.
+    if (iteration > 0u && generationSearchTicks == 0u && index < antCount) {
+        antStates[index] = uvec4(startNode, 0u, 0u, 1u);
+    }
+}

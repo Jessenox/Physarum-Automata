@@ -1,0 +1,216 @@
+#version 450
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(set = 0, binding = 0, std430) readonly buffer InputStates {
+    uint values[];
+} inputStates;
+
+layout(set = 0, binding = 1, std430) writeonly buffer OutputStates {
+    uint values[];
+} outputStates;
+
+layout(set = 0, binding = 2, std430) buffer StepStats {
+    uint nutrientPending;
+    uint nutrientFound;
+    uint physarumCells;
+} stepStats;
+
+layout(push_constant) uniform PushConstants {
+    uint width;
+    uint height;
+    uint stepSeed;
+    uint reserved;
+} pushConstants;
+
+shared uint tile[18][18];
+
+const uint kVisibleStatesPerCell = 9u;
+
+uint globalIndex(const uint x, const uint y) {
+    return y * pushConstants.width + x;
+}
+
+uint visibleState(const uint combinedState) {
+    return combinedState % kVisibleStatesPerCell;
+}
+
+uint memoryState(const uint combinedState) {
+    return combinedState / kVisibleStatesPerCell;
+}
+
+uint combinedState(const uint stateValue, const uint memoryValue) {
+    return stateValue + memoryValue * kVisibleStatesPerCell;
+}
+
+uint hashDirection(const uint x, const uint y, const uint combinedValue, const uint seed) {
+    uint value = seed;
+    value ^= (x + 1u) * 0x9e3779b9u;
+    value ^= (y + 1u) * 0x85ebca6bu;
+    value ^= (combinedValue + 1u) * 0xc2b2ae35u;
+    value ^= value >> 16u;
+    value *= 0x7feb352du;
+    value ^= value >> 15u;
+    value *= 0x846ca68bu;
+    value ^= value >> 16u;
+    return value & 7u;
+}
+
+bool hasNeighbourState(const uint neighbours[8], const uint direction, const uint stateValue) {
+    return neighbours[direction] == stateValue;
+}
+
+bool isOnMooreOffset(const uint neighboursDirections[8]) {
+    uint index = 4u;
+    for (uint expected = 0u; expected < 8u; ++expected) {
+        if (index > 7u) {
+            index = 0u;
+        }
+        if (neighboursDirections[index] > 0u &&
+            neighboursDirections[index] - 1u == expected) {
+            return true;
+        }
+        ++index;
+    }
+    return false;
+}
+
+void findStates(const uint neighbours[8], out bool statesFound[9]) {
+    for (uint index = 0u; index < 9u; ++index) {
+        statesFound[index] = false;
+    }
+    for (uint index = 0u; index < 8u; ++index) {
+        const uint value = neighbours[index];
+        if (value < 9u) {
+            statesFound[value] = true;
+        }
+    }
+}
+
+void applyCornerWalls(inout uint neighbours[8]) {
+    if (neighbours[0] == 2u && neighbours[2] == 2u) {
+        neighbours[1] = 2u;
+    }
+    if (neighbours[0] == 2u && neighbours[6] == 2u) {
+        neighbours[7] = 2u;
+    }
+    if (neighbours[6] == 2u && neighbours[4] == 2u) {
+        neighbours[5] = 2u;
+    }
+    if (neighbours[2] == 2u && neighbours[4] == 2u) {
+        neighbours[3] = 2u;
+    }
+}
+
+void main() {
+    const uvec2 globalCoord = gl_GlobalInvocationID.xy;
+    const uvec2 localCoord = gl_LocalInvocationID.xy;
+    const uvec2 groupBase = gl_WorkGroupID.xy * uvec2(16u, 16u);
+
+    for (uint tileY = localCoord.y; tileY < 18u; tileY += 16u) {
+        for (uint tileX = localCoord.x; tileX < 18u; tileX += 16u) {
+            const int sampleX = clamp(int(groupBase.x + tileX) - 1, 0, int(pushConstants.width) - 1);
+            const int sampleY = clamp(int(groupBase.y + tileY) - 1, 0, int(pushConstants.height) - 1);
+            tile[tileY][tileX] = inputStates.values[globalIndex(uint(sampleX), uint(sampleY))];
+        }
+    }
+
+    barrier();
+
+    if (globalCoord.x >= pushConstants.width || globalCoord.y >= pushConstants.height) {
+        return;
+    }
+
+    uint neighboursData[8];
+    uint neighboursDirections[8];
+    bool statesFound[9];
+
+    const uint centerCombined = tile[localCoord.y + 1u][localCoord.x + 1u];
+    const uint currentCell = visibleState(centerCombined);
+    uint nextCell = currentCell;
+    uint nextMemory = memoryState(centerCombined);
+
+    neighboursData[0] = visibleState(tile[localCoord.y + 1u][localCoord.x + 0u]);
+    neighboursData[1] = visibleState(tile[localCoord.y + 2u][localCoord.x + 0u]);
+    neighboursData[2] = visibleState(tile[localCoord.y + 2u][localCoord.x + 1u]);
+    neighboursData[3] = visibleState(tile[localCoord.y + 2u][localCoord.x + 2u]);
+    neighboursData[4] = visibleState(tile[localCoord.y + 1u][localCoord.x + 2u]);
+    neighboursData[5] = visibleState(tile[localCoord.y + 0u][localCoord.x + 2u]);
+    neighboursData[6] = visibleState(tile[localCoord.y + 0u][localCoord.x + 1u]);
+    neighboursData[7] = visibleState(tile[localCoord.y + 0u][localCoord.x + 0u]);
+
+    neighboursDirections[0] = memoryState(tile[localCoord.y + 1u][localCoord.x + 0u]);
+    neighboursDirections[1] = memoryState(tile[localCoord.y + 2u][localCoord.x + 0u]);
+    neighboursDirections[2] = memoryState(tile[localCoord.y + 2u][localCoord.x + 1u]);
+    neighboursDirections[3] = memoryState(tile[localCoord.y + 2u][localCoord.x + 2u]);
+    neighboursDirections[4] = memoryState(tile[localCoord.y + 1u][localCoord.x + 2u]);
+    neighboursDirections[5] = memoryState(tile[localCoord.y + 0u][localCoord.x + 2u]);
+    neighboursDirections[6] = memoryState(tile[localCoord.y + 0u][localCoord.x + 1u]);
+    neighboursDirections[7] = memoryState(tile[localCoord.y + 0u][localCoord.x + 0u]);
+
+    applyCornerWalls(neighboursData);
+    findStates(neighboursData, statesFound);
+
+    const uint currentDirection = hashDirection(globalCoord.x, globalCoord.y, centerCombined, pushConstants.stepSeed);
+
+    switch (currentCell) {
+        case 0u:
+            if ((hasNeighbourState(neighboursData, currentDirection, 3u) ||
+                 hasNeighbourState(neighboursData, currentDirection, 4u) ||
+                 hasNeighbourState(neighboursData, currentDirection, 6u)) &&
+                nextMemory == 0u) {
+                nextCell = 7u;
+            }
+            break;
+        case 1u:
+            atomicAdd(stepStats.nutrientPending, 1u);
+            if (statesFound[5] || statesFound[6]) {
+                nextCell = 6u;
+            }
+            break;
+        case 2u:
+        case 3u:
+            break;
+        case 4u:
+            if ((hasNeighbourState(neighboursData, currentDirection, 3u) ||
+                 hasNeighbourState(neighboursData, currentDirection, 5u) ||
+                 hasNeighbourState(neighboursData, currentDirection, 6u)) &&
+                nextMemory == 0u &&
+                !statesFound[0] &&
+                !statesFound[7]) {
+                nextCell = 5u;
+                nextMemory = currentDirection + 1u;
+            }
+            break;
+        case 5u:
+            atomicAdd(stepStats.physarumCells, 1u);
+            if (!isOnMooreOffset(neighboursDirections) &&
+                !isOnMooreOffset(neighboursDirections) &&
+                !statesFound[1] &&
+                !statesFound[3] &&
+                !statesFound[4] &&
+                !statesFound[6]) {
+                nextCell = 0u;
+                nextMemory = 0u;
+            } else {
+                nextCell = 8u;
+            }
+            break;
+        case 6u:
+            atomicAdd(stepStats.nutrientFound, 1u);
+            break;
+        case 7u:
+            if (statesFound[3] || statesFound[4] || statesFound[6]) {
+                nextCell = 4u;
+            }
+            break;
+        case 8u:
+            atomicAdd(stepStats.physarumCells, 1u);
+            nextCell = 5u;
+            break;
+        default:
+            break;
+    }
+
+    outputStates.values[globalIndex(globalCoord.x, globalCoord.y)] = combinedState(nextCell, nextMemory);
+}

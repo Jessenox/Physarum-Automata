@@ -1,0 +1,29 @@
+#version 450
+layout(local_size_x = 64) in;
+
+layout(std430, binding = 9) readonly buffer InteractionCurrent { float interactionCurrent[]; };
+layout(std430, binding = 10) buffer InteractionTotal { float interactionTotal[]; };
+layout(std430, binding = 11) buffer InteractionHistory { float interactionHistory[]; };
+layout(std430, binding = 12) readonly buffer Control {
+    uint iteration; uint width; uint height; uint obstacleCount;
+    uint antCount; uint maxPath; uint maxIterations; uint startNode;
+    uint goalCount; uint tileWidth; uint tileHeight; uint seed;
+    float alpha; float beta; float rho; float depositQ;
+    float initialPheromone; uint guidedMode; uint visitedCapacity; uint t1SearchTicks;
+    float odorRadius; float odorStrength;
+    uint odorEnabled; uint generationSearchTicks;
+};
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    uint matrixSize = antCount * antCount;
+    if (index >= matrixSize || iteration >= maxIterations) return;
+    float value = interactionCurrent[index];
+    uint historyIndex = iteration * matrixSize + index;
+    if (generationSearchTicks > 0u) {
+        interactionHistory[historyIndex] += value;
+    } else {
+        interactionHistory[historyIndex] = value;
+    }
+    interactionTotal[index] += value;
+}

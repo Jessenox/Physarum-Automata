@@ -1,0 +1,82 @@
+#version 450
+
+layout(local_size_x = 256) in;
+
+layout(set = 0, binding = 0, std430) readonly buffer CellWeights { uint values[]; } cells;
+layout(set = 0, binding = 1, std430) buffer Distances { uint values[]; } distances;
+layout(set = 0, binding = 2, std430) buffer PreviousNodes { uint values[]; } previous;
+layout(set = 0, binding = 3, std430) buffer VisitedNodes { uint values[]; } visited;
+layout(set = 0, binding = 4, std430) buffer DijkstraControl {
+    uint minDistance;
+    uint selected;
+    uint finished;
+    uint found;
+    uint iterations;
+    uint source;
+    uint target;
+    uint width;
+    uint height;
+} controlData;
+
+const uint INF = 0xffffffffu;
+
+uint cellWeight(uint index) {
+    uint word = cells.values[index >> 2u];
+    return (word >> ((index & 3u) * 8u)) & 0xffu;
+}
+
+uint visitState(uint index) {
+    uint word = visited.values[index >> 4u];
+    return (word >> ((index & 15u) * 2u)) & 3u;
+}
+
+void markVisited(uint index) {
+    uint shift = (index & 15u) * 2u;
+    atomicOr(visited.values[index >> 4u], 1u << shift);
+}
+
+void main() {
+    if (controlData.finished != 0u) {
+        return;
+    }
+
+    uint index = gl_GlobalInvocationID.x;
+    uint count = controlData.width * controlData.height;
+    uint current = controlData.selected;
+    if (current == INF) {
+        if (index == 0u) {
+            controlData.finished = 1u;
+            controlData.found = 0u;
+        }
+        return;
+    }
+
+    if (index == current) {
+        markVisited(current);
+        atomicAdd(controlData.iterations, 1u);
+        if (current == controlData.target) {
+            controlData.found = 1u;
+            controlData.finished = 1u;
+        }
+        return;
+    }
+
+    if (index >= count || cellWeight(index) == 0u || visitState(index) != 0u || current == controlData.target) {
+        return;
+    }
+
+    uint currentX = current % controlData.width;
+    uint currentY = current / controlData.width;
+    uint x = index % controlData.width;
+    uint y = index / controlData.width;
+    uint manhattan = uint(abs(int(currentX) - int(x))) + uint(abs(int(currentY) - int(y)));
+    if (manhattan != 1u || distances.values[current] == INF) {
+        return;
+    }
+
+    uint candidate = distances.values[current] + cellWeight(index);
+    if (candidate < distances.values[index]) {
+        distances.values[index] = candidate;
+        previous.values[index] = current;
+    }
+}

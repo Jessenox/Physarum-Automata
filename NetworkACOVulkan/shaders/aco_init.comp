@@ -1,0 +1,53 @@
+#version 450
+layout(local_size_x = 64) in;
+
+struct GoalBest { uint pathLength; uint iterationFound; float cost; uint ant; };
+layout(std430, binding = 2) buffer GoalBestBuffer { GoalBest goalBest[]; };
+layout(std430, binding = 3) buffer TotalPheromone { uint totalPheromone[]; };
+layout(std430, binding = 4) buffer PheromoneByAnt { uint pheromoneByAnt[]; };
+layout(std430, binding = 6) buffer PathLengths { uint pathLengths[]; };
+layout(std430, binding = 8) buffer ReachedGoal { uint reachedGoal[]; };
+layout(std430, binding = 9) buffer InteractionCurrent { float interactionCurrent[]; };
+layout(std430, binding = 10) buffer InteractionTotal { float interactionTotal[]; };
+layout(std430, binding = 12) buffer Control {
+    uint iteration; uint width; uint height; uint obstacleCount;
+    uint antCount; uint maxPath; uint maxIterations; uint startNode;
+    uint goalCount; uint tileWidth; uint tileHeight; uint seed;
+    float alpha; float beta; float rho; float depositQ;
+    float initialPheromone; uint guidedMode; uint visitedCapacity; uint t1SearchTicks;
+    float odorRadius; float odorStrength;
+    uint odorEnabled; uint generationSearchTicks;
+};
+layout(std430, binding = 16) buffer SimpleLengths { uint simpleLengths[]; };
+layout(std430, binding = 17) buffer AntStates { uvec4 antStates[]; };
+layout(std430, binding = 18) buffer PathStarts { uint pathStarts[]; };
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    uint slotCount = tileWidth * tileHeight * 4u;
+    uint matrixSize = antCount * antCount;
+    if (index < slotCount) totalPheromone[index] = max(1u, uint(initialPheromone * 65536.0));
+    if (index < slotCount * antCount) pheromoneByAnt[index] = 0u;
+    if (index < matrixSize) {
+        interactionCurrent[index] = 0.0;
+        interactionTotal[index] = 0.0;
+    }
+    if (index < goalCount) {
+        goalBest[index].pathLength = 0u;
+        goalBest[index].iterationFound = 0u;
+        goalBest[index].cost = 3.402823466e+38;
+        goalBest[index].ant = 0xffffffffu;
+    }
+    if (index < antCount) {
+        antStates[index] = uvec4(startNode, 0u, 0u, 1u);
+        pathStarts[index] = startNode;
+        simpleLengths[index] = 0u;
+        pathLengths[index] = 0u;
+        reachedGoal[index] = 0u;
+    }
+    if (index == 0u) {
+        iteration = 0u;
+        t1SearchTicks = 0u;
+        generationSearchTicks = 0u;
+    }
+}

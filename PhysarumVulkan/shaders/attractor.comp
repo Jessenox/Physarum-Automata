@@ -1,0 +1,279 @@
+#version 460
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(push_constant) uniform PushConstants {
+    uint width;
+    uint height;
+    uint count;
+    uint reserved;
+} pushConstants;
+
+layout(set = 0, binding = 0) readonly buffer InputStates {
+    uint values[];
+} inputStates;
+
+layout(set = 0, binding = 1) writeonly buffer OutputStates {
+    uint values[];
+} outputStates;
+
+const uint kVisibleStatesPerCell = 9u;
+const uint64_t kCombinedStatesPerCell = 81ul;
+const uint kStoredCells = 25u;
+const uint kGridCells = 49u;
+
+uint activeCellCount() {
+    return pushConstants.width * pushConstants.height;
+}
+
+uint stateBaseIndex(const uint invocationIndex) {
+    return invocationIndex * kStoredCells;
+}
+
+uint fullWidth() {
+    return pushConstants.width + 2u;
+}
+
+uint fullIndex(const uint x, const uint y) {
+    return y * fullWidth() + x;
+}
+
+uint64_t mix64(uint64_t value) {
+    value ^= value >> 33u;
+    value *= 0xff51afd7ed558ccdUL;
+    value ^= value >> 33u;
+    value *= 0xc4ceb9fe1a85ec53UL;
+    value ^= value >> 33u;
+    return value;
+}
+
+uint64_t hashStateBlock(const uint baseIndex, const uint activeCells) {
+    uint64_t hash = 0x84222325cbf29ce4UL ^ uint64_t(activeCells);
+    for (uint index = 0u; index < activeCells; ++index) {
+        hash ^= uint64_t(inputStates.values[baseIndex + index] + 1u) * 0x100000001b3UL;
+        hash = mix64(hash + uint64_t(index + 1u) * 0x9e3779b97f4a7c15UL);
+    }
+    return hash;
+}
+
+uint64_t directionSeedForState(const uint baseIndex, const uint activeCells) {
+    uint64_t encoded = 0UL;
+    uint64_t base = 1UL;
+    for (uint index = 0u; index < activeCells; ++index) {
+        if (base > 0xffffffffffffffffUL / kCombinedStatesPerCell) {
+            return hashStateBlock(baseIndex, activeCells);
+        }
+        encoded += uint64_t(inputStates.values[baseIndex + index]) * base;
+        base *= kCombinedStatesPerCell;
+    }
+    return encoded;
+}
+
+uint deterministicDirection(
+    const uint64_t stateSeed,
+    const uint x,
+    const uint y,
+    const uint currentCell,
+    const uint currentMemory) {
+    uint64_t value = stateSeed;
+    value ^= uint64_t(x + 1u) * 0x9e3779b97f4a7c15UL;
+    value ^= uint64_t(y + 1u) * 0xc2b2ae3d27d4eb4fUL;
+    value ^= uint64_t(currentCell + 1u) * 0x165667b19e3779f9UL;
+    value ^= uint64_t(currentMemory + 1u) * 0x85ebca77c2b2ae63UL;
+    return uint(mix64(value) % 8UL);
+}
+
+void decodeStateBlock(
+    const uint baseIndex,
+    out uint states[kGridCells],
+    out uint memoryValues[kGridCells]) {
+    for (uint index = 0u; index < kGridCells; ++index) {
+        states[index] = 2u;
+        memoryValues[index] = 0u;
+    }
+
+    uint cellIndex = 0u;
+    for (uint y = 1u; y <= pushConstants.height; ++y) {
+        for (uint x = 1u; x <= pushConstants.width; ++x) {
+            const uint digit = inputStates.values[baseIndex + cellIndex];
+            states[fullIndex(x, y)] = digit % kVisibleStatesPerCell;
+            memoryValues[fullIndex(x, y)] = digit / kVisibleStatesPerCell;
+            ++cellIndex;
+        }
+    }
+}
+
+void encodeCombinedState(
+    const uint states[kGridCells],
+    const uint memoryValues[kGridCells],
+    const uint baseIndex) {
+    uint cellIndex = 0u;
+    for (uint y = 1u; y <= pushConstants.height; ++y) {
+        for (uint x = 1u; x <= pushConstants.width; ++x) {
+            const uint index = fullIndex(x, y);
+            outputStates.values[baseIndex + cellIndex] =
+                states[index] + memoryValues[index] * kVisibleStatesPerCell;
+            ++cellIndex;
+        }
+    }
+    for (; cellIndex < kStoredCells; ++cellIndex) {
+        outputStates.values[baseIndex + cellIndex] = 0u;
+    }
+}
+
+void gatherNeighbours(const uint matrix[kGridCells], const uint x, const uint y, out uint neighbours[8]) {
+    const ivec2 offsets[8] = ivec2[8](
+        ivec2(-1, 0),
+        ivec2(-1, 1),
+        ivec2(0, 1),
+        ivec2(1, 1),
+        ivec2(1, 0),
+        ivec2(1, -1),
+        ivec2(0, -1),
+        ivec2(-1, -1)
+    );
+
+    for (uint index = 0u; index < 8u; ++index) {
+        const ivec2 offset = offsets[index];
+        neighbours[index] = matrix[fullIndex(uint(int(x) + offset.x), uint(int(y) + offset.y))];
+    }
+}
+
+void applyCornerWalls(inout uint neighbours[8]) {
+    if (neighbours[0] == 2u && neighbours[2] == 2u) {
+        neighbours[1] = 2u;
+    }
+    if (neighbours[0] == 2u && neighbours[6] == 2u) {
+        neighbours[7] = 2u;
+    }
+    if (neighbours[6] == 2u && neighbours[4] == 2u) {
+        neighbours[5] = 2u;
+    }
+    if (neighbours[2] == 2u && neighbours[4] == 2u) {
+        neighbours[3] = 2u;
+    }
+}
+
+bool hasNeighbourState(const uint neighbours[8], const uint direction, const uint state) {
+    return neighbours[direction] == state;
+}
+
+bool isOnMooreOffset(const uint neighboursDirections[8]) {
+    uint index = 4u;
+    for (uint expected = 0u; expected < 8u; ++expected) {
+        if (index > 7u) {
+            index = 0u;
+        }
+        if (neighboursDirections[index] > 0u && neighboursDirections[index] - 1u == expected) {
+            return true;
+        }
+        ++index;
+    }
+    return false;
+}
+
+void findStates(const uint neighbours[8], out bool statesFound[9]) {
+    for (uint index = 0u; index < 9u; ++index) {
+        statesFound[index] = false;
+    }
+    for (uint index = 0u; index < 8u; ++index) {
+        const uint value = neighbours[index];
+        if (value < 9u) {
+            statesFound[value] = true;
+        }
+    }
+}
+
+void main() {
+    const uint invocationIndex = gl_GlobalInvocationID.x;
+    if (invocationIndex >= pushConstants.count) {
+        return;
+    }
+
+    const uint baseIndex = stateBaseIndex(invocationIndex);
+    const uint64_t stateSeed = directionSeedForState(baseIndex, activeCellCount());
+
+    uint states[kGridCells];
+    uint auxStates[kGridCells];
+    uint memoryValues[kGridCells];
+    decodeStateBlock(baseIndex, states, memoryValues);
+    for (uint index = 0u; index < kGridCells; ++index) {
+        auxStates[index] = states[index];
+    }
+
+    uint neighboursData[8];
+    uint neighboursDirections[8];
+    bool statesFound[9];
+
+    for (uint y = 1u; y <= pushConstants.height; ++y) {
+        for (uint x = 1u; x <= pushConstants.width; ++x) {
+            gatherNeighbours(states, x, y, neighboursData);
+            gatherNeighbours(memoryValues, x, y, neighboursDirections);
+            applyCornerWalls(neighboursData);
+            findStates(neighboursData, statesFound);
+
+            const uint index = fullIndex(x, y);
+            const uint currentCell = states[index];
+            const uint currentMemory = memoryValues[index];
+            const uint currentDirection =
+                deterministicDirection(stateSeed, x - 1u, y - 1u, currentCell, currentMemory);
+
+            switch (currentCell) {
+                case 0u:
+                    if ((hasNeighbourState(neighboursData, currentDirection, 3u) ||
+                         hasNeighbourState(neighboursData, currentDirection, 4u) ||
+                         hasNeighbourState(neighboursData, currentDirection, 6u)) &&
+                        memoryValues[index] == 0u) {
+                        auxStates[index] = 7u;
+                    }
+                    break;
+                case 1u:
+                    if (statesFound[5] || statesFound[6]) {
+                        auxStates[index] = 6u;
+                    }
+                    break;
+                case 2u:
+                case 3u:
+                case 6u:
+                    break;
+                case 4u:
+                    if ((hasNeighbourState(neighboursData, currentDirection, 3u) ||
+                         hasNeighbourState(neighboursData, currentDirection, 5u) ||
+                         hasNeighbourState(neighboursData, currentDirection, 6u)) &&
+                        memoryValues[index] == 0u &&
+                        !statesFound[0] &&
+                        !statesFound[7]) {
+                        auxStates[index] = 5u;
+                        memoryValues[index] = currentDirection + 1u;
+                    }
+                    break;
+                case 5u:
+                    if (!isOnMooreOffset(neighboursDirections) &&
+                        !isOnMooreOffset(neighboursDirections) &&
+                        !statesFound[1] &&
+                        !statesFound[3] &&
+                        !statesFound[4] &&
+                        !statesFound[6]) {
+                        auxStates[index] = 0u;
+                        memoryValues[index] = 0u;
+                    } else {
+                        auxStates[index] = 8u;
+                    }
+                    break;
+                case 7u:
+                    if (statesFound[3] || statesFound[4] || statesFound[6]) {
+                        auxStates[index] = 4u;
+                    }
+                    break;
+                case 8u:
+                    auxStates[index] = 5u;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    encodeCombinedState(auxStates, memoryValues, baseIndex);
+}
