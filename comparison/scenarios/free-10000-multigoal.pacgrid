@@ -1,0 +1,8 @@
+PACGRID 2
+size 10000 10000
+start 1 5000
+goals 2
+9998 2500
+9998 7500
+seed 12345
+obstacles 0

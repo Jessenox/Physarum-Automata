@@ -1,0 +1,41 @@
+#version 450
+
+layout(local_size_x = 256) in;
+
+layout(set = 0, binding = 0, std430) readonly buffer CellWeights { uint values[]; } cells;
+layout(set = 0, binding = 1, std430) buffer Distances { uint values[]; } distances;
+layout(set = 0, binding = 2, std430) buffer PreviousNodes { uint values[]; } previous;
+layout(set = 0, binding = 3, std430) buffer VisitedNodes { uint values[]; } visited;
+layout(set = 0, binding = 4, std430) buffer DijkstraControl {
+    uint minDistance;
+    uint selected;
+    uint finished;
+    uint found;
+    uint iterations;
+    uint source;
+    uint target;
+    uint width;
+    uint height;
+} controlData;
+
+const uint INF = 0xffffffffu;
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    uint count = controlData.width * controlData.height;
+    if (index < count) {
+        distances.values[index] = index == controlData.source ? 0u : INF;
+        previous.values[index] = INF;
+    }
+    uint visitedWordCount = (count + 15u) >> 4u;
+    if (index < visitedWordCount) {
+        visited.values[index] = 0u;
+    }
+    if (index == 0u) {
+        controlData.minDistance = INF;
+        controlData.selected = INF;
+        controlData.finished = 0u;
+        controlData.found = 0u;
+        controlData.iterations = 0u;
+    }
+}

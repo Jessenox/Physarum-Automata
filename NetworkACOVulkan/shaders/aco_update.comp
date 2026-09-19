@@ -1,0 +1,25 @@
+#version 450
+layout(local_size_x = 64) in;
+
+layout(std430, binding = 3) buffer TotalPheromone { uint totalPheromone[]; };
+layout(std430, binding = 4) buffer PheromoneByAnt { uint pheromoneByAnt[]; };
+layout(std430, binding = 12) readonly buffer Control {
+    uint iteration; uint width; uint height; uint obstacleCount;
+    uint antCount; uint maxPath; uint maxIterations; uint startNode;
+    uint goalCount; uint tileWidth; uint tileHeight; uint seed;
+    float alpha; float beta; float rho; float depositQ;
+    float initialPheromone; uint guidedMode; uint visitedCapacity; uint t1SearchTicks;
+    float odorRadius; float odorStrength;
+    uint odorEnabled; uint generationSearchTicks;
+};
+
+void main() {
+    // A T can span many movement blocks. Evaporation belongs to the generation,
+    // not to every visualization/search block inside that same generation.
+    if (generationSearchTicks > 0u) return;
+    uint index = gl_GlobalInvocationID.x;
+    uint slotCount = tileWidth * tileHeight * 4u;
+    float remaining = 1.0 - rho;
+    if (index < slotCount) totalPheromone[index] = max(1u, uint(float(totalPheromone[index]) * remaining));
+    if (index < slotCount * antCount) pheromoneByAnt[index] = uint(float(pheromoneByAnt[index]) * remaining);
+}

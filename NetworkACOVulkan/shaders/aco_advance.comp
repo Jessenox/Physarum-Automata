@@ -1,0 +1,183 @@
+#version 450
+layout(local_size_x = 128) in;
+
+struct GoalBest { uint pathLength; uint iterationFound; float cost; uint ant; };
+layout(std430, binding = 2) buffer GoalBestBuffer { GoalBest goalBest[]; };
+layout(std430, binding = 3) buffer TotalPheromone { uint totalPheromone[]; };
+layout(std430, binding = 4) buffer PheromoneByAnt { uint pheromoneByAnt[]; };
+layout(std430, binding = 7) readonly buffer PathCosts { float pathCosts[]; };
+layout(std430, binding = 8) readonly buffer ReachedGoal { uint reachedGoal[]; };
+layout(std430, binding = 12) buffer Control {
+    uint iteration; uint width; uint height; uint obstacleCount;
+    uint antCount; uint maxPath; uint maxIterations; uint startNode;
+    uint goalCount; uint tileWidth; uint tileHeight; uint seed;
+    float alpha; float beta; float rho; float depositQ;
+    float initialPheromone; uint guidedMode; uint visitedCapacity; uint t1SearchTicks;
+    float odorRadius; float odorStrength;
+    uint odorEnabled; uint generationSearchTicks;
+};
+layout(std430, binding = 13) buffer BestPaths { uint bestPaths[]; };
+layout(std430, binding = 15) readonly buffer SimplePaths { uint simplePaths[]; };
+layout(std430, binding = 16) readonly buffer SimpleLengths { uint simpleLengths[]; };
+layout(std430, binding = 17) buffer AntStates { uvec4 antStates[]; };
+
+const uint EXHAUSTED = 3u;
+const uint VISIT_BITS = 18u;
+const uint ATTEMPT_MASK = (1u << (32u - VISIT_BITS)) - 1u;
+const float T1_CORRIDOR_STRENGTH = 8.0;
+shared uint allGoalsReached;
+shared uint allAntsFinished;
+shared uint generationComplete;
+
+uint directionFor(uint from, uint to) {
+    if (to + 1u == from) return 0u;
+    if (to == from + 1u) return 1u;
+    if (to + width == from) return 2u;
+    return 3u;
+}
+
+uint pheromoneSlot(uint from, uint direction) {
+    uint x = from % width;
+    uint y = from / width;
+    uint tileX = min(tileWidth - 1u, uint(float(x) * float(tileWidth) / float(width)));
+    uint tileY = min(tileHeight - 1u, uint(float(y) * float(tileHeight) / float(height)));
+    return (tileY * tileWidth + tileX) * 4u + direction;
+}
+
+void main() {
+    uint ant = gl_LocalInvocationID.x;
+    if (ant == 0u) {
+        allGoalsReached = goalCount > 0u ? 1u : 0u;
+        allAntsFinished = antCount > 0u ? 1u : 0u;
+        for (uint goalIndex = 0u; goalIndex < goalCount; ++goalIndex) {
+            bool reached = false;
+            for (uint candidate = 0u; candidate < antCount; ++candidate) {
+                uint routeIndex = iteration * antCount + candidate;
+                if (reachedGoal[routeIndex] == goalIndex + 1u) {
+                    reached = true;
+                    break;
+                }
+            }
+            if (!reached) allGoalsReached = 0u;
+        }
+        for (uint candidate = 0u; candidate < antCount; ++candidate) {
+            if (antStates[candidate].z == 0u) allAntsFinished = 0u;
+        }
+        // T1 is the discovery/bootstrap phase: publish the first solution as
+        // soon as every food has a route. From T2 onward use complete Ant
+        // System batches so all finished routes participate in the update.
+        bool bootstrapComplete = iteration == 0u && allGoalsReached != 0u;
+        bool colonyBatchComplete = iteration > 0u && allGoalsReached != 0u && allAntsFinished != 0u;
+        generationComplete = iteration < maxIterations && (bootstrapComplete || colonyBatchComplete) ? 1u : 0u;
+    }
+    barrier();
+    if (iteration >= maxIterations) return;
+
+    if (generationComplete == 0u) {
+        if (allAntsFinished != 0u && allGoalsReached == 0u
+            && ant < antCount && antStates[ant].z == EXHAUSTED) {
+            uint assignedGoal = ant % goalCount;
+            bool assignedGoalReached = false;
+            for (uint candidate = 0u; candidate < antCount; ++candidate) {
+                uint routeIndex = iteration * antCount + candidate;
+                if (reachedGoal[routeIndex] == assignedGoal + 1u) {
+                    assignedGoalReached = true;
+                    break;
+                }
+            }
+            if (!assignedGoalReached) {
+                uint attempt = min((antStates[ant].w >> VISIT_BITS) + 1u, ATTEMPT_MASK);
+                antStates[ant] = uvec4(startNode, 0u, 0u, (attempt << VISIT_BITS) | 1u);
+            }
+        }
+        barrier();
+        if (ant == 0u) {
+            if (iteration == 0u) ++t1SearchTicks;
+            ++generationSearchTicks;
+        }
+        return;
+    }
+
+    // Ant System batch update: no ant can affect another one while routes are
+    // being constructed. Evaporation and successful deposits happen only after
+    // every ant has either reached its goal or completed a failed route.
+    uint slotCount = tileWidth * tileHeight * 4u;
+    float remaining = 1.0 - rho;
+    for (uint index = ant; index < slotCount; index += gl_WorkGroupSize.x) {
+        totalPheromone[index] = max(1u, uint(float(totalPheromone[index]) * remaining));
+    }
+    for (uint index = ant; index < slotCount * antCount; index += gl_WorkGroupSize.x) {
+        pheromoneByAnt[index] = uint(float(pheromoneByAnt[index]) * remaining);
+    }
+    barrier();
+
+    if (ant < antCount) {
+        uint routeIndex = iteration * antCount + ant;
+        if (reachedGoal[routeIndex] != 0u && pathCosts[routeIndex] > 0.0) {
+            float deposit = depositQ / pathCosts[routeIndex];
+            if (iteration == 0u) {
+                // T1 is deliberately closed on the first route per food so it
+                // can be shown immediately. Compensate for the explorers that
+                // did not get to finish: the successful T1 routes receive the
+                // same total reinforcement that the assigned colony would
+                // have contributed if it had converged on those routes. T2 is
+                // still constructed with the normal stochastic ACO roulette;
+                // it is not a deterministic replay of the stored best path.
+                uint goal = reachedGoal[routeIndex];
+                uint assignedAnts = 0u;
+                uint successfulAnts = 0u;
+                for (uint candidate = 0u; candidate < antCount; ++candidate) {
+                    if (candidate % goalCount == goal - 1u) ++assignedAnts;
+                    uint candidateRoute = iteration * antCount + candidate;
+                    if (reachedGoal[candidateRoute] == goal) ++successfulAnts;
+                }
+                float successfulCount = float(max(1u, successfulAnts));
+                float colonyEquivalent = deposit * float(assignedAnts) / successfulCount;
+                // Q/L tends to zero as a unit-cost grid grows. Keep T1's
+                // preferred corridor visible at every supported resolution by
+                // guaranteeing a total seed relative to tau0, shared among
+                // the successful founders. Later generations use plain Q/L.
+                float scaleIndependentSeed = initialPheromone
+                    * T1_CORRIDOR_STRENGTH / successfulCount;
+                deposit = max(colonyEquivalent, scaleIndependentSeed);
+            }
+            uint amount = max(1u, uint(deposit * 65536.0));
+            uint previous = startNode;
+            uint pathOffset = ant * maxPath;
+            for (uint step = 0u; step < simpleLengths[ant]; ++step) {
+                uint next = simplePaths[pathOffset + step];
+                uint slot = pheromoneSlot(previous, directionFor(previous, next));
+                atomicAdd(totalPheromone[slot], amount);
+                pheromoneByAnt[slot * antCount + ant] += amount;
+                previous = next;
+            }
+        }
+    }
+    barrier();
+
+    if (ant == 0u) {
+        for (uint goalIndex = 0u; goalIndex < goalCount; ++goalIndex) {
+            uint bestAnt = 0xffffffffu;
+            float bestCost = goalBest[goalIndex].cost;
+            for (uint candidate = 0u; candidate < antCount; ++candidate) {
+                uint routeIndex = iteration * antCount + candidate;
+                if (reachedGoal[routeIndex] == goalIndex + 1u && pathCosts[routeIndex] < bestCost) {
+                    bestCost = pathCosts[routeIndex];
+                    bestAnt = candidate;
+                }
+            }
+            if (bestAnt != 0xffffffffu) {
+                uint length = simpleLengths[bestAnt];
+                goalBest[goalIndex].pathLength = length;
+                goalBest[goalIndex].iterationFound = iteration + 1u;
+                goalBest[goalIndex].cost = bestCost;
+                goalBest[goalIndex].ant = bestAnt;
+                for (uint step = 0u; step < length; ++step) {
+                    bestPaths[goalIndex * maxPath + step] = simplePaths[bestAnt * maxPath + step];
+                }
+            }
+        }
+        ++iteration;
+        generationSearchTicks = 0u;
+    }
+}
